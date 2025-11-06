@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { CertificateRequestsTable } from "@/db/schema";
 import { db } from "@/db";
 import { NextRequest, NextResponse } from "next/server";

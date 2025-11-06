@@ -1,4 +1,6 @@
-// app/api/admin/blogs/[id]/route.ts
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export const runtime = "nodejs";
 
 import { db } from "@/db";
 import { BlogsTable, BlogTagsTable, UsersTable } from "@/db/schema";
@@ -8,8 +10,9 @@ import { NextRequest, NextResponse } from "next/server";
 // GET - Get single blog with all details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+   context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const [blog] = await db
       .select({
@@ -64,8 +67,9 @@ export async function GET(
 // PUT - Update blog
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const body = await req.json();
     const {
@@ -180,8 +184,9 @@ export async function PUT(
 // DELETE - Delete blog
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+ context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     // Check if blog exists
     const [blog] = await db

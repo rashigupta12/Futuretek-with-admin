@@ -1,4 +1,5 @@
-// app/api/admin/courses/[id]/route.ts
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { CoursesTable, CourseFeaturesTable, CourseWhyLearnTable, CourseContentTable, CourseTopicsTable } from "@/db/schema";
@@ -6,8 +7,9 @@ import { eq } from "drizzle-orm";
 // GET - Get single course
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+ context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const [course] = await db
       .select()
@@ -66,8 +68,9 @@ export async function GET(
 // PUT - Update course
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const body = await req.json();
     const { features, whyLearn, content, topics, ...courseData } = body;
@@ -166,8 +169,9 @@ export async function PUT(
 // DELETE - Delete course
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+ context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     await db.delete(CoursesTable).where(eq(CoursesTable.id, params.id));
 

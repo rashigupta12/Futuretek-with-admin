@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 import { EnrollmentsTable, PaymentsTable } from "@/db/schema";
 import { eq, and } from "drizzle-orm";

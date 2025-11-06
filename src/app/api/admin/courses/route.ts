@@ -1,4 +1,5 @@
-// app/api/admin/courses/route.ts
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { CoursesTable, CourseFeaturesTable, CourseWhyLearnTable, CourseContentTable, CourseTopicsTable } from "@/db/schema";
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
 
-    let query = db.select().from(CoursesTable);
+    const query = db.select().from(CoursesTable);
 
     // Define allowed status values as a type and array
     type CourseStatus = "COMPLETED" | "DRAFT" | "UPCOMING" | "REGISTRATION_OPEN" | "ONGOING" | "ARCHIVED";

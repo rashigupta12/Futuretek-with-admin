@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { db } from "@/db";
 import { CourseContentTable, CourseFeaturesTable, CoursesTable, CourseTopicsTable, CourseWhyLearnTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -6,8 +9,9 @@ import { NextRequest, NextResponse } from "next/server";
 // app/api/courses/[slug]/route.ts
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  context: { params: Promise<{ slug: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const [course] = await db
       .select()

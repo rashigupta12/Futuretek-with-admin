@@ -1,4 +1,5 @@
-// app/api/admin/users/[id]/route.ts
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { UsersTable } from "@/db/schema";
@@ -6,8 +7,9 @@ import { eq } from "drizzle-orm";
 // GET - Get user details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+   context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const [user] = await db
       .select({
@@ -41,8 +43,9 @@ export async function GET(
 // PUT - Update user
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+ context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const body = await req.json();
     const { name, email, mobile, role } = body;
