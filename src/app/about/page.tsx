@@ -35,12 +35,12 @@ export default function AboutPage() {
             <p>
               Sunil Dixit is a distinguished leader in the fields of Vedic
               Astrology and Vastu Shastra. As the Founder and Director of the
-              Futuretek Institute of Astrological Sciences', he has dedicated
+              &apos;Futuretek Institute of Astrological Sciences&apos;, he has dedicated
               himself to the advancement and education of these ancient
-              sciences. He is a Managing Partner at 'SS Techno Vastu', where his
+              sciences. He is a Managing Partner at &apos;SS Techno Vastu&apos;, where his
               expertise in software engineering and Vastu Science significantly
               influences strategic decision-making in the production of
-              'Vastuteq software'.
+              &apos;Vastuteq software&apos;.
             </p>
             <h2 className="text-2xl font-bold">Professional Experience</h2>
             <p>

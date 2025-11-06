@@ -1,3 +1,4 @@
+//src/app/courses/[course]/page.tsx
 import React from "react";
 import {
   Card,
@@ -500,11 +501,12 @@ Through this, you can optimize health, relationships, prosperity, and spiritual 
 export default async function CoursePage({
   params,
 }: {
-  params: { course: string };
+  params: Promise<{ course: string }>; // ← FIX: Wrap in Promise
 }) {
-  const course = courses[params.course as keyof typeof courses];
+  const { course } = await params; // ← Await the promise
+  const selectedCourse = courses[course as keyof typeof courses];
 
-  if (!course) {
+  if (!selectedCourse) {
     notFound();
   }
 
@@ -526,13 +528,13 @@ export default async function CoursePage({
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-              {course.title}
+              {selectedCourse.title}
             </h1>
             <p className="text-xl text-muted-foreground mb-6">
-              {course.tagline}
+              {selectedCourse.tagline}
             </p>
             <div className="flex flex-wrap gap-2 mb-6">
-              {course.relatedTopics.map((topic) => (
+              {selectedCourse.relatedTopics.map((topic) => (
                 <Badge
                   key={topic}
                   variant="secondary"
@@ -555,14 +557,14 @@ export default async function CoursePage({
                 <CardTitle className="text-2xl">Course Overview</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="mb-6 leading-relaxed">{course.description}</p>
+                <p className="mb-6 leading-relaxed">{selectedCourse.description}</p>
                 <div className="grid sm:grid-cols-2 gap-6 p-4 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Users className="h-6 w-6 text-purple-500" />
                     <div>
                       <div className="font-medium">Instructor</div>
                       <div className="text-muted-foreground">
-                        {course.instructor}
+                        {selectedCourse.instructor}
                       </div>
                     </div>
                   </div>
@@ -571,7 +573,7 @@ export default async function CoursePage({
                     <div>
                       <div className="font-medium">Duration</div>
                       <div className="text-muted-foreground">
-                        {course.duration}
+                        {selectedCourse.duration}
                       </div>
                     </div>
                   </div>
@@ -585,7 +587,7 @@ export default async function CoursePage({
               </CardHeader>
               <CardContent>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {course.features.map((feature) => (
+                  {selectedCourse.features.map((feature) => (
                     <div
                       key={feature}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
@@ -601,13 +603,13 @@ export default async function CoursePage({
             <Card className="hover:shadow-lg transition-shadow duration-300">
               <CardHeader>
                 <CardTitle className="text-2xl">
-                  Why Learn {course.title}
+                  Why Learn {selectedCourse.title}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="mb-6 leading-relaxed">{course.whyLearnIntro}</p>
+                <p className="mb-6 leading-relaxed">{selectedCourse.whyLearnIntro}</p>
                 <Accordion type="single" collapsible className="w-full">
-                  {course.whyLearn.map((item, index) => (
+                  {selectedCourse.whyLearn.map((item, index) => (
                     <AccordionItem key={index} value={`item-${index}`}>
                       <AccordionTrigger className="hover:text-purple-500 transition-colors">
                         {item.title}
@@ -625,13 +627,13 @@ export default async function CoursePage({
               <CardHeader>
                 <CardTitle className="text-2xl">Course Content</CardTitle>
                 <CardDescription>
-                  Comprehensive curriculum with {course.courseContent.length}{" "}
+                  Comprehensive curriculum with {selectedCourse.courseContent.length}{" "}
                   detailed lectures
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3">
-                  {course.courseContent.map((content, index) => (
+                  {selectedCourse.courseContent.map((content, index) => (
                     <div
                       key={index}
                       className="flex items-start gap-3 p-4 hover:bg-muted rounded-lg transition-colors group"
@@ -650,27 +652,27 @@ export default async function CoursePage({
             <Card className="lg:sticky lg:top-24 hover:shadow-lg transition-shadow duration-300 border-purple-500/20">
               <CardHeader className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-t-lg">
                 <CardTitle className="text-2xl">
-                  {course.enrollment.title}
+                  {selectedCourse.enrollment.title}
                 </CardTitle>
                 <CardDescription>
-                  {course.enrollment.description}
+                  {selectedCourse.enrollment.description}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <span className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-                      {course.fee}
+                      {selectedCourse.fee}
                     </span>
                     <Badge
                       variant="secondary"
                       className="bg-purple-500/10 text-purple-500"
                     >
-                      {course.enrollment.offer.badge}
+                      {selectedCourse.enrollment.offer.badge}
                     </Badge>
                   </div>
                   <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
-                    {course.enrollment.features.map((feature, index) => {
+                    {selectedCourse.enrollment.features.map((feature, index) => {
                       const IconComponent = getIcon(feature.icon);
                       return (
                         <div key={index} className="flex items-center gap-3">
@@ -682,7 +684,7 @@ export default async function CoursePage({
                   </div>
                   {/* <ProductBuyForm priceId={course.priceId} /> */}
                   <p className="text-sm text-muted-foreground text-center italic">
-                    {course.enrollment.offer.guarantee}
+                    {selectedCourse.enrollment.offer.guarantee}
                   </p>
                 </div>
               </CardContent>
