@@ -1,3 +1,4 @@
+/*eslint-diable react/no-unescaped-entities */
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function AboutPage() {
@@ -15,7 +16,7 @@ export default function AboutPage() {
           <p>
             At Futuretek Institute of Astrological Sciences, we envision a world
             where ancient wisdom and modern science converge to provide profound
-            insights and practical solutions for navigating life's challenges.
+            insights and practical solutions for navigating life&apos;s challenges.
             Our mission is to empower individuals with the knowledge of KP
             Astrology, Financial Astrology, Vastu Shastra, and Astro-Vastu,
             enabling them to make informed decisions and create harmonious
@@ -34,7 +35,7 @@ export default function AboutPage() {
             <p>
               Sunil Dixit is a distinguished leader in the fields of Vedic
               Astrology and Vastu Shastra. As the Founder and Director of the
-              'Futuretek Institute of Astrological Sciences', he has dedicated
+              Futuretek Institute of Astrological Sciences', he has dedicated
               himself to the advancement and education of these ancient
               sciences. He is a Managing Partner at 'SS Techno Vastu', where his
               expertise in software engineering and Vastu Science significantly

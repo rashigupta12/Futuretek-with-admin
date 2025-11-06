@@ -37,7 +37,7 @@ export function Hero() {
           <p className="text-white/70 max-w-2xl text-sm sm:text-base mx-auto">
             At Futuretek we offer expert-led courses designed to equip you with
             profound knowledge and practical skills in KP Astrology, Financial
-            Astrology, Vastu Shastra, and Astro-Vastu. Whether you're seeking to
+            Astrology, Vastu Shastra, and Astro-Vastu. Whether you &apos;re seeking to
             gain personal insights or expand your professional expertise, our
             programs empower you to harness ancient wisdom to navigate modern
             life.

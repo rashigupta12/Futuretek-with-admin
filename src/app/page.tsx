@@ -38,7 +38,7 @@ export default async function Page() {
                 <CardTitle>Tailored for Everyone</CardTitle>
               </CardHeader>
               <CardContent>
-                Whether you're a beginner or looking to deepen your knowledge,
+                Whether you&apos;re a beginner or looking to deepen your knowledge,
                 we offer courses that cater to all levels of expertise.
               </CardContent>
             </Card>
@@ -126,7 +126,7 @@ export default async function Page() {
               </CardHeader>
               <CardContent>
                 Learn to apply these ancient sciences effectively in modern
-                contexts—whether it's for personal use or professional
+                contexts—whether it&apos;s for personal use or professional
                 consultation.
               </CardContent>
             </Card>
@@ -145,7 +145,7 @@ export default async function Page() {
           </h2>
           <p className="mb-8 max-w-2xl mx-auto">
             Transform your life by mastering the ancient sciences of astrology
-            and Vastu. Whether you're looking to understand your life's purpose
+            and Vastu. Whether you&apos;re looking to understand your life&apos;s purpose
             or guide others, our courses provide the tools you need for success.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">

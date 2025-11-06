@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -22,7 +21,6 @@ import {
   Calendar,
   Users,
   CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -587,7 +585,7 @@ export default async function CoursePage({
               </CardHeader>
               <CardContent>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {course.features.map((feature, index) => (
+                  {course.features.map((feature) => (
                     <div
                       key={feature}
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"

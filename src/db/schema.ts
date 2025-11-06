@@ -6,11 +6,49 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  integer,
+  boolean,
+  decimal,
+  jsonb,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+
+// =====================
+// Enums
+// =====================
 
 export const UserRole = pgEnum("user_role", ["ADMIN", "USER"]);
+export const PaymentStatus = pgEnum("payment_status", [
+  "PENDING",
+  "COMPLETED",
+  "FAILED",
+  "REFUNDED",
+]);
+export const PaymentType = pgEnum("payment_type", ["DOMESTIC", "FOREX"]);
+export const DiscountType = pgEnum("discount_type", [
+  "PERCENTAGE",
+  "FIXED_AMOUNT",
+]);
+export const CouponType = pgEnum("coupon_type", ["STANDARD", "CUSTOM", "COMBO"]);
+export const CourseStatus = pgEnum("course_status", [
+  "DRAFT",
+  "UPCOMING",
+  "REGISTRATION_OPEN",
+  "ONGOING",
+  "COMPLETED",
+  "ARCHIVED",
+]);
+export const EnrollmentStatus = pgEnum("enrollment_status", [
+  "ACTIVE",
+  "COMPLETED",
+  "CANCELLED",
+  "EXPIRED",
+]);
 
-// User Table
+// =====================
+// User Tables
+// =====================
+
 export const UsersTable = pgTable(
   "users",
   {
@@ -21,8 +59,13 @@ export const UsersTable = pgTable(
     password: text("password").notNull(),
     mobile: text("mobile"),
     role: UserRole("role").default("USER").notNull(),
+    gstNumber: text("gst_number"),
+    isGstVerified: boolean("is_gst_verified").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (table) => [
     uniqueIndex("users_email_key").on(table.email),
@@ -34,11 +77,34 @@ export const UsersTable = pgTable(
   ]
 );
 
+// User Address Table
+export const UserAddressTable = pgTable(
+  "user_addresses",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    addressLine1: text("address_line1").notNull(),
+    addressLine2: text("address_line2"),
+    city: text("city").notNull(),
+    state: text("state").notNull(),
+    pinCode: text("pin_code").notNull(),
+    country: text("country").default("India").notNull(),
+    isDefault: boolean("is_default").default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("user_addresses_user_id_idx").on(table.userId)]
+);
+
 // =====================
 // Authentication Tables
 // =====================
 
-// Email Verification Tokens
 export const EmailVerificationTokenTable = pgTable(
   "email_verification_tokens",
   {
@@ -56,7 +122,6 @@ export const EmailVerificationTokenTable = pgTable(
   ]
 );
 
-// Password Reset Tokens
 export const PasswordResetTokenTable = pgTable(
   "password_reset_tokens",
   {
@@ -73,3 +138,410 @@ export const PasswordResetTokenTable = pgTable(
     uniqueIndex("password_reset_tokens_token_key").on(table.token),
   ]
 );
+
+// =====================
+// Course Tables
+// =====================
+
+export const CoursesTable = pgTable(
+  "courses",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    tagline: text("tagline").notNull(),
+    description: text("description").notNull(),
+    instructor: text("instructor").default("To be announced").notNull(),
+    duration: text("duration").notNull(),
+    totalSessions: integer("total_sessions").notNull(),
+    priceINR: decimal("price_inr", { precision: 10, scale: 2 }).notNull(),
+    priceUSD: decimal("price_usd", { precision: 10, scale: 2 }).notNull(),
+    status: CourseStatus("status").default("DRAFT").notNull(),
+    thumbnailUrl: text("thumbnail_url"),
+    startDate: timestamp("start_date", { mode: "date" }),
+    endDate: timestamp("end_date", { mode: "date" }),
+    registrationDeadline: timestamp("registration_deadline", { mode: "date" }),
+    whyLearnIntro: text("why_learn_intro"),
+    whatYouLearn: text("what_you_learn"),
+    disclaimer: text("disclaimer"),
+    maxStudents: integer("max_students"),
+    currentEnrollments: integer("current_enrollments").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("courses_slug_key").on(table.slug),
+    index("courses_status_idx").on(table.status),
+  ]
+);
+
+// Course Features
+export const CourseFeaturesTable = pgTable(
+  "course_features",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => CoursesTable.id, { onDelete: "cascade" }),
+    feature: text("feature").notNull(),
+    sortOrder: integer("sort_order").default(0),
+  },
+  (table) => [index("course_features_course_id_idx").on(table.courseId)]
+);
+
+// Course Why Learn Points
+export const CourseWhyLearnTable = pgTable(
+  "course_why_learn",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => CoursesTable.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    sortOrder: integer("sort_order").default(0),
+  },
+  (table) => [index("course_why_learn_course_id_idx").on(table.courseId)]
+);
+
+// Course Content/Curriculum
+export const CourseContentTable = pgTable(
+  "course_content",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => CoursesTable.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    sortOrder: integer("sort_order").default(0),
+  },
+  (table) => [index("course_content_course_id_idx").on(table.courseId)]
+);
+
+// Course Related Topics (Tags)
+export const CourseTopicsTable = pgTable(
+  "course_topics",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => CoursesTable.id, { onDelete: "cascade" }),
+    topic: text("topic").notNull(),
+  },
+  (table) => [
+    index("course_topics_course_id_idx").on(table.courseId),
+    index("course_topics_topic_idx").on(table.topic),
+  ]
+);
+
+// =====================
+// Coupon & Discount Tables
+// =====================
+
+export const CouponsTable = pgTable(
+  "coupons",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    code: text("code").notNull(),
+    type: CouponType("type").notNull(),
+    discountType: DiscountType("discount_type").notNull(),
+    discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+    maxUsageCount: integer("max_usage_count"),
+    currentUsageCount: integer("current_usage_count").default(0),
+    validFrom: timestamp("valid_from", { mode: "date" }).notNull(),
+    validUntil: timestamp("valid_until", { mode: "date" }).notNull(),
+    isActive: boolean("is_active").default(true),
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("coupons_code_key").on(table.code),
+    index("coupons_code_active_idx").on(table.code, table.isActive),
+  ]
+);
+
+// Coupon Course Mapping (for combo and specific course discounts)
+export const CouponCoursesTable = pgTable(
+  "coupon_courses",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    couponId: uuid("coupon_id")
+      .notNull()
+      .references(() => CouponsTable.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => CoursesTable.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    index("coupon_courses_coupon_id_idx").on(table.couponId),
+    index("coupon_courses_course_id_idx").on(table.courseId),
+    uniqueIndex("coupon_courses_unique_idx").on(table.couponId, table.courseId),
+  ]
+);
+
+// User-Specific Coupons (for custom discounts)
+export const UserCouponsTable = pgTable(
+  "user_coupons",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    couponId: uuid("coupon_id")
+      .notNull()
+      .references(() => CouponsTable.id, { onDelete: "cascade" }),
+    isUsed: boolean("is_used").default(false),
+    usedAt: timestamp("used_at", { mode: "date" }),
+  },
+  (table) => [
+    index("user_coupons_user_id_idx").on(table.userId),
+    index("user_coupons_coupon_id_idx").on(table.couponId),
+  ]
+);
+
+// =====================
+// Enrollment & Payment Tables
+// =====================
+
+export const EnrollmentsTable = pgTable(
+  "enrollments",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => CoursesTable.id, { onDelete: "cascade" }),
+    status: EnrollmentStatus("status").default("ACTIVE").notNull(),
+    enrolledAt: timestamp("enrolled_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at", { mode: "date" }),
+    certificateIssued: boolean("certificate_issued").default(false),
+    certificateIssuedAt: timestamp("certificate_issued_at", { mode: "date" }),
+    certificateUrl: text("certificate_url"),
+  },
+  (table) => [
+    index("enrollments_user_id_idx").on(table.userId),
+    index("enrollments_course_id_idx").on(table.courseId),
+    uniqueIndex("enrollments_user_course_unique_idx").on(
+      table.userId,
+      table.courseId
+    ),
+  ]
+);
+
+export const PaymentsTable = pgTable(
+  "payments",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    enrollmentId: uuid("enrollment_id")
+      .references(() => EnrollmentsTable.id, { onDelete: "set null" }),
+    invoiceNumber: text("invoice_number").notNull(),
+    paymentType: PaymentType("payment_type").notNull(),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    currency: text("currency").notNull(),
+    gstAmount: decimal("gst_amount", { precision: 10, scale: 2 }).default("0"),
+    discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+    finalAmount: decimal("final_amount", { precision: 10, scale: 2 }).notNull(),
+    couponId: uuid("coupon_id").references(() => CouponsTable.id, {
+      onDelete: "set null",
+    }),
+    razorpayOrderId: text("razorpay_order_id"),
+    razorpayPaymentId: text("razorpay_payment_id"),
+    razorpaySignature: text("razorpay_signature"),
+    status: PaymentStatus("status").default("PENDING").notNull(),
+    paymentMethod: text("payment_method"),
+    instalmentPlan: integer("instalment_plan"),
+    instalmentNumber: integer("instalment_number").default(1),
+    billingAddress: jsonb("billing_address"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("payments_invoice_number_key").on(table.invoiceNumber),
+    index("payments_user_id_idx").on(table.userId),
+    index("payments_enrollment_id_idx").on(table.enrollmentId),
+    index("payments_status_idx").on(table.status),
+  ]
+);
+
+// =====================
+// Blog Tables
+// =====================
+
+export const BlogsTable = pgTable(
+  "blogs",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    excerpt: text("excerpt"),
+    content: text("content").notNull(),
+    thumbnailUrl: text("thumbnail_url"),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    publishedAt: timestamp("published_at", { mode: "date" }),
+    isPublished: boolean("is_published").default(false),
+    viewCount: integer("view_count").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("blogs_slug_key").on(table.slug),
+    index("blogs_author_id_idx").on(table.authorId),
+    index("blogs_published_idx").on(table.isPublished, table.publishedAt),
+  ]
+);
+
+export const BlogTagsTable = pgTable(
+  "blog_tags",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    blogId: uuid("blog_id")
+      .notNull()
+      .references(() => BlogsTable.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+  },
+  (table) => [
+    index("blog_tags_blog_id_idx").on(table.blogId),
+    index("blog_tags_tag_idx").on(table.tag),
+  ]
+);
+
+// =====================
+// Website Content Management
+// =====================
+
+export const WebsiteContentTable = pgTable(
+  "website_content",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    key: text("key").notNull(),
+    section: text("section").notNull(),
+    content: jsonb("content").notNull(),
+    updatedBy: uuid("updated_by")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("website_content_key_section_key").on(table.key, table.section),
+    index("website_content_section_idx").on(table.section),
+  ]
+);
+
+// =====================
+// Certificate Requests
+// =====================
+
+export const CertificateRequestsTable = pgTable(
+  "certificate_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    enrollmentId: uuid("enrollment_id")
+      .notNull()
+      .references(() => EnrollmentsTable.id, { onDelete: "cascade" }),
+    status: text("status").default("PENDING").notNull(), // PENDING, APPROVED, REJECTED
+    requestedAt: timestamp("requested_at").defaultNow().notNull(),
+    processedAt: timestamp("processed_at", { mode: "date" }),
+    processedBy: uuid("processed_by").references(() => UsersTable.id, {
+      onDelete: "set null",
+    }),
+    notes: text("notes"),
+  },
+  (table) => [
+    index("certificate_requests_user_id_idx").on(table.userId),
+    index("certificate_requests_enrollment_id_idx").on(table.enrollmentId),
+    index("certificate_requests_status_idx").on(table.status),
+  ]
+);
+
+// =====================
+// Relations
+// =====================
+
+export const usersRelations = relations(UsersTable, ({ many }) => ({
+  addresses: many(UserAddressTable),
+  enrollments: many(EnrollmentsTable),
+  payments: many(PaymentsTable),
+  blogs: many(BlogsTable),
+  userCoupons: many(UserCouponsTable),
+}));
+
+export const coursesRelations = relations(CoursesTable, ({ many }) => ({
+  features: many(CourseFeaturesTable),
+  whyLearnPoints: many(CourseWhyLearnTable),
+  content: many(CourseContentTable),
+  topics: many(CourseTopicsTable),
+  enrollments: many(EnrollmentsTable),
+  couponCourses: many(CouponCoursesTable),
+}));
+
+export const enrollmentsRelations = relations(
+  EnrollmentsTable,
+  ({ one, many }) => ({
+    user: one(UsersTable, {
+      fields: [EnrollmentsTable.userId],
+      references: [UsersTable.id],
+    }),
+    course: one(CoursesTable, {
+      fields: [EnrollmentsTable.courseId],
+      references: [CoursesTable.id],
+    }),
+    payments: many(PaymentsTable),
+    certificateRequests: many(CertificateRequestsTable),
+  })
+);
+
+export const paymentsRelations = relations(PaymentsTable, ({ one }) => ({
+  user: one(UsersTable, {
+    fields: [PaymentsTable.userId],
+    references: [UsersTable.id],
+  }),
+  enrollment: one(EnrollmentsTable, {
+    fields: [PaymentsTable.enrollmentId],
+    references: [EnrollmentsTable.id],
+  }),
+  coupon: one(CouponsTable, {
+    fields: [PaymentsTable.couponId],
+    references: [CouponsTable.id],
+  }),
+}));
+
+export const couponsRelations = relations(CouponsTable, ({ many }) => ({
+  couponCourses: many(CouponCoursesTable),
+  userCoupons: many(UserCouponsTable),
+  payments: many(PaymentsTable),
+}));
+
+export const blogsRelations = relations(BlogsTable, ({ one, many }) => ({
+  author: one(UsersTable, {
+    fields: [BlogsTable.authorId],
+    references: [UsersTable.id],
+  }),
+  tags: many(BlogTagsTable),
+}));

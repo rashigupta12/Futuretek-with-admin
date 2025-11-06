@@ -59,7 +59,7 @@ export default function CareerPage() {
             <li>Continuous learning and professional development</li>
             <li>Flexible work environment</li>
             <li>Competitive salary and benefits</li>
-            <li>Chance to make a positive impact on people's lives through ancient wisdom</li>
+            <li>Chance to make a positive impact on people&apos;s lives through ancient wisdom</li>
           </ul>
         </CardContent>
       </Card>

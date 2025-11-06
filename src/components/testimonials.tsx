@@ -27,7 +27,7 @@ export function Testimonials() {
         {testimonials.map((testimonial, index) => (
           <Card key={index} className="bg-background">
             <CardContent className="pt-6">
-              <p className="text-muted-foreground italic">"{testimonial.testimonial}"</p>
+              <p className="text-muted-foreground italic">&quot;{testimonial.testimonial}&qout;</p>
             </CardContent>
             <CardFooter className="flex items-center gap-4">
               <Avatar>
