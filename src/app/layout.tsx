@@ -1,3 +1,4 @@
+//src/app/layout.tsx
 import { auth } from "@/auth";
 import { cn } from "@/lib/utils";
 import { SiteHeader } from "@/components/site-header";
@@ -30,7 +31,7 @@ export default  async function RootLayout({
        <Providers>
           <SiteHeader />
           <main className="flex-1">{children}</main>
-          <SiteFooter />
+          {/* <SiteFooter /> */}
         </Providers>
       </body>
     </html>

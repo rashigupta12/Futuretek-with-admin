@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
+
 // POST - Create new course
 export async function POST(req: NextRequest) {
   try {
@@ -52,9 +53,12 @@ export async function POST(req: NextRequest) {
       instructor,
       duration,
       totalSessions,
-      priceINR,
-      priceUSD,
+      price,        // ← incoming
+      forexPrice,   // ← incoming
       status,
+      thumbnail,    // if any
+      startDate,
+      endDate,
       features,
       whyLearn,
       content,
@@ -62,26 +66,38 @@ export async function POST(req: NextRequest) {
       ...rest
     } = body;
 
-    // Create course
+    // Map frontend fields → DB column names
+    const courseData = {
+      slug,
+      title,
+      tagline: tagline || null,
+      description,
+      instructor: instructor || null,
+      duration: duration || null,
+      totalSessions: totalSessions || null,
+      price_inr: price ?? null,           // ← map 'price' → 'price_inr'
+      price_usd: forexPrice ?? null,      // ← map 'forexPrice' → 'price_usd'
+      status,
+      thumbnail_url: thumbnail || null,
+      start_date: startDate || null,
+      end_date: endDate || null,
+      registration_deadline: null,
+      why_learn_intro: null,
+      what_you_learn: null,
+      disclaimer: null,
+      max_students: null,
+      current_enrollments: 0,
+      ...rest,
+    };
+
+    // Insert course
     const [course] = await db
       .insert(CoursesTable)
-      .values({
-        slug,
-        title,
-        tagline,
-        description,
-        instructor,
-        duration,
-        totalSessions,
-        priceINR,
-        priceUSD,
-        status,
-        ...rest,
-      })
+      .values(courseData)
       .returning();
 
-    // Insert features
-    if (features && features.length > 0) {
+    // === Insert related data (unchanged) ===
+    if (features?.length) {
       await db.insert(CourseFeaturesTable).values(
         features.map((feature: string, index: number) => ({
           courseId: course.id,
@@ -91,8 +107,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert why learn points
-    if (whyLearn && whyLearn.length > 0) {
+    if (whyLearn?.length) {
       await db.insert(CourseWhyLearnTable).values(
         whyLearn.map((item: any, index: number) => ({
           courseId: course.id,
@@ -103,8 +118,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert content
-    if (content && content.length > 0) {
+    if (content?.length) {
       await db.insert(CourseContentTable).values(
         content.map((item: string, index: number) => ({
           courseId: course.id,
@@ -114,8 +128,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert topics
-    if (topics && topics.length > 0) {
+    if (topics?.length) {
       await db.insert(CourseTopicsTable).values(
         topics.map((topic: string) => ({
           courseId: course.id,
@@ -128,9 +141,10 @@ export async function POST(req: NextRequest) {
       { message: "Course created successfully", course },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Course creation error:", error); // Log for debugging
     return NextResponse.json(
-      { error: "Failed to create course" },
+      { error: "Failed to create course", details: error.message },
       { status: 500 }
     );
   }

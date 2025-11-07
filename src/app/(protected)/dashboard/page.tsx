@@ -1,3 +1,4 @@
+//src/app/(protected)/dashboard/page.tsx
 "use client";
 
 import { useCurrentRole } from "@/hooks/auth";
