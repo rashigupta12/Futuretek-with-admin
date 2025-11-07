@@ -5,7 +5,6 @@ import { SiteHeader } from "@/components/site-header";
 import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
-import { SiteFooter } from "@/components/site-footer";
 import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"] });

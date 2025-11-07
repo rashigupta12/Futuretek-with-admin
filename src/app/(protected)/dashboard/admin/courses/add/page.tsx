@@ -1,23 +1,21 @@
 // src/app/(protected)/dashboard/admin/courses/add/page.tsx
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import {
-  TextInput,
   DateInput,
-  StatusSelect,
   DynamicStringList,
   DynamicWhyLearn,
   Field,
+  StatusSelect,
+  TextInput,
 } from "@/components/courses/course-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 
 export default function AddCoursePage() {
   const router = useRouter();

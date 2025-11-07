@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { BlogsTable, BlogTagsTable } from "@/db/schema";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";

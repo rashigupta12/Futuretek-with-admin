@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { BlogsTable, BlogTagsTable, UsersTable,  } from "@/db/schema";
+import { BlogsTable, BlogTagsTable, UsersTable } from "@/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -10,7 +10,10 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    // Base query – always include the author join and published filter
+    // Build the where conditions
+    const conditions = [eq(BlogsTable.isPublished, true)];
+    
+    // Start building the query
     let query = db
       .select({
         id: BlogsTable.id,
@@ -23,24 +26,20 @@ export async function GET(req: NextRequest) {
         authorName: UsersTable.name,
       })
       .from(BlogsTable)
-      .leftJoin(UsersTable, eq(BlogsTable.authorId, UsersTable.id))
-      .where(eq(BlogsTable.isPublished, true))
-      .orderBy(desc(BlogsTable.publishedAt));
+      .leftJoin(UsersTable, eq(BlogsTable.authorId, UsersTable.id));
 
-    // If a tag is provided, join the tags table and filter
+    // If a tag is provided, join the tags table and add the tag condition
     if (tag) {
-      query = query
-        .leftJoin(BlogTagsTable, eq(BlogsTable.id, BlogTagsTable.blogId))
-        .where(
-          and(
-            eq(BlogsTable.isPublished, true),
-            eq(BlogTagsTable.tag, tag)
-          )
-        );
+      query = query.leftJoin(BlogTagsTable, eq(BlogsTable.id, BlogTagsTable.blogId));
+      conditions.push(eq(BlogTagsTable.tag, tag));
     }
 
-    // Pagination must come **after** all joins/filters
-    const blogs = await query.limit(limit).offset(offset);
+    // Apply all conditions at once
+    const blogs = await query
+      .where(and(...conditions))
+      .orderBy(desc(BlogsTable.publishedAt))
+      .limit(limit)
+      .offset(offset);
 
     return NextResponse.json({ blogs }, { status: 200 });
   } catch (error) {

@@ -1,3 +1,4 @@
+/*eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/(protected)/dashboard/admin/courses/page.tsx
 "use client";
 

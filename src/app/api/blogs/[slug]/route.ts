@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 import { BlogsTable, BlogTagsTable, UsersTable } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
