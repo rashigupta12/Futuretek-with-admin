@@ -1,3 +1,4 @@
+//src/app/api/admin/blogs/[id]/route.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const runtime = "nodejs";
 
@@ -32,7 +33,7 @@ export async function GET(
       })
       .from(BlogsTable)
       .leftJoin(UsersTable, eq(BlogsTable.authorId, UsersTable.id))
-      .where(eq(BlogsTable.id, params.id))
+      .where(eq(BlogsTable.slug, params.id))
       .limit(1);
 
     if (!blog) {
@@ -43,7 +44,7 @@ export async function GET(
     const tags = await db
       .select()
       .from(BlogTagsTable)
-      .where(eq(BlogTagsTable.blogId, params.id));
+      .where(eq(BlogTagsTable.blogId, blog.id));
 
     return NextResponse.json(
       {

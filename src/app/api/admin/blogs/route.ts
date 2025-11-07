@@ -1,3 +1,4 @@
+//app/api/admin/blogs
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { BlogsTable, BlogTagsTable } from "@/db/schema";
 import { NextRequest, NextResponse } from "next/server";
