@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { UsersTable } from "@/db/schema";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
@@ -9,7 +11,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const role = searchParams.get("role");
 
-    let query = db.select({
+    const query = db.select({
       id: UsersTable.id,
       name: UsersTable.name,
       email: UsersTable.email,

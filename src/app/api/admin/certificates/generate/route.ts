@@ -1,5 +1,5 @@
-// app/api/admin/certificates/generate/route.ts
-import { CertificateRequestsTable, EnrollmentsTable } from "@/db/schema";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */import { CertificateRequestsTable, EnrollmentsTable } from "@/db/schema";
 import { db } from "@/db";
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";

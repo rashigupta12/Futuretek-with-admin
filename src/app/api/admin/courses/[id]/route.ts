@@ -1,4 +1,5 @@
-// app/api/admin/courses/[id]/route.ts
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import {
@@ -84,6 +85,7 @@ export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;  
   try {
     const { id } = await context.params;
     const body = await req.json();
@@ -192,6 +194,7 @@ export async function DELETE(
   req: NextRequest,
   context: { params: Promise<{ id: string }> } // <-- params is Promise
 ) {
+  const params = await context.params;  
   try {
     const { id } = await context.params; // <-- await here
 

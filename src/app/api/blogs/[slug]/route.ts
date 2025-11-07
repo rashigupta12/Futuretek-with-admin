@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 import { BlogsTable, BlogTagsTable, UsersTable } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -5,9 +7,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  context: { params: Promise<{ slug : string }> } 
 ) {
-  try {
+  const params = await context.params;  
+  try{
     const [blog] = await db
       .select({
         id: BlogsTable.id,

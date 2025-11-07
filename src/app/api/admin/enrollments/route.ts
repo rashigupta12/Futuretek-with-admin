@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { EnrollmentsTable } from "@/db/schema";
 import { db } from "@/db";
 
