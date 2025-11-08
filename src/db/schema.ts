@@ -17,7 +17,7 @@ import { relations } from "drizzle-orm";
 // Enums
 // =====================
 
-export const UserRole = pgEnum("user_role", ["ADMIN", "USER"]);
+export const UserRole = pgEnum("user_role", ["ADMIN", "USER", "JYOTISHI"]);
 export const PaymentStatus = pgEnum("payment_status", [
   "PENDING",
   "COMPLETED",
@@ -44,6 +44,17 @@ export const EnrollmentStatus = pgEnum("enrollment_status", [
   "CANCELLED",
   "EXPIRED",
 ]);
+export const CommissionStatus = pgEnum("commission_status", [
+  "PENDING",
+  "PAID",
+  "CANCELLED",
+]);
+export const PayoutStatus = pgEnum("payout_status", [
+  "PENDING",
+  "PROCESSING",
+  "COMPLETED",
+  "REJECTED",
+]);
 
 // =====================
 // User Tables
@@ -61,6 +72,13 @@ export const UsersTable = pgTable(
     role: UserRole("role").default("USER").notNull(),
     gstNumber: text("gst_number"),
     isGstVerified: boolean("is_gst_verified").default(false),
+    // Jyotishi specific fields
+    commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }), // e.g., 10.00 for 10%
+    bankAccountNumber: text("bank_account_number"),
+    bankIfscCode: text("bank_ifsc_code"),
+    bankAccountHolderName: text("bank_account_holder_name"),
+    panNumber: text("pan_number"),
+    isActive: boolean("is_active").default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -74,6 +92,7 @@ export const UsersTable = pgTable(
       table.email,
       table.mobile
     ),
+    index("users_role_idx").on(table.role),
   ]
 );
 
@@ -255,6 +274,10 @@ export const CouponsTable = pgTable(
     validUntil: timestamp("valid_until", { mode: "date" }).notNull(),
     isActive: boolean("is_active").default(true),
     description: text("description"),
+    // Creator tracking (for Jyotishi)
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -264,6 +287,7 @@ export const CouponsTable = pgTable(
   (table) => [
     uniqueIndex("coupons_code_key").on(table.code),
     index("coupons_code_active_idx").on(table.code, table.isActive),
+    index("coupons_created_by_idx").on(table.createdBy),
   ]
 );
 
@@ -344,8 +368,9 @@ export const PaymentsTable = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => UsersTable.id, { onDelete: "cascade" }),
-    enrollmentId: uuid("enrollment_id")
-      .references(() => EnrollmentsTable.id, { onDelete: "set null" }),
+    enrollmentId: uuid("enrollment_id").references(() => EnrollmentsTable.id, {
+      onDelete: "set null",
+    }),
     invoiceNumber: text("invoice_number").notNull(),
     paymentType: PaymentType("payment_type").notNull(),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
@@ -356,6 +381,13 @@ export const PaymentsTable = pgTable(
     couponId: uuid("coupon_id").references(() => CouponsTable.id, {
       onDelete: "set null",
     }),
+    // Commission tracking
+    jyotishiId: uuid("jyotishi_id").references(() => UsersTable.id, {
+      onDelete: "set null",
+    }),
+    commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).default("0"),
+    commissionPaid: boolean("commission_paid").default(false),
+    
     razorpayOrderId: text("razorpay_order_id"),
     razorpayPaymentId: text("razorpay_payment_id"),
     razorpaySignature: text("razorpay_signature"),
@@ -375,6 +407,89 @@ export const PaymentsTable = pgTable(
     index("payments_user_id_idx").on(table.userId),
     index("payments_enrollment_id_idx").on(table.enrollmentId),
     index("payments_status_idx").on(table.status),
+    index("payments_jyotishi_id_idx").on(table.jyotishiId),
+  ]
+);
+
+// =====================
+// Commission Tables (NEW)
+// =====================
+
+// Commission Records
+export const CommissionsTable = pgTable(
+  "commissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    jyotishiId: uuid("jyotishi_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    paymentId: uuid("payment_id")
+      .notNull()
+      .references(() => PaymentsTable.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => CoursesTable.id, { onDelete: "set null" }),
+    studentId: uuid("student_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "set null" }),
+    couponId: uuid("coupon_id").references(() => CouponsTable.id, {
+      onDelete: "set null",
+    }),
+    commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull(), // Snapshot of rate at time of sale
+    saleAmount: decimal("sale_amount", { precision: 10, scale: 2 }).notNull(),
+    commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
+    status: CommissionStatus("status").default("PENDING").notNull(),
+    paidAt: timestamp("paid_at", { mode: "date" }),
+    payoutId: uuid("payout_id").references(() => PayoutsTable.id, {
+      onDelete: "set null",
+    }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("commissions_jyotishi_id_idx").on(table.jyotishiId),
+    index("commissions_payment_id_idx").on(table.paymentId),
+    index("commissions_status_idx").on(table.status),
+    index("commissions_payout_id_idx").on(table.payoutId),
+  ]
+);
+
+// Payout Requests
+export const PayoutsTable = pgTable(
+  "payouts",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    jyotishiId: uuid("jyotishi_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    status: PayoutStatus("status").default("PENDING").notNull(),
+    requestedAt: timestamp("requested_at").defaultNow().notNull(),
+    processedAt: timestamp("processed_at", { mode: "date" }),
+    processedBy: uuid("processed_by").references(() => UsersTable.id, {
+      onDelete: "set null",
+    }),
+    // Payment details
+    paymentMethod: text("payment_method"), // Bank Transfer, UPI, etc.
+    transactionId: text("transaction_id"),
+    transactionProof: text("transaction_proof"), // URL to proof document
+    bankDetails: jsonb("bank_details"),
+    notes: text("notes"),
+    rejectionReason: text("rejection_reason"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("payouts_jyotishi_id_idx").on(table.jyotishiId),
+    index("payouts_status_idx").on(table.status),
+    index("payouts_processed_by_idx").on(table.processedBy),
   ]
 );
 
@@ -490,6 +605,9 @@ export const usersRelations = relations(UsersTable, ({ many }) => ({
   payments: many(PaymentsTable),
   blogs: many(BlogsTable),
   userCoupons: many(UserCouponsTable),
+  createdCoupons: many(CouponsTable),
+  commissions: many(CommissionsTable),
+  payouts: many(PayoutsTable),
 }));
 
 export const coursesRelations = relations(CoursesTable, ({ many }) => ({
@@ -499,6 +617,7 @@ export const coursesRelations = relations(CoursesTable, ({ many }) => ({
   topics: many(CourseTopicsTable),
   enrollments: many(EnrollmentsTable),
   couponCourses: many(CouponCoursesTable),
+  commissions: many(CommissionsTable),
 }));
 
 export const enrollmentsRelations = relations(
@@ -530,12 +649,60 @@ export const paymentsRelations = relations(PaymentsTable, ({ one }) => ({
     fields: [PaymentsTable.couponId],
     references: [CouponsTable.id],
   }),
+  jyotishi: one(UsersTable, {
+    fields: [PaymentsTable.jyotishiId],
+    references: [UsersTable.id],
+  }),
 }));
 
-export const couponsRelations = relations(CouponsTable, ({ many }) => ({
+export const couponsRelations = relations(CouponsTable, ({ one, many }) => ({
+  creator: one(UsersTable, {
+    fields: [CouponsTable.createdBy],
+    references: [UsersTable.id],
+  }),
   couponCourses: many(CouponCoursesTable),
   userCoupons: many(UserCouponsTable),
   payments: many(PaymentsTable),
+  commissions: many(CommissionsTable),
+}));
+
+export const commissionsRelations = relations(CommissionsTable, ({ one }) => ({
+  jyotishi: one(UsersTable, {
+    fields: [CommissionsTable.jyotishiId],
+    references: [UsersTable.id],
+  }),
+  payment: one(PaymentsTable, {
+    fields: [CommissionsTable.paymentId],
+    references: [PaymentsTable.id],
+  }),
+  course: one(CoursesTable, {
+    fields: [CommissionsTable.courseId],
+    references: [CoursesTable.id],
+  }),
+  student: one(UsersTable, {
+    fields: [CommissionsTable.studentId],
+    references: [UsersTable.id],
+  }),
+  coupon: one(CouponsTable, {
+    fields: [CommissionsTable.couponId],
+    references: [CouponsTable.id],
+  }),
+  payout: one(PayoutsTable, {
+    fields: [CommissionsTable.payoutId],
+    references: [PayoutsTable.id],
+  }),
+}));
+
+export const payoutsRelations = relations(PayoutsTable, ({ one, many }) => ({
+  jyotishi: one(UsersTable, {
+    fields: [PayoutsTable.jyotishiId],
+    references: [UsersTable.id],
+  }),
+  processedBy: one(UsersTable, {
+    fields: [PayoutsTable.processedBy],
+    references: [UsersTable.id],
+  }),
+  commissions: many(CommissionsTable),
 }));
 
 export const blogsRelations = relations(BlogsTable, ({ one, many }) => ({
