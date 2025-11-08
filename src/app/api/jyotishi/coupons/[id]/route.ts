@@ -14,8 +14,9 @@ import { NextRequest, NextResponse } from "next/server";
 // GET - Get coupon details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> } 
 ) {
+   const params = await context.params; 
   try {
     const jyotishiId = "jyotishi-id-from-session";
 
@@ -83,8 +84,9 @@ export async function GET(
 // PUT - Update coupon
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+   context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params; 
   try {
     const jyotishiId = "jyotishi-id-from-session";
     const body = await req.json();
@@ -130,8 +132,9 @@ export async function PUT(
 // DELETE - Deactivate coupon
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> } 
 ) {
+   const params = await context.params; 
   try {
     const jyotishiId = "jyotishi-id-from-session";
 

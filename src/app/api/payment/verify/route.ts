@@ -1,4 +1,4 @@
-/*eslint-disable  @typescript-eslint/no-require-imports*/
+/* eslint-disable  @typescript-eslint/no-require-imports */
 // app/api/payment/verify/route.ts
 import { db } from "@/db";
 import { CoursesTable, EnrollmentsTable, PaymentsTable } from "@/db/schema";
@@ -6,9 +6,7 @@ import { createCommissionRecord } from "@/lib/helper";
 import { eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
-
-
-export async function verifyPaymentWithCommission(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const {
       razorpay_order_id,
@@ -18,9 +16,9 @@ export async function verifyPaymentWithCommission(req: NextRequest) {
       courseId,
     } = await req.json();
 
-    const userId = "user-id-from-session";
+    const userId = "user-id-from-session"; // Replace this with actual session retrieval logic
 
-    // Verify signature (existing code)
+    // Verify signature
     const crypto = require("crypto");
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -70,7 +68,7 @@ export async function verifyPaymentWithCommission(req: NextRequest) {
       })
       .returning();
 
-    // Update enrollment in payment
+    // Link enrollment to payment
     await db
       .update(PaymentsTable)
       .set({ enrollmentId: enrollment.id })
@@ -81,7 +79,7 @@ export async function verifyPaymentWithCommission(req: NextRequest) {
       sql`UPDATE ${CoursesTable} SET current_enrollments = current_enrollments + 1 WHERE id = ${courseId}`
     );
 
-    // Create commission record if coupon was used by Jyotishi
+    // Create commission record if coupon was used
     if (payment.couponId) {
       await createCommissionRecord(
         paymentId,
@@ -93,10 +91,7 @@ export async function verifyPaymentWithCommission(req: NextRequest) {
     }
 
     return NextResponse.json(
-      {
-        message: "Payment verified successfully",
-        enrollment,
-      },
+      { message: "Payment verified successfully", enrollment },
       { status: 200 }
     );
   } catch (error) {
