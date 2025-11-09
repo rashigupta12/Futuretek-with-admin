@@ -60,13 +60,13 @@ export async function GET(
     return NextResponse.json(
       {
         ...course,
-        features: features.map((f) => ({ feature: f.feature })),
+       features: features.map((f) => f.feature), 
         whyLearn: whyLearn.map((w) => ({
           title: w.title,
           description: w.description,
         })),
-        content: content.map((c) => ({ content: c.content })),
-        topics: topics.map((t) => ({ topic: t.topic })),
+        courseContent: content.map((c) => c.content),       
+    topics: topics.map((t) => t.topic),        
       },
       { status: 200 }
     );
@@ -81,6 +81,7 @@ export async function GET(
 
 // PUT - Update course
 // PUT - Update course
+// PUT - Update course
 export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -93,17 +94,20 @@ export async function PUT(
     const { features, whyLearn, content, topics, ...courseData } = body;
 
     // --- CRITICAL FIX: Convert date strings to Date objects ---
-    const dateFields = ["createdAt", "updatedAt", "startDate", "endDate"] as const;
+    const dateFields = ["createdAt", "updatedAt", "startDate", "endDate", "registrationDeadline"] as const;
 
     const cleanedCourseData = { ...courseData };
 
     for (const field of dateFields) {
-      if (cleanedCourseData[field] != null) {
-        // If it's a string like "2025-11-07T...", convert to Date
+      if (cleanedCourseData[field] != null && cleanedCourseData[field] !== "") {
+        // If it's a string like "2025-11-07" or "2025-11-07T...", convert to Date
         if (typeof cleanedCourseData[field] === "string") {
           cleanedCourseData[field] = new Date(cleanedCourseData[field]);
         }
         // If it's already a Date, leave it
+      } else if (cleanedCourseData[field] === "") {
+        // If it's an empty string, set to null
+        cleanedCourseData[field] = null;
       }
     }
 
@@ -123,7 +127,7 @@ export async function PUT(
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    // --- Rest of your code (features, whyLearn, etc.) remains unchanged ---
+    // --- Update related tables ---
     if (features !== undefined) {
       await db.delete(CourseFeaturesTable).where(eq(CourseFeaturesTable.courseId, id));
       if (features.length > 0) {
@@ -184,30 +188,6 @@ export async function PUT(
     console.error("PUT /api/admin/courses/[id] error:", error);
     return NextResponse.json(
       { error: "Failed to update course", details: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Delete course
-export async function DELETE(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> } // <-- params is Promise
-) {
-  const params = await context.params;  
-  try {
-    const { id } = await context.params; // <-- await here
-
-    await db.delete(CoursesTable).where(eq(CoursesTable.id, id));
-
-    return NextResponse.json(
-      { message: "Course deleted successfully" },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("DELETE /api/admin/courses/[id] error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete course" },
       { status: 500 }
     );
   }
