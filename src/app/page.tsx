@@ -15,75 +15,80 @@ import {
   Shield,
   Globe,
   ArrowRight,
-  Sparkles
+  Award,
+  CheckCircle
 } from "lucide-react";
 
 export default async function Page() {
   return (
-    <div className="flex flex-col gap-24">
+    <div className="flex flex-col gap-20">
       <Hero />
       
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
         {/* Why Choose Us Section */}
-        <section className="text-center mb-10 relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-purple-50/30 pointer-events-none" />
-          <div className="relative mb-16">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full px-4 py-2 mb-6 border border-purple-200/50">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-700">Why we're different</span>
+        <section className="py-6">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 text-gray-600 mb-4">
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
             </div>
-            <h2 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-6">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
               Why Choose FutureTek
             </h2>
-           
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Professional education in ancient sciences with modern teaching methodologies
+            </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 icon: Users,
                 title: "Expert Instructors",
-                description: "Learn from experienced practitioners and professionals who offer clear, practical, and accurate teachings in every subject.",
-                gradient: "from-purple-100 to-pink-100",
-                iconColor: "text-purple-600"
+                description: "Learn from certified practitioners with decades of professional experience in their respective fields.",
+                color: "purple",
+                gradient: "from-purple-500 to-blue-500"
               },
               {
                 icon: BookOpen,
-                title: "Comprehensive Curriculum",
-                description: "Our courses are structured to help you understand concepts thoroughly, blending theory with real-world applications.",
-                gradient: "from-blue-100 to-cyan-100",
-                iconColor: "text-blue-600"
+                title: "Structured Curriculum",
+                description: "Comprehensive course materials designed for progressive learning and practical application.",
+                color: "blue",
+                gradient: "from-blue-500 to-cyan-500"
               },
               {
                 icon: Target,
-                title: "Tailored for Everyone",
-                description: "Whether you're a beginner or looking to deepen your knowledge, we offer courses that cater to all levels of expertise.",
-                gradient: "from-green-100 to-emerald-100",
-                iconColor: "text-green-600"
+                title: "All Skill Levels",
+                description: "Courses tailored for beginners to advanced practitioners seeking professional development.",
+                color: "green",
+                gradient: "from-green-500 to-emerald-500"
               },
               {
                 icon: Globe,
-                title: "Holistic Approach",
-                description: "Gain mastery in multiple disciplines, empowering you to make balanced and informed decisions in all areas of life.",
-                gradient: "from-orange-100 to-red-100",
-                iconColor: "text-orange-600"
+                title: "Holistic Methodology",
+                description: "Integrated approach combining traditional wisdom with contemporary scientific understanding.",
+                color: "orange",
+                gradient: "from-orange-500 to-amber-500"
               }
             ].map((item, index) => (
               <Card 
                 key={index}
-                className="group hover:shadow-2xl transition-all duration-500 border border-gray-100/50 shadow-lg hover:shadow-purple-500/10 backdrop-blur-sm bg-white/70 hover:bg-white/90 hover:-translate-y-2 relative overflow-hidden"
+                className="group border border-gray-200 bg-white hover:shadow-xl transition-all duration-300 hover:border-gray-300 shadow-md relative overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-white to-gray-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <CardHeader className="pb-4 relative z-10">
-                  <div className={`w-14 h-14 bg-gradient-to-br ${item.gradient} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                    <item.icon className={`h-7 w-7 ${item.iconColor}`} />
+                {/* Top Border Gradient */}
+                <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${item.gradient}`}></div>
+                
+                <CardHeader className="pb-4 pt-6">
+                  <div className={`w-12 h-12 bg-${item.color}-50 rounded-lg flex items-center justify-center mb-4 group-hover:scale-105 transition-transform`}>
+                    <item.icon className={`h-6 w-6 text-${item.color}-600`} />
                   </div>
-                  <CardTitle className="text-xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  <CardTitle className="text-lg font-semibold text-gray-900">
                     {item.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="relative z-10">
-                  <p className="text-muted-foreground leading-relaxed text-[15px]">
+                <CardContent>
+                  <p className="text-gray-600 text-sm leading-relaxed">
                     {item.description}
                   </p>
                 </CardContent>
@@ -95,131 +100,140 @@ export default async function Page() {
         {/* Courses Catalog */}
         <CoursesCatalog />
 
-        {/* What You Will Learn Section */}
-        <section className="text-center mb-24 relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-blue-50/20 pointer-events-none" />
-          <div className="relative mb-16">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-cyan-100 rounded-full px-4 py-2 mb-6 border border-blue-200/50">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-700">Learning outcomes</span>
+        {/* Curriculum Focus Section */}
+        <section className="py-16">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 text-gray-600 mb-4">
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
             </div>
-            <h2 className="text-5xl font-bold text-purple-900  mb-6">
-              What You Will Learn
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Curriculum Focus
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Master ancient sciences with modern applications and practical implementations
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Specialized disciplines combining ancient wisdom with practical application
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
               {
                 icon: Star,
                 title: "KP Astrology",
-                description: "How to interpret charts, predict life events, and time major decisions using the Krishnamurti Paddhati method with precision and accuracy.",
-                color: "blue",
-                gradient: "from-blue-50 to-cyan-50",
-                border: "hover:border-blue-200"
+                description: "Master the Krishnamurti Paddhati system for precise chart analysis and predictive techniques used by professional astrologers.",
+                features: ["Sub-lord theory", "Ruling planets", "Timing techniques", "Horary astrology"],
+                gradient: "from-blue-500 to-purple-500"
               },
               {
                 icon: Target,
                 title: "Financial Astrology",
-                description: "Understanding market cycles, investment timing, and wealth management using astrology to make informed financial decisions.",
-                color: "green",
-                gradient: "from-green-50 to-emerald-50",
-                border: "hover:border-green-200"
+                description: "Learn to analyze market cycles and economic trends using planetary movements and technical indicators.",
+                features: ["Market timing", "Investment cycles", "Planetary periods", "Risk assessment"],
+                gradient: "from-green-500 to-blue-500"
               },
               {
                 icon: Shield,
                 title: "Vastu Shastra",
-                description: "Learn to design and transform spaces that enhance positive energy, well-being, and prosperity in both residential and commercial settings.",
-                color: "purple",
-                gradient: "from-purple-50 to-violet-50",
-                border: "hover:border-purple-200"
+                description: "Professional training in spatial design principles for enhancing energy flow in residential and commercial spaces.",
+                features: ["Space planning", "Energy mapping", "Remedial measures", "Modern applications"],
+                gradient: "from-purple-500 to-pink-500"
               },
               {
                 icon: Lightbulb,
-                title: "Astro-Vastu",
-                description: "Combine astrology and Vastu principles to create personalized, harmonious living and working spaces that align with cosmic energies.",
-                color: "orange",
-                gradient: "from-orange-50 to-amber-50",
-                border: "hover:border-orange-200"
+                title: "Astro-Vastu Integration",
+                description: "Advanced methodology combining astrological charts with Vastu principles for personalized space optimization.",
+                features: ["Chart analysis", "Directional strength", "Personalized solutions", "Case studies"],
+                gradient: "from-orange-500 to-red-500"
               }
             ].map((item, index) => (
               <Card 
                 key={index}
-                className={`group hover:shadow-xl transition-all duration-500 border border-gray-100/50 shadow-lg ${item.border} backdrop-blur-sm bg-gradient-to-br ${item.gradient} hover:-translate-y-2 relative overflow-hidden`}
+                className="border border-gray-200 bg-white hover:shadow-xl transition-all duration-300 shadow-md relative overflow-hidden"
               >
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-xl font-semibold flex items-center gap-4 text-gray-800">
-                    <div className={`w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                      <item.icon className={`h-6 w-6 text-${item.color}-600`} />
+                {/* Top Border Gradient */}
+                <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${item.gradient}`}></div>
+                
+                <CardHeader className="pb-4 pt-6">
+                  <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <item.icon className="h-5 w-5 text-gray-700" />
                     </div>
                     {item.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-left">
-                  <p className="text-gray-600 leading-relaxed text-[15px]">
+                <CardContent>
+                  <p className="text-gray-600 mb-4 text-sm leading-relaxed">
                     {item.description}
                   </p>
+                  <div className="space-y-2">
+                    {item.features.map((feature, featureIndex) => (
+                      <div key={featureIndex} className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         </section>
 
-        {/* Why Learn With Us Section */}
-        <section className="text-center mb-6 relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-50/20 pointer-events-none" />
-          <div className="relative mb-16">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-cyan-100 rounded-full px-4 py-2 mb-6 border border-emerald-200/50">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-700">Our methodology</span>
+        {/* Learning Methodology */}
+        <section className="py-16 bg-gray-50 rounded-2xl">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 text-gray-600 mb-4">
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
             </div>
-            <h2 className="text-5xl font-bold text-purple-900 mb-6">
-              Why Learn With Us?
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Learning Methodology
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Experience learning that transforms your understanding and application through innovative approaches
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Structured approach for comprehensive understanding and skill development
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {[
               {
                 icon: Users,
-                title: "Personalised Approach",
-                description: "Tailored learning experiences designed to fit your personal growth and professional development with individual attention.",
-                color: "purple"
+                title: "Personalized Guidance",
+                description: "One-on-one mentorship and small group sessions for individualized learning paths and progress tracking.",
+                gradient: "from-purple-500 to-blue-500"
               },
               {
                 icon: BookOpen,
                 title: "Comprehensive Resources",
-                description: "Access to detailed course materials, live sessions, one-on-one mentorship, and an exclusive community of dedicated learners.",
-                color: "blue"
+                description: "Access to detailed study materials, case studies, and reference libraries for continuous learning.",
+                gradient: "from-blue-500 to-cyan-500"
               },
               {
-                icon: Target,
+                icon: Award,
                 title: "Practical Application",
-                description: "Learn to apply these ancient sciences effectively in modern contexts—whether for personal use or professional consultation services.",
-                color: "green"
+                description: "Real-world projects and case studies to develop professional consulting skills and client management.",
+                gradient: "from-green-500 to-emerald-500"
               }
             ].map((item, index) => (
               <Card 
                 key={index}
-                className="group hover:shadow-xl transition-all duration-500 border border-gray-100/50 shadow-lg backdrop-blur-sm bg-white/80 hover:bg-white hover:scale-105 hover:-translate-y-1 relative overflow-hidden"
+                className="border border-gray-200 bg-white text-center hover:shadow-xl transition-all duration-300 shadow-md relative overflow-hidden"
               >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-200 to-gray-100" />
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold flex items-center justify-center gap-3 text-gray-800">
-                    <div className={`w-10 h-10 bg-${item.color}-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                      <item.icon className={`h-5 w-5 text-${item.color}-600`} />
-                    </div>
+                {/* Top Border Gradient */}
+                <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${item.gradient}`}></div>
+                
+                <CardHeader className="pt-6">
+                  <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <item.icon className="h-6 w-6 text-gray-700" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-gray-900">
                     {item.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
+                  <p className="text-gray-600 text-sm leading-relaxed">
                     {item.description}
                   </p>
                 </CardContent>
@@ -233,37 +247,29 @@ export default async function Page() {
         <Testimonials />
 
         {/* CTA Section */}
-        <section className="text-center bg-gradient-to-br from-purple-50 via-white to-blue-50 py-24 rounded-3xl border border-gray-100/50 shadow-lg relative overflow-hidden">
-          <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" />
-          <div className="relative max-w-4xl mx-auto px-6">
-            <div className="inline-flex items-center gap-2 bg-white/80 rounded-full px-4 py-2 mb-6 border border-purple-200/50 backdrop-blur-sm">
-              <Sparkles className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-700">Begin your journey</span>
-            </div>
-            <h2 className="text-5xl font-bold text-gray-900 mb-8 leading-tight">
-              Join Us on a Journey of <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Discovery</span>
+        <section className="py-16 bg-gray-900 rounded-2xl">
+          <div className="max-w-3xl mx-auto text-center px-6">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Begin Your Professional Journey
             </h2>
-            <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-              Transform your life by mastering the ancient sciences of astrology and Vastu. 
-              Whether you're looking to understand your life's purpose or guide others, 
-              our courses provide the tools you need for success.
+            <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+              Join FutureTek Academy to master ancient sciences with modern professional standards. 
+              Transform your knowledge into practical expertise.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button asChild size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-purple-500/25 transition-all duration-300 hover:-translate-y-0.5">
+              <Button asChild size="lg" className="bg-white text-gray-900 hover:bg-gray-100 border border-white">
                 <Link href="/courses" className="flex items-center gap-2">
-                  Get Started
+                  Explore Courses
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 shadow-sm backdrop-blur-sm">
-                <Link href="/courses" className="flex items-center gap-2">
-                  Learn More
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" size="lg" className="text-gray-600 hover:bg-white/50 hover:text-gray-700 backdrop-blur-sm">
-                <Link href="/contact">Contact Us</Link>
+              <Button asChild variant="outline" size="lg" className="border-gray-600 text-white hover:bg-gray-800">
+                <Link href="/contact">Schedule Consultation</Link>
               </Button>
             </div>
+            <p className="text-gray-400 text-sm mt-6">
+              Professional certification available upon course completion
+            </p>
           </div>
         </section>
       </div>
