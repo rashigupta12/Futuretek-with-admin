@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 // GET - Get students using Jyotishi's coupons
 export async function GET(req: NextRequest) {
   try {
-    const jyotishiId = "jyotishi-id-from-session";
+    // const jyotishiId = "jyotishi-id-from-session";
 
     const students = await db
       .select({
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       .leftJoin(CouponsTable, eq(PaymentsTable.couponId, CouponsTable.id))
       .where(
         and(
-          eq(CouponsTable.createdBy, jyotishiId),
+          // eq(CouponsTable.createdBy, jyotishiId),
           eq(PaymentsTable.status, "COMPLETED")
         )
       )

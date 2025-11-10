@@ -59,7 +59,8 @@ export async function GET(req: NextRequest) {
 // POST - Create coupon type
 export async function POST(req: NextRequest) {
   try {
-    const adminId = "admin-id-from-session"; // Replace with actual auth logic
+ 
+   
     const body = await req.json();
     const {
       typeCode,
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
       description,
       discountType,
       maxDiscountLimit,
+      adminId
     } = body;
 
     // ✅ Validate required fields

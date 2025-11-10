@@ -17,7 +17,7 @@ export async function GET(
 ) {
    const params = await context.params; 
   try {
-    const jyotishiId = "jyotishi-id-from-session";
+    // const jyotishiId = "jyotishi-id-from-session";
 
     // Get student info
     const [student] = await db
@@ -64,7 +64,6 @@ export async function GET(
       .where(
         and(
           eq(PaymentsTable.userId, params.id),
-          eq(CouponsTable.createdBy, jyotishiId),
           eq(PaymentsTable.status, "COMPLETED")
         )
       )

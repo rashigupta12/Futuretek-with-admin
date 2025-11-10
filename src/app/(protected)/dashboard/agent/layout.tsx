@@ -1,32 +1,31 @@
-// Create a NEW layout specifically for admin routes
+// src/app/(protected)/dashboard/agent/layout.tsx
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+import {
+  Home,
+  Settings,
+  LogOut,
+  Tag,
+  TrendingUp,
+  Users,
+  Wallet,
+  BarChart3,
+  ChevronDown,
+  Plus,
+  List,
+  DollarSign,
+  Ticket,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { signOut } from "next-auth/react";
-import {
-  BookOpen,
-  Home,
-  Settings,
-  Users,
-  BarChart3,
-  LogOut,
-  FileText,
-  Tag,
-  CreditCard,
-  Award,
-  Globe,
-  ChevronDown,
-  Plus,
-  List,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 type SingleNavItem = {
   title: string;
@@ -38,7 +37,7 @@ type SingleNavItem = {
 type GroupNavItem = {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  key: "courses" | "blogs" | "coupons" | "certificates"|"agent";
+  key: "coupons" | "earnings";
   subItems: {
     title: string;
     href: string;
@@ -49,7 +48,7 @@ type GroupNavItem = {
 
 type NavItem = SingleNavItem | GroupNavItem;
 
-export default function AdminLayout({
+export default function JyotishiLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -57,13 +56,10 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   const [expandedMenus, setExpandedMenus] = useState<
-    Record<"courses" | "blogs" | "coupons" | "certificates"|"agent", boolean>
+    Record<"coupons" | "earnings", boolean>
   >({
-    courses: true,
-    blogs: false,
-    coupons: false,
-    certificates: false,
-    agent:false,
+    coupons: true,
+    earnings: false,
   });
 
   const handleLogout = async () => {
@@ -83,103 +79,65 @@ export default function AdminLayout({
     {
       title: "Dashboard",
       icon: Home,
-      href: "/dashboard/admin",
+      href: "/dashboard/agent",
       single: true,
     },
     {
-      title: "Courses",
-      icon: BookOpen,
-      key: "courses",
-      subItems: [
-        { title: "All Courses", href: "/dashboard/admin/courses", icon: List },
-        {
-          title: "Add Course",
-          href: "/dashboard/admin/courses/add",
-          icon: Plus,
-        },
-      ],
-    },
-    {
-      title: "Blogs",
-      icon: FileText,
-      key: "blogs",
-      subItems: [
-        { title: "All Blogs", href: "/dashboard/admin/blogs", icon: List },
-        { title: "Add Blog", href: "/dashboard/admin/blogs/add", icon: Plus },
-      ],
-    },
-
-     {
-      title: "Agent",
-      icon: BookOpen,
-      key: "agent",
-      subItems: [
-        { title: "All Agent", href: "/dashboard/admin/agent", icon: List },
-        {
-          title: "Add agent",
-          href: "/dashboard/admin/agent/add",
-          icon: Plus,
-        },
-      ],
-    },
-  
-    {
-      title: "Coupons Types",
+      title: "My Coupons",
       icon: Tag,
       key: "coupons",
       subItems: [
+        { title: "All Coupons", href: "/dashboard/agent/coupons", icon: List },
         {
-          title: "All Coupons Types",
-          href: "/dashboard/admin/coupons-types",
-          icon: List,
+          title: "Create Coupon",
+          href: "/dashboard/agent/coupons/create",
+          icon: Plus,
         },
         {
-          title: "Add Coupon",
-          href: "/dashboard/admin/coupons-types/add",
+          title: "Coupon Types",
+          href: "/dashboard/agent/coupon-types",
+          icon: Ticket,
+        },
+      ],
+    },
+    {
+      title: "Earnings",
+      icon: TrendingUp,
+      key: "earnings",
+      subItems: [
+        { 
+          title: "Commission Overview", 
+          href: "/dashboard/agent/earnings", 
+          icon: DollarSign 
+        },
+        {
+          title: "Payout History",
+          href: "/dashboard/agent/payouts",
+          icon: Wallet,
+        },
+        {
+          title: "Request Payout",
+          href: "/dashboard/agent/payouts/request",
           icon: Plus,
         },
       ],
     },
-
-      {
-      title: "Users",
+    {
+      title: "My Students",
       icon: Users,
-      href: "/dashboard/admin/users",
-      single: true,
-    },
-    {
-      title: "Payments",
-      icon: CreditCard,
-      href: "/dashboard/admin/payments",
-      single: true,
-    },
-    {
-      title: "Certificates",
-      icon: Award,
-      key: "certificates",
-      subItems: [
-        {
-          title: "Requests",
-          href: "/dashboard/admin/certificates/requests",
-          icon: List,
-        },
-        {
-          title: "All Certificates",
-          href: "/dashboard/admin/certificates",
-          icon: Award,
-        },
-      ],
-    },
-    {
-      title: "Website Content",
-      icon: Globe,
-      href: "/dashboard/admin/website-content",
+      href: "/dashboard/agent/students",
       single: true,
     },
     {
       title: "Analytics",
       icon: BarChart3,
-      href: "/dashboard/admin/analytics",
+      href: "/dashboard/agent/analytics",
+      single: true,
+    },
+    {
+      title: "Profile Settings",
+      icon: Settings,
+      href: "/dashboard/agent/profile",
       single: true,
     },
   ];
@@ -187,36 +145,44 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
-      <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50">
+      <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50 ">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">FT</span>
             </div>
-            <h1 className="text-2xl font-semibold text-gray-800">
-              FutureTek Admin
-            </h1>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-800">
+                FutureTek agent
+              </h1>
+              <p className="text-xs text-gray-500">Affiliate Partner Portal</p>
+            </div>
           </div>
 
           <Popover>
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/images/user_alt_icon.png" alt="Admin" />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarImage src="/images/user_alt_icon.png" alt="agent" />
+                  <AvatarFallback>JY</AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-gray-700">
-                  Admin User
-                </span>
+                <div className="text-left">
+                  <span className="text-sm font-medium text-gray-700 block">
+                    agent Name
+                  </span>
+                  <span className="text-xs text-gray-500">Code: JD001</span>
+                </div>
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-56" align="end">
               <div className="space-y-1">
-                <button className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                  <Settings className="h-4 w-4" />
-                  Profile Settings
-                </button>
+                <Link href="/dashboard/agent/profile">
+                  <button className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                    <Settings className="h-4 w-4" />
+                    Profile Settings
+                  </button>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
@@ -230,9 +196,9 @@ export default function AdminLayout({
         </div>
       </nav>
 
-      <div className="flex ">
+      <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r min-h-[calc(100vh-64px)] p-4 fixed left-0 top-16 bottom-0 overflow-y-auto">
+        <aside className="w-64 bg-white border-r min-h-[calc(100vh-64px)] p-4 fixed left-0 top-16 bottom-0 overflow-y-auto mt-4">
           <nav className="space-y-1">
             {navigationItems.map((item) => (
               <div key={item.title}>
@@ -241,7 +207,7 @@ export default function AdminLayout({
                     <button
                       className={`w-full flex items-center gap-3 rounded-lg p-3 transition-colors ${
                         isActive(item.href)
-                          ? "bg-blue-50 text-blue-700 font-medium"
+                          ? "bg-purple-50 text-purple-700 font-medium"
                           : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
@@ -275,7 +241,7 @@ export default function AdminLayout({
                             <button
                               className={`w-full flex items-center gap-3 rounded-lg p-2 pl-3 transition-colors ${
                                 isActive(sub.href)
-                                  ? "bg-blue-50 text-blue-700 font-medium"
+                                  ? "bg-purple-50 text-purple-700 font-medium"
                                   : "text-gray-600 hover:bg-gray-50"
                               }`}
                             >
@@ -291,14 +257,32 @@ export default function AdminLayout({
               </div>
             ))}
           </nav>
+
+          {/* Quick Stats in Sidebar */}
+          <div className="mt-6 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+            <h3 className="text-xs font-semibold text-gray-600 mb-3">Quick Stats</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">Active Coupons</span>
+                <span className="text-sm font-bold text-purple-700">12</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">Students</span>
+                <span className="text-sm font-bold text-purple-700">45</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-600">Pending Earnings</span>
+                <span className="text-sm font-bold text-green-600">₹15,420</span>
+              </div>
+            </div>
+          </div>
         </aside>
 
         {/* Main Content - This is where child pages render */}
-        <main className="flex-1 ml-64 p-6">
+        <main className="flex-1 ml-64 mt-4 p-6">
           <div className="w-full mx-auto">{children}</div>
         </main>
       </div>
     </div>
   );
 }
-

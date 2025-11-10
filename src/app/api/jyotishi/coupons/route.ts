@@ -1,8 +1,5 @@
-// =====================================================
-// 5. JYOTISHI - COUPON MANAGEMENT
-// =====================================================
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
-// app/api/jyotishi/coupons/route.ts
 import { db } from "@/db";
 import {
   CommissionsTable,
@@ -10,19 +7,36 @@ import {
   CouponsTable,
   CouponTypesTable,
   PaymentsTable,
-  UsersTable
+  UsersTable,
 } from "@/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-// app/api/jyotishi/coupons/route.ts
+import { auth } from "@/auth"; // ✅ your /src/auth.ts file
+
+// =====================================================
+// 5. JYOTISHI - COUPON MANAGEMENT
+// =====================================================
+
 // GET - List Jyotishi's coupons
 export async function GET(req: NextRequest) {
   try {
-    const jyotishiId = "jyotishi-id-from-session";
+    // ✅ Get the authenticated user (server-side)
+    const session = await auth();
+    const jyotishiId = session?.user?.id;
+    const role = session?.user?.role;
+
+    if (!jyotishiId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const isActive = searchParams.get("isActive");
 
-    const conditions = [eq(CouponsTable.createdByJyotishiId, jyotishiId)];
+    // ✅ Build condition based on role (admin sees all, jyotishi sees own)
+    const conditions = [];
+    if (role === "JYOTISHI") {
+      conditions.push(eq(CouponsTable.createdByJyotishiId, jyotishiId));
+    }
 
     if (isActive !== null) {
       conditions.push(eq(CouponsTable.isActive, isActive === "true"));
@@ -48,10 +62,10 @@ export async function GET(req: NextRequest) {
         CouponTypesTable,
         eq(CouponsTable.couponTypeId, CouponTypesTable.id)
       )
-      .where(and(...conditions))
+      .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(CouponsTable.createdAt));
 
-    // Get usage and commission stats for each coupon
+    // Get usage + commission stats
     const couponsWithStats = await Promise.all(
       coupons.map(async (coupon) => {
         const [stats] = await db
@@ -72,10 +86,7 @@ export async function GET(req: NextRequest) {
             )
           );
 
-        return {
-          ...coupon,
-          stats,
-        };
+        return { ...coupon, stats };
       })
     );
 
@@ -92,7 +103,14 @@ export async function GET(req: NextRequest) {
 // POST - Create coupon with type selection
 export async function POST(req: NextRequest) {
   try {
-    const jyotishiId = "jyotishi-id-from-session";
+    const session = await auth();
+    const jyotishiId = session?.user?.id;
+    const role = session?.user?.role;
+
+    if (!jyotishiId || role !== "JYOTISHI") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       couponTypeId,
@@ -104,7 +122,6 @@ export async function POST(req: NextRequest) {
       courseIds,
     } = body;
 
-    // Validate required fields
     if (!couponTypeId || !discountValue || !validFrom || !validUntil) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -112,7 +129,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get Jyotishi details
     const [jyotishi] = await db
       .select({
         jyotishiCode: UsersTable.jyotishiCode,
@@ -122,14 +138,13 @@ export async function POST(req: NextRequest) {
       .where(eq(UsersTable.id, jyotishiId))
       .limit(1);
 
-    if (!jyotishi || !jyotishi.jyotishiCode) {
+    if (!jyotishi?.jyotishiCode) {
       return NextResponse.json(
         { error: "Jyotishi code not found" },
         { status: 404 }
       );
     }
 
-    // Get coupon type
     const [couponType] = await db
       .select()
       .from(CouponTypesTable)
@@ -148,7 +163,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate discount value against max limit
     if (
       couponType.maxDiscountLimit &&
       parseFloat(discountValue) > parseFloat(couponType.maxDiscountLimit)
@@ -161,11 +175,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate coupon code: COUP[JyotishiCode][TypeCode][DiscountValue]
     const formattedDiscount = discountValue.toString().replace(".", "");
     const couponCode = `COUP${jyotishi.jyotishiCode}${couponType.typeCode}${formattedDiscount}`;
 
-    // Check if code already exists
     const [existingCoupon] = await db
       .select()
       .from(CouponsTable)
@@ -179,7 +191,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create coupon
     const [coupon] = await db
       .insert(CouponsTable)
       .values({
@@ -195,8 +206,7 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    // Link courses if provided
-    if (courseIds && courseIds.length > 0) {
+    if (courseIds?.length > 0) {
       await db.insert(CouponCoursesTable).values(
         courseIds.map((courseId: string) => ({
           couponId: coupon.id,

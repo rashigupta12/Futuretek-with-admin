@@ -1,4 +1,5 @@
 // app/api/jyotishi/coupons/preview/route.ts
+import { auth } from "@/auth";
 import { db } from "@/db";
 import {
   CouponTypesTable,
@@ -10,7 +11,15 @@ import { NextRequest, NextResponse } from "next/server";
 // POST - Preview coupon code before creation
 export async function POST(req: NextRequest) {
   try {
-    const jyotishiId = "jyotishi-id-from-session"; // Replace with actual auth
+
+     const session = await auth();
+        const jyotishiId = session?.user?.id;
+        const role = session?.user?.role;
+    
+        if (!jyotishiId || role !== "JYOTISHI") {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+    
     const { couponTypeId, discountValue } = await req.json();
 
     if (!couponTypeId || !discountValue) {
