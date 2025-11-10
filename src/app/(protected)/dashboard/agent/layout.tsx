@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import {
   Home,
   Settings,
@@ -54,6 +54,23 @@ export default function JyotishiLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
+  // Get user data from session
+  const userName = session?.user?.name || "Agent";
+  const userImage = session?.user?.image || "/images/user_alt_icon.png";
+
+  // Generate avatar fallback from name
+  const getAvatarFallback = () => {
+    if (session?.user?.name) {
+      return session.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return "AG";
+  };
 
   const [expandedMenus, setExpandedMenus] = useState<
     Record<"coupons" | "earnings", boolean>
@@ -105,10 +122,10 @@ export default function JyotishiLayout({
       icon: TrendingUp,
       key: "earnings",
       subItems: [
-        { 
-          title: "Commission Overview", 
-          href: "/dashboard/agent/earnings", 
-          icon: DollarSign 
+        {
+          title: "Commission Overview",
+          href: "/dashboard/agent/earnings",
+          icon: DollarSign,
         },
         {
           title: "Payout History",
@@ -163,14 +180,14 @@ export default function JyotishiLayout({
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/images/user_alt_icon.png" alt="agent" />
-                  <AvatarFallback>JY</AvatarFallback>
+                  <AvatarImage src={userImage} alt={userName} />
+                  <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
                 </Avatar>
                 <div className="text-left">
                   <span className="text-sm font-medium text-gray-700 block">
-                    agent Name
+                    {userName}
                   </span>
-                  <span className="text-xs text-gray-500">Code: JD001</span>
+                  
                 </div>
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               </button>
@@ -260,7 +277,9 @@ export default function JyotishiLayout({
 
           {/* Quick Stats in Sidebar */}
           <div className="mt-6 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-100">
-            <h3 className="text-xs font-semibold text-gray-600 mb-3">Quick Stats</h3>
+            <h3 className="text-xs font-semibold text-gray-600 mb-3">
+              Quick Stats
+            </h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-600">Active Coupons</span>
@@ -272,7 +291,9 @@ export default function JyotishiLayout({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-600">Pending Earnings</span>
-                <span className="text-sm font-bold text-green-600">₹15,420</span>
+                <span className="text-sm font-bold text-green-600">
+                  ₹15,420
+                </span>
               </div>
             </div>
           </div>

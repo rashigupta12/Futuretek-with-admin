@@ -118,7 +118,7 @@ export default function JyotishisPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">All Jyotishis</h2>
+          <h2 className="text-2xl font-bold text-foreground">All Jyotishi</h2>
           <p className="text-muted-foreground mt-1">
             Manage astrologers, commissions, and account status.
           </p>

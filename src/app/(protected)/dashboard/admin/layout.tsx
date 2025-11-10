@@ -1,4 +1,3 @@
-// Create a NEW layout specifically for admin routes
 "use client";
 
 import React, { useState } from "react";
@@ -8,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import {
   BookOpen,
   Home,
@@ -38,7 +37,7 @@ type SingleNavItem = {
 type GroupNavItem = {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  key: "courses" | "blogs" | "coupons" | "certificates"|"agent";
+  key: "courses" | "blogs" | "coupons" | "certificates" | "agent";
   subItems: {
     title: string;
     href: string;
@@ -55,15 +54,16 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
 
   const [expandedMenus, setExpandedMenus] = useState<
-    Record<"courses" | "blogs" | "coupons" | "certificates"|"agent", boolean>
+    Record<"courses" | "blogs" | "coupons" | "certificates" | "agent", boolean>
   >({
     courses: true,
     blogs: false,
     coupons: false,
     certificates: false,
-    agent:false,
+    agent: false,
   });
 
   const handleLogout = async () => {
@@ -78,6 +78,23 @@ export default function AdminLayout({
   };
 
   const isActive = (path: string) => pathname === path;
+
+  // Get user data from session
+  const userName = session?.user?.name || session?.user?.role ;
+  const userImage = session?.user?.image || "/images/user_alt_icon.png";
+  
+  // Generate avatar fallback from name
+  const getAvatarFallback = () => {
+    if (session?.user?.name) {
+      return session.user.name
+        .split(" ")
+        .map(n => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return "AD";
+  };
 
   const navigationItems: NavItem[] = [
     {
@@ -108,8 +125,7 @@ export default function AdminLayout({
         { title: "Add Blog", href: "/dashboard/admin/blogs/add", icon: Plus },
       ],
     },
-
-     {
+    {
       title: "Agent",
       icon: BookOpen,
       key: "agent",
@@ -122,7 +138,6 @@ export default function AdminLayout({
         },
       ],
     },
-  
     {
       title: "Coupons Types",
       icon: Tag,
@@ -140,8 +155,7 @@ export default function AdminLayout({
         },
       ],
     },
-
-      {
+    {
       title: "Users",
       icon: Users,
       href: "/dashboard/admin/users",
@@ -184,6 +198,20 @@ export default function AdminLayout({
     },
   ];
 
+  // Show loading state while session is loading
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-lg">FT</span>
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
@@ -202,12 +230,14 @@ export default function AdminLayout({
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/images/user_alt_icon.png" alt="Admin" />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarImage src={userImage} alt={userName} />
+                  <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-gray-700">
-                  Admin User
-                </span>
+                <div className="text-left">
+                  <span className="text-sm font-medium text-gray-700 block">
+                    {userName}
+                  </span>
+                </div>
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               </button>
             </PopoverTrigger>
@@ -230,7 +260,7 @@ export default function AdminLayout({
         </div>
       </nav>
 
-      <div className="flex ">
+      <div className="flex">
         {/* Sidebar */}
         <aside className="w-64 bg-white border-r min-h-[calc(100vh-64px)] p-4 fixed left-0 top-16 bottom-0 overflow-y-auto">
           <nav className="space-y-1">
@@ -293,12 +323,11 @@ export default function AdminLayout({
           </nav>
         </aside>
 
-        {/* Main Content - This is where child pages render */}
-        <main className="flex-1 ml-64 p-6">
+        {/* Main Content */}
+        <main className="flex-1 ml-64 p-6 mt-16">
           <div className="w-full mx-auto">{children}</div>
         </main>
       </div>
     </div>
   );
 }
-
