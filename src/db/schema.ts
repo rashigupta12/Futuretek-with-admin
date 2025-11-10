@@ -10,6 +10,7 @@ import {
   boolean,
   decimal,
   jsonb,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -29,7 +30,6 @@ export const DiscountType = pgEnum("discount_type", [
   "PERCENTAGE",
   "FIXED_AMOUNT",
 ]);
-export const CouponType = pgEnum("coupon_type", ["STANDARD", "CUSTOM", "COMBO"]);
 export const CourseStatus = pgEnum("course_status", [
   "DRAFT",
   "UPCOMING",
@@ -70,15 +70,20 @@ export const UsersTable = pgTable(
     password: text("password").notNull(),
     mobile: text("mobile"),
     role: UserRole("role").default("USER").notNull(),
+    
+    // User specific fields
     gstNumber: text("gst_number"),
     isGstVerified: boolean("is_gst_verified").default(false),
+    
     // Jyotishi specific fields
-    commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }), // e.g., 10.00 for 10%
+    jyotishiCode: varchar("jyotishi_code", { length: 10 }), // JD001, AS001, BK001
+    commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }), // 10.00 = 10%
     bankAccountNumber: text("bank_account_number"),
     bankIfscCode: text("bank_ifsc_code"),
     bankAccountHolderName: text("bank_account_holder_name"),
     panNumber: text("pan_number"),
     isActive: boolean("is_active").default(true),
+    
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -87,12 +92,14 @@ export const UsersTable = pgTable(
   },
   (table) => [
     uniqueIndex("users_email_key").on(table.email),
+    uniqueIndex("users_jyotishi_code_key").on(table.jyotishiCode),
     index("users_name_email_mobile_idx").on(
       table.name,
       table.email,
       table.mobile
     ),
     index("users_role_idx").on(table.role),
+    index("users_jyotishi_code_idx").on(table.jyotishiCode),
   ]
 );
 
@@ -257,24 +264,24 @@ export const CourseTopicsTable = pgTable(
 );
 
 // =====================
-// Coupon & Discount Tables
+// COUPON TYPE SYSTEM (NEW)
 // =====================
 
-export const CouponsTable = pgTable(
-  "coupons",
+/**
+ * Coupon Types Table
+ * Admin creates coupon type templates with 2-digit codes (01-99)
+ * Examples: 01=FESTIVE, 10=EARLYBIRD, 25=STUDENT, 99=SPECIAL
+ */
+export const CouponTypesTable = pgTable(
+  "coupon_types",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
-    code: text("code").notNull(),
-    type: CouponType("type").notNull(),
-    discountType: DiscountType("discount_type").notNull(),
-    discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
-    maxUsageCount: integer("max_usage_count"),
-    currentUsageCount: integer("current_usage_count").default(0),
-    validFrom: timestamp("valid_from", { mode: "date" }).notNull(),
-    validUntil: timestamp("valid_until", { mode: "date" }).notNull(),
-    isActive: boolean("is_active").default(true),
+    typeCode: varchar("type_code", { length: 2 }).notNull(), // 01-99
+    typeName: text("type_name").notNull(), // FESTIVE, EARLYBIRD, STUDENT, etc.
     description: text("description"),
-    // Creator tracking (for Jyotishi)
+    discountType: DiscountType("discount_type").notNull(), // PERCENTAGE or FIXED_AMOUNT
+    maxDiscountLimit: decimal("max_discount_limit", { precision: 10, scale: 2 }), // Optional max limit
+    isActive: boolean("is_active").default(true).notNull(),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => UsersTable.id, { onDelete: "cascade" }),
@@ -285,13 +292,53 @@ export const CouponsTable = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    uniqueIndex("coupons_code_key").on(table.code),
-    index("coupons_code_active_idx").on(table.code, table.isActive),
-    index("coupons_created_by_idx").on(table.createdBy),
+    uniqueIndex("coupon_types_type_code_key").on(table.typeCode),
+    index("coupon_types_is_active_idx").on(table.isActive),
+    index("coupon_types_type_name_idx").on(table.typeName),
   ]
 );
 
-// Coupon Course Mapping (for combo and specific course discounts)
+/**
+ * Individual Coupons Table
+ * Jyotishi creates coupons by selecting a type and adding discount value
+ * Code format: COUP[JyotishiCode][TypeCode][DiscountValue]
+ * Example: COUPJD00110500 = Jyotishi JD001, Type 10, ₹500 discount
+ */
+export const CouponsTable = pgTable(
+  "coupons",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    code: text("code").notNull(), // Auto-generated: COUPJD00110500
+    couponTypeId: uuid("coupon_type_id")
+      .notNull()
+      .references(() => CouponTypesTable.id, { onDelete: "cascade" }),
+    createdByJyotishiId: uuid("created_by_jyotishi_id")
+      .notNull()
+      .references(() => UsersTable.id, { onDelete: "cascade" }),
+    discountType: DiscountType("discount_type").notNull(), // Inherited from type
+    discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(), // Set by Jyotishi
+    maxUsageCount: integer("max_usage_count"), // Optional usage limit
+    currentUsageCount: integer("current_usage_count").default(0).notNull(),
+    validFrom: timestamp("valid_from", { mode: "date" }).notNull(),
+    validUntil: timestamp("valid_until", { mode: "date" }).notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("coupons_code_key").on(table.code),
+    index("coupons_code_active_idx").on(table.code, table.isActive),
+    index("coupons_created_by_jyotishi_idx").on(table.createdByJyotishiId),
+    index("coupons_coupon_type_idx").on(table.couponTypeId),
+    index("coupons_valid_dates_idx").on(table.validFrom, table.validUntil),
+  ]
+);
+
+// Coupon Course Mapping (for specific course restrictions)
 export const CouponCoursesTable = pgTable(
   "coupon_courses",
   {
@@ -310,7 +357,7 @@ export const CouponCoursesTable = pgTable(
   ]
 );
 
-// User-Specific Coupons (for custom discounts)
+// User-Specific Coupons (for targeted user discounts)
 export const UserCouponsTable = pgTable(
   "user_coupons",
   {
@@ -321,12 +368,13 @@ export const UserCouponsTable = pgTable(
     couponId: uuid("coupon_id")
       .notNull()
       .references(() => CouponsTable.id, { onDelete: "cascade" }),
-    isUsed: boolean("is_used").default(false),
+    isUsed: boolean("is_used").default(false).notNull(),
     usedAt: timestamp("used_at", { mode: "date" }),
   },
   (table) => [
     index("user_coupons_user_id_idx").on(table.userId),
     index("user_coupons_coupon_id_idx").on(table.couponId),
+    uniqueIndex("user_coupons_unique_idx").on(table.userId, table.couponId),
   ]
 );
 
@@ -347,7 +395,7 @@ export const EnrollmentsTable = pgTable(
     status: EnrollmentStatus("status").default("ACTIVE").notNull(),
     enrolledAt: timestamp("enrolled_at").defaultNow().notNull(),
     completedAt: timestamp("completed_at", { mode: "date" }),
-    certificateIssued: boolean("certificate_issued").default(false),
+    certificateIssued: boolean("certificate_issued").default(false).notNull(),
     certificateIssuedAt: timestamp("certificate_issued_at", { mode: "date" }),
     certificateUrl: text("certificate_url"),
   },
@@ -371,12 +419,12 @@ export const PaymentsTable = pgTable(
     enrollmentId: uuid("enrollment_id").references(() => EnrollmentsTable.id, {
       onDelete: "set null",
     }),
-    invoiceNumber: text("invoice_number").notNull(),
+    invoiceNumber: text("invoice_number").notNull(), // FT2526G00001 or FT2526F00001
     paymentType: PaymentType("payment_type").notNull(),
     amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
     currency: text("currency").notNull(),
-    gstAmount: decimal("gst_amount", { precision: 10, scale: 2 }).default("0"),
-    discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+    gstAmount: decimal("gst_amount", { precision: 10, scale: 2 }).default("0").notNull(),
+    discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0").notNull(),
     finalAmount: decimal("final_amount", { precision: 10, scale: 2 }).notNull(),
     couponId: uuid("coupon_id").references(() => CouponsTable.id, {
       onDelete: "set null",
@@ -385,16 +433,20 @@ export const PaymentsTable = pgTable(
     jyotishiId: uuid("jyotishi_id").references(() => UsersTable.id, {
       onDelete: "set null",
     }),
-    commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).default("0"),
-    commissionPaid: boolean("commission_paid").default(false),
+    commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).default("0").notNull(),
+    commissionPaid: boolean("commission_paid").default(false).notNull(),
     
+    // Razorpay details
     razorpayOrderId: text("razorpay_order_id"),
     razorpayPaymentId: text("razorpay_payment_id"),
     razorpaySignature: text("razorpay_signature"),
     status: PaymentStatus("status").default("PENDING").notNull(),
     paymentMethod: text("payment_method"),
+    
+    // Installment support
     instalmentPlan: integer("instalment_plan"),
     instalmentNumber: integer("instalment_number").default(1),
+    
     billingAddress: jsonb("billing_address"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -408,14 +460,18 @@ export const PaymentsTable = pgTable(
     index("payments_enrollment_id_idx").on(table.enrollmentId),
     index("payments_status_idx").on(table.status),
     index("payments_jyotishi_id_idx").on(table.jyotishiId),
+    index("payments_coupon_id_idx").on(table.couponId),
   ]
 );
 
 // =====================
-// Commission Tables (NEW)
+// Commission Tables
 // =====================
 
-// Commission Records
+/**
+ * Commission Records
+ * Tracks commission for each sale made using Jyotishi's coupon
+ */
 export const CommissionsTable = pgTable(
   "commissions",
   {
@@ -435,7 +491,7 @@ export const CommissionsTable = pgTable(
     couponId: uuid("coupon_id").references(() => CouponsTable.id, {
       onDelete: "set null",
     }),
-    commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull(), // Snapshot of rate at time of sale
+    commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull(), // Snapshot of rate at sale time
     saleAmount: decimal("sale_amount", { precision: 10, scale: 2 }).notNull(),
     commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
     status: CommissionStatus("status").default("PENDING").notNull(),
@@ -455,10 +511,14 @@ export const CommissionsTable = pgTable(
     index("commissions_payment_id_idx").on(table.paymentId),
     index("commissions_status_idx").on(table.status),
     index("commissions_payout_id_idx").on(table.payoutId),
+    index("commissions_student_id_idx").on(table.studentId),
   ]
 );
 
-// Payout Requests
+/**
+ * Payout Requests
+ * Jyotishi requests payout of accumulated commissions
+ */
 export const PayoutsTable = pgTable(
   "payouts",
   {
@@ -510,8 +570,8 @@ export const BlogsTable = pgTable(
       .notNull()
       .references(() => UsersTable.id, { onDelete: "cascade" }),
     publishedAt: timestamp("published_at", { mode: "date" }),
-    isPublished: boolean("is_published").default(false),
-    viewCount: integer("view_count").default(0),
+    isPublished: boolean("is_published").default(false).notNull(),
+    viewCount: integer("view_count").default(0).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -605,9 +665,33 @@ export const usersRelations = relations(UsersTable, ({ many }) => ({
   payments: many(PaymentsTable),
   blogs: many(BlogsTable),
   userCoupons: many(UserCouponsTable),
+  createdCouponTypes: many(CouponTypesTable),
   createdCoupons: many(CouponsTable),
   commissions: many(CommissionsTable),
   payouts: many(PayoutsTable),
+}));
+
+export const couponTypesRelations = relations(CouponTypesTable, ({ one, many }) => ({
+  creator: one(UsersTable, {
+    fields: [CouponTypesTable.createdBy],
+    references: [UsersTable.id],
+  }),
+  coupons: many(CouponsTable),
+}));
+
+export const couponsRelations = relations(CouponsTable, ({ one, many }) => ({
+  couponType: one(CouponTypesTable, {
+    fields: [CouponsTable.couponTypeId],
+    references: [CouponTypesTable.id],
+  }),
+  creatorJyotishi: one(UsersTable, {
+    fields: [CouponsTable.createdByJyotishiId],
+    references: [UsersTable.id],
+  }),
+  couponCourses: many(CouponCoursesTable),
+  userCoupons: many(UserCouponsTable),
+  payments: many(PaymentsTable),
+  commissions: many(CommissionsTable),
 }));
 
 export const coursesRelations = relations(CoursesTable, ({ many }) => ({
@@ -653,17 +737,6 @@ export const paymentsRelations = relations(PaymentsTable, ({ one }) => ({
     fields: [PaymentsTable.jyotishiId],
     references: [UsersTable.id],
   }),
-}));
-
-export const couponsRelations = relations(CouponsTable, ({ one, many }) => ({
-  creator: one(UsersTable, {
-    fields: [CouponsTable.createdBy],
-    references: [UsersTable.id],
-  }),
-  couponCourses: many(CouponCoursesTable),
-  userCoupons: many(UserCouponsTable),
-  payments: many(PaymentsTable),
-  commissions: many(CommissionsTable),
 }));
 
 export const commissionsRelations = relations(CommissionsTable, ({ one }) => ({
@@ -712,3 +785,34 @@ export const blogsRelations = relations(BlogsTable, ({ one, many }) => ({
   }),
   tags: many(BlogTagsTable),
 }));
+
+// =====================
+// Type Exports for TypeScript
+// =====================
+
+export type User = typeof UsersTable.$inferSelect;
+export type NewUser = typeof UsersTable.$inferInsert;
+
+export type CouponType = typeof CouponTypesTable.$inferSelect;
+export type NewCouponType = typeof CouponTypesTable.$inferInsert;
+
+export type Coupon = typeof CouponsTable.$inferSelect;
+export type NewCoupon = typeof CouponsTable.$inferInsert;
+
+export type Course = typeof CoursesTable.$inferSelect;
+export type NewCourse = typeof CoursesTable.$inferInsert;
+
+export type Enrollment = typeof EnrollmentsTable.$inferSelect;
+export type NewEnrollment = typeof EnrollmentsTable.$inferInsert;
+
+export type Payment = typeof PaymentsTable.$inferSelect;
+export type NewPayment = typeof PaymentsTable.$inferInsert;
+
+export type Commission = typeof CommissionsTable.$inferSelect;
+export type NewCommission = typeof CommissionsTable.$inferInsert;
+
+export type Payout = typeof PayoutsTable.$inferSelect;
+export type NewPayout = typeof PayoutsTable.$inferInsert;
+
+export type Blog = typeof BlogsTable.$inferSelect;
+export type NewBlog = typeof BlogsTable.$inferInsert;

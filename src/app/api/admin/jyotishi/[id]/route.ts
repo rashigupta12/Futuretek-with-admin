@@ -13,8 +13,9 @@ import { NextRequest, NextResponse } from "next/server";
 // GET - Get Jyotishi details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params; 
   try {
     const [jyotishi] = await db
       .select({
@@ -92,8 +93,9 @@ export async function GET(
 // PUT - Update Jyotishi
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params; 
   try {
     const body = await req.json();
     const {
@@ -155,8 +157,9 @@ export async function PUT(
 // DELETE - Delete Jyotishi (soft delete by deactivating)
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+   context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const [jyotishi] = await db
       .update(UsersTable)

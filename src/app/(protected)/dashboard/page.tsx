@@ -36,6 +36,10 @@ export default function Dashboard() {
       case "USER":
           router.push("/dashboard/user");
           break;
+      case "JYOTISHI":
+        router.push("/dashboard/agent");
+          break;
+        
       default:
         setIsRedirecting(false);
         break;

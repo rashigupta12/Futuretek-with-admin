@@ -1,14 +1,11 @@
-/*eslint-disable  @typescript-eslint/no-require-imports*/
+/* eslint-disable  @typescript-eslint/no-require-imports */
 // app/api/payment/verify/route.ts
 import { db } from "@/db";
-import { CoursesTable, EnrollmentsTable, PaymentsTable } from "@/db/schema";
-import { createCommissionRecord } from "@/lib/helper";
+import { CommissionsTable, CouponsTable, CoursesTable, EnrollmentsTable, PaymentsTable, UsersTable } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
-
-
-export async function verifyPaymentWithCommission(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const {
       razorpay_order_id,
@@ -20,7 +17,7 @@ export async function verifyPaymentWithCommission(req: NextRequest) {
 
     const userId = "user-id-from-session";
 
-    // Verify signature (existing code)
+    // Verify signature
     const crypto = require("crypto");
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -81,15 +78,33 @@ export async function verifyPaymentWithCommission(req: NextRequest) {
       sql`UPDATE ${CoursesTable} SET current_enrollments = current_enrollments + 1 WHERE id = ${courseId}`
     );
 
-    // Create commission record if coupon was used by Jyotishi
+    // Update coupon usage count
     if (payment.couponId) {
-      await createCommissionRecord(
-        paymentId,
-        courseId,
-        userId,
-        payment.couponId,
-        parseFloat(payment.finalAmount)
+      await db.execute(
+        sql`UPDATE ${CouponsTable} SET current_usage_count = current_usage_count + 1 WHERE id = ${payment.couponId}`
       );
+
+      // Create commission record if Jyotishi coupon was used
+      if (payment.jyotishiId && parseFloat(payment.commissionAmount) > 0) {
+        // Get Jyotishi commission rate
+        const [jyotishi] = await db
+          .select({ commissionRate: UsersTable.commissionRate })
+          .from(UsersTable)
+          .where(eq(UsersTable.id, payment.jyotishiId))
+          .limit(1);
+
+        await db.insert(CommissionsTable).values({
+          jyotishiId: payment.jyotishiId,
+          paymentId: payment.id,
+          courseId,
+          studentId: userId,
+          couponId: payment.couponId,
+          commissionRate: jyotishi?.commissionRate || "0",
+          saleAmount: payment.finalAmount,
+          commissionAmount: payment.commissionAmount,
+          status: "PENDING",
+        });
+      }
     }
 
     return NextResponse.json(
@@ -107,3 +122,4 @@ export async function verifyPaymentWithCommission(req: NextRequest) {
     );
   }
 }
+

@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
       email,
       password,
       mobile,
+      jyotishiCode,
       commissionRate,
       bankAccountNumber,
       bankIfscCode,
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!name || !email || !password || !commissionRate) {
+    if (!name || !email || !password || !jyotishiCode || !commissionRate) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -121,6 +122,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if Jyotishi code already exists
+    const [existingCode] = await db
+      .select()
+      .from(UsersTable)
+      .where(eq(UsersTable.jyotishiCode, jyotishiCode))
+      .limit(1);
+
+    if (existingCode) {
+      return NextResponse.json(
+        { error: "Jyotishi code already exists" },
+        { status: 400 }
+      );
+    }
+
     // Hash password
     const bcrypt = require("bcryptjs");
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -134,6 +149,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         mobile,
         role: "JYOTISHI",
+        jyotishiCode,
         commissionRate,
         bankAccountNumber,
         bankIfscCode,

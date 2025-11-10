@@ -3,7 +3,9 @@
 import { db } from "@/db";
 import {
   CommissionsTable,
+  CouponCoursesTable,
   CouponsTable,
+  CouponTypesTable,
   CoursesTable,
   EnrollmentsTable,
   PaymentsTable,
@@ -11,21 +13,42 @@ import {
 } from "@/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+// app/api/jyotishi/coupons/[id]/route.ts
 // GET - Get coupon details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const jyotishiId = "jyotishi-id-from-session";
 
     const [coupon] = await db
-      .select()
+      .select({
+        id: CouponsTable.id,
+        code: CouponsTable.code,
+        discountType: CouponsTable.discountType,
+        discountValue: CouponsTable.discountValue,
+        maxUsageCount: CouponsTable.maxUsageCount,
+        currentUsageCount: CouponsTable.currentUsageCount,
+        validFrom: CouponsTable.validFrom,
+        validUntil: CouponsTable.validUntil,
+        isActive: CouponsTable.isActive,
+        description: CouponsTable.description,
+        createdAt: CouponsTable.createdAt,
+        typeName: CouponTypesTable.typeName,
+        typeCode: CouponTypesTable.typeCode,
+        typeDescription: CouponTypesTable.description,
+      })
       .from(CouponsTable)
+      .leftJoin(
+        CouponTypesTable,
+        eq(CouponsTable.couponTypeId, CouponTypesTable.id)
+      )
       .where(
         and(
           eq(CouponsTable.id, params.id),
-          eq(CouponsTable.createdBy, jyotishiId)
+          eq(CouponsTable.createdByJyotishiId, jyotishiId)
         )
       )
       .limit(1);
@@ -34,14 +57,16 @@ export async function GET(
       return NextResponse.json({ error: "Coupon not found" }, { status: 404 });
     }
 
-    // Get usage details
+    // Get usage details with commission
     const usageDetails = await db
       .select({
         id: PaymentsTable.id,
         invoiceNumber: PaymentsTable.invoiceNumber,
         amount: PaymentsTable.finalAmount,
         commission: CommissionsTable.commissionAmount,
+        commissionStatus: CommissionsTable.status,
         studentName: UsersTable.name,
+        studentEmail: UsersTable.email,
         courseName: CoursesTable.title,
         createdAt: PaymentsTable.createdAt,
       })
@@ -64,10 +89,22 @@ export async function GET(
       )
       .orderBy(desc(PaymentsTable.createdAt));
 
+    // Get linked courses
+    const linkedCourses = await db
+      .select({
+        id: CoursesTable.id,
+        title: CoursesTable.title,
+        slug: CoursesTable.slug,
+      })
+      .from(CouponCoursesTable)
+      .leftJoin(CoursesTable, eq(CouponCoursesTable.courseId, CoursesTable.id))
+      .where(eq(CouponCoursesTable.couponId, params.id));
+
     return NextResponse.json(
       {
         coupon,
         usageDetails,
+        linkedCourses,
       },
       { status: 200 }
     );
@@ -83,8 +120,9 @@ export async function GET(
 // PUT - Update coupon
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const jyotishiId = "jyotishi-id-from-session";
     const body = await req.json();
@@ -105,7 +143,7 @@ export async function PUT(
       .where(
         and(
           eq(CouponsTable.id, params.id),
-          eq(CouponsTable.createdBy, jyotishiId)
+          eq(CouponsTable.createdByJyotishiId, jyotishiId)
         )
       )
       .returning();
@@ -130,8 +168,9 @@ export async function PUT(
 // DELETE - Deactivate coupon
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const jyotishiId = "jyotishi-id-from-session";
 
@@ -141,7 +180,7 @@ export async function DELETE(
       .where(
         and(
           eq(CouponsTable.id, params.id),
-          eq(CouponsTable.createdBy, jyotishiId)
+          eq(CouponsTable.createdByJyotishiId, jyotishiId)
         )
       )
       .returning();

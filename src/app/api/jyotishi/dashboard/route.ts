@@ -4,8 +4,8 @@ import { db } from "@/db";
 import {
   CommissionsTable,
   CouponsTable,
+  CouponTypesTable,
   CoursesTable,
-  PayoutsTable,
   UsersTable
 } from "@/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
@@ -15,8 +15,19 @@ export async function GET(req: NextRequest) {
   try {
     const jyotishiId = "jyotishi-id-from-session";
 
-    // Overall statistics
-    const [stats] = await db
+    // Get Jyotishi details
+    const [jyotishi] = await db
+      .select({
+        name: UsersTable.name,
+        jyotishiCode: UsersTable.jyotishiCode,
+        commissionRate: UsersTable.commissionRate,
+      })
+      .from(UsersTable)
+      .where(eq(UsersTable.id, jyotishiId))
+      .limit(1);
+
+    // Overall commission statistics
+    const [commissionStats] = await db
       .select({
         totalEarnings: sql<number>`COALESCE(SUM(${CommissionsTable.commissionAmount}), 0)`,
         pendingEarnings: sql<number>`COALESCE(SUM(CASE WHEN ${CommissionsTable.status} = 'PENDING' THEN ${CommissionsTable.commissionAmount} ELSE 0 END), 0)`,
@@ -40,14 +51,14 @@ export async function GET(req: NextRequest) {
         )
       );
 
-    // Active coupons count
+    // Coupons count
     const [couponsCount] = await db
       .select({
         total: sql<number>`COUNT(*)`,
         active: sql<number>`COUNT(*) FILTER (WHERE ${CouponsTable.isActive} = true)`,
       })
       .from(CouponsTable)
-      .where(eq(CouponsTable.createdBy, jyotishiId));
+      .where(eq(CouponsTable.createdByJyotishiId, jyotishiId));
 
     // Total students
     const [studentsCount] = await db
@@ -57,7 +68,7 @@ export async function GET(req: NextRequest) {
       .from(CommissionsTable)
       .where(eq(CommissionsTable.jyotishiId, jyotishiId));
 
-    // Recent activity (last 5 commissions)
+    // Recent activity
     const recentActivity = await db
       .select({
         id: CommissionsTable.id,
@@ -66,36 +77,44 @@ export async function GET(req: NextRequest) {
         studentName: UsersTable.name,
         status: CommissionsTable.status,
         createdAt: CommissionsTable.createdAt,
+        couponCode: CouponsTable.code,
       })
       .from(CommissionsTable)
       .leftJoin(CoursesTable, eq(CommissionsTable.courseId, CoursesTable.id))
       .leftJoin(UsersTable, eq(CommissionsTable.studentId, UsersTable.id))
+      .leftJoin(CouponsTable, eq(CommissionsTable.couponId, CouponsTable.id))
       .where(eq(CommissionsTable.jyotishiId, jyotishiId))
       .orderBy(desc(CommissionsTable.createdAt))
       .limit(5);
 
-    // Pending payout requests
-    const [pendingPayouts] = await db
+    // Top performing coupons
+    const topCoupons = await db
       .select({
-        count: sql<number>`COUNT(*)`,
-        totalAmount: sql<number>`COALESCE(SUM(${PayoutsTable.amount}), 0)`,
+        code: CouponsTable.code,
+        typeName: CouponTypesTable.typeName,
+        usage: sql<number>`COUNT(*)`,
+        earnings: sql<number>`COALESCE(SUM(${CommissionsTable.commissionAmount}), 0)`,
       })
-      .from(PayoutsTable)
-      .where(
-        and(
-          eq(PayoutsTable.jyotishiId, jyotishiId),
-          eq(PayoutsTable.status, "PENDING")
-        )
-      );
+      .from(CommissionsTable)
+      .leftJoin(CouponsTable, eq(CommissionsTable.couponId, CouponsTable.id))
+      .leftJoin(
+        CouponTypesTable,
+        eq(CouponsTable.couponTypeId, CouponTypesTable.id)
+      )
+      .where(eq(CommissionsTable.jyotishiId, jyotishiId))
+      .groupBy(CouponsTable.code, CouponTypesTable.typeName)
+      .orderBy(desc(sql`COUNT(*)`))
+      .limit(5);
 
     return NextResponse.json(
       {
-        stats,
+        jyotishi,
+        commissionStats,
         thisMonth: thisMonthStats,
         coupons: couponsCount,
         students: studentsCount,
         recentActivity,
-        pendingPayouts,
+        topCoupons,
       },
       { status: 200 }
     );

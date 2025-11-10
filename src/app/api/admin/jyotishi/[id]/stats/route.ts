@@ -11,8 +11,9 @@ import { NextRequest, NextResponse } from "next/server";
 // GET - Get detailed statistics
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params;  
   try {
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get("startDate");

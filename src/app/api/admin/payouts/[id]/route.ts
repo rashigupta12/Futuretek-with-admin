@@ -10,8 +10,9 @@ import { NextRequest, NextResponse } from "next/server";
 // GET - Get payout details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+   context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params; 
   try {
     const [payout] = await db
       .select({
@@ -74,8 +75,9 @@ export async function GET(
 // PUT - Approve/Reject payout
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> } 
 ) {
+  const params = await context.params; 
   try {
     const body = await req.json();
     const { action, rejectionReason } = body;
