@@ -14,13 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Clock,
-  BookOpen,
-  CheckCircle2,
-  Users,
-  Calendar,
-} from "lucide-react";
+import { Clock, BookOpen, CheckCircle2, Users, Calendar } from "lucide-react";
 import { notFound } from "next/navigation";
 
 interface CourseData {
@@ -31,16 +25,21 @@ interface CourseData {
   tagline?: string;
   instructor?: string;
   duration?: string;
-  fee?: string;
-  features: string[];
-  whyLearn: Array<{
+  totalSessions?: number;
+  priceINR?: string;
+  priceUSD?: string;
+  status?: string;
+  features?: string[] | Array<{ feature: string }>;
+  whyLearn?: Array<{
     title: string;
     description: string;
   }>;
   whyLearnIntro?: string;
-  courseContent: string[];
-  relatedTopics: string[];
-  enrollment: {
+  whatYouLearn?: string;
+  courseContent?: string[];
+  topics?: string[];
+  relatedTopics?: string[];
+  enrollment?: {
     title: string;
     description: string;
     offer: {
@@ -53,26 +52,67 @@ interface CourseData {
     }>;
   };
   disclaimer?: string;
+  maxStudents?: number;
+  currentEnrollments?: number;
 }
 
 async function getCourse(slug: string): Promise<CourseData | null> {
   try {
-    // Use the admin API route but with public access
-    const response = await fetch(`/api/admin/courses/${slug}`, {
-      next: { revalidate: 60 } 
+    // Use absolute URL for server-side fetch
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const url = `${baseUrl}/api/admin/courses/${slug}`;
+
+    const response = await fetch(url, {
+      next: { revalidate: 60 },
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store", // Disable caching for debugging
     });
-    
+
     if (!response.ok) {
       if (response.status === 404) {
         return null;
       }
-      throw new Error('Failed to fetch course');
+
+      const errorText = await response.text();
+      throw new Error("Failed to fetch course");
     }
-    
+
     const data = await response.json();
-    return data.course;
+
+    // The API returns the course directly, not wrapped
+    const course = data;
+
+    if (!course || !course.id) {
+      return null;
+    }
+
+    // Parse features if they're JSON strings
+    if (course.features && Array.isArray(course.features)) {
+      course.features = course.features.map(
+        (f: string | { feature: string }) => {
+          if (typeof f === "string") {
+            try {
+              const parsed = JSON.parse(f);
+              return parsed.feature || f;
+            } catch {
+              return f;
+            }
+          }
+          return f.feature || f;
+        }
+      );
+    }
+
+    // Map topics to relatedTopics
+    if (course.topics && !course.relatedTopics) {
+      course.relatedTopics = course.topics;
+    }
+
+    return course;
   } catch (error) {
-    console.error('Error fetching course:', error);
+    console.error("💥 Error fetching course:", error);
     return null;
   }
 }
@@ -80,10 +120,11 @@ async function getCourse(slug: string): Promise<CourseData | null> {
 export default async function CoursePage({
   params,
 }: {
-  params: Promise<{ course: string }>; // ← FIXED: Changed to 'course'
+  params: Promise<{ course: string }>;
 }) {
-  const { course } = await params; // ← FIXED: Changed to 'course'
-  const courseData = await getCourse(course); // ← FIXED: Pass 'course'
+  const { course } = await params;
+
+  const courseData = await getCourse(course);
 
   if (!courseData) {
     notFound();
@@ -113,15 +154,17 @@ export default async function CoursePage({
               {courseData.tagline || courseData.description}
             </p>
             <div className="flex flex-wrap gap-2 mb-6">
-              {courseData.relatedTopics?.map((topic) => (
-                <Badge
-                  key={topic}
-                  variant="secondary"
-                  className="bg-white/10 hover:bg-white/20 transition-colors"
-                >
-                  {topic}
-                </Badge>
-              ))}
+              {(courseData.relatedTopics || courseData.topics || []).map(
+                (topic) => (
+                  <Badge
+                    key={topic}
+                    variant="secondary"
+                    className="bg-white/10 hover:bg-white/20 transition-colors"
+                  >
+                    {topic}
+                  </Badge>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -167,15 +210,19 @@ export default async function CoursePage({
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 gap-4">
-                    {courseData.features.map((feature, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                        <span className="leading-snug">{feature}</span>
-                      </div>
-                    ))}
+                    {courseData.features.map((feature, index) => {
+                      const text =
+                        typeof feature === "string" ? feature : feature.feature;
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          <span className="leading-snug">{text}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -190,7 +237,9 @@ export default async function CoursePage({
                 </CardHeader>
                 <CardContent>
                   {courseData.whyLearnIntro && (
-                    <p className="mb-6 leading-relaxed">{courseData.whyLearnIntro}</p>
+                    <p className="mb-6 leading-relaxed">
+                      {courseData.whyLearnIntro}
+                    </p>
                   )}
                   <Accordion type="single" collapsible className="w-full">
                     {courseData.whyLearn.map((item, index) => (
@@ -208,27 +257,53 @@ export default async function CoursePage({
               </Card>
             )}
 
-            {courseData.courseContent && courseData.courseContent.length > 0 && (
+            {((courseData.courseContent &&
+              courseData.courseContent.length > 0) ||
+              courseData.whatYouLearn) && (
               <Card className="hover:shadow-lg transition-shadow duration-300">
                 <CardHeader>
-                  <CardTitle className="text-2xl">Course Content</CardTitle>
-                  <CardDescription>
-                    Comprehensive curriculum with {courseData.courseContent.length}{" "}
-                    detailed lectures
-                  </CardDescription>
+                  <CardTitle className="text-2xl">
+                    {courseData.courseContent &&
+                    courseData.courseContent.length > 0
+                      ? "Course Content"
+                      : "What You'll Learn"}
+                  </CardTitle>
+                  {courseData.courseContent &&
+                    courseData.courseContent.length > 0 && (
+                      <CardDescription>
+                        Comprehensive curriculum with{" "}
+                        {courseData.courseContent.length} detailed lectures
+                      </CardDescription>
+                    )}
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3">
-                    {courseData.courseContent.map((content, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start gap-3 p-4 hover:bg-muted rounded-lg transition-colors group"
-                      >
-                        <BookOpen className="h-5 w-5 mt-1 text-purple-500 group-hover:scale-110 transition-transform" />
-                        <span className="leading-relaxed">{content}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {courseData.courseContent &&
+                  courseData.courseContent.length > 0 ? (
+                    <div className="grid gap-3">
+                      {courseData.courseContent.map((content, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 p-4 hover:bg-muted rounded-lg transition-colors group"
+                        >
+                          <BookOpen className="h-5 w-5 mt-1 text-purple-500 group-hover:scale-110 transition-transform" />
+                          <span className="leading-relaxed">{content}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : courseData.whatYouLearn ? (
+                    <div className="prose prose-sm max-w-none">
+                      {courseData.whatYouLearn
+                        .split("\n\n")
+                        .map((paragraph, index) => (
+                          <p
+                            key={index}
+                            className="mb-4 leading-relaxed text-muted-foreground"
+                          >
+                            {paragraph}
+                          </p>
+                        ))}
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             )}
@@ -239,27 +314,35 @@ export default async function CoursePage({
             <Card className="lg:sticky lg:top-24 hover:shadow-lg transition-shadow duration-300 border-purple-500/20">
               <CardHeader className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-t-lg">
                 <CardTitle className="text-2xl">
-                  {courseData.enrollment?.title || `Enroll in ${courseData.title}`}
+                  {courseData.enrollment?.title ||
+                    `Enroll in ${courseData.title}`}
                 </CardTitle>
                 <CardDescription>
-                  {courseData.enrollment?.description || `Master ${courseData.title}`}
+                  {courseData.enrollment?.description ||
+                    `Master ${courseData.title}`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <span className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-                      {courseData.fee || "Contact for pricing"}
+                      {courseData.priceINR
+                        ? `₹${parseFloat(courseData.priceINR).toLocaleString(
+                            "en-IN"
+                          )}`
+                        : "Contact for pricing"}
                     </span>
                     <Badge
                       variant="secondary"
                       className="bg-purple-500/10 text-purple-500"
                     >
-                      {courseData.enrollment?.offer?.badge || "Limited Seats"}
+                      {courseData.enrollment?.offer?.badge ||
+                        courseData.status ||
+                        "Limited Seats"}
                     </Badge>
                   </div>
-                  
-                  {courseData.enrollment?.features && (
+
+                  {courseData.enrollment?.features ? (
                     <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
                       {courseData.enrollment.features.map((feature, index) => {
                         const IconComponent = getIcon(feature.icon);
@@ -271,10 +354,36 @@ export default async function CoursePage({
                         );
                       })}
                     </div>
+                  ) : (
+                    <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Clock className="h-5 w-5 text-purple-500" />
+                        <span className="text-sm">
+                          {courseData.duration || "Self-paced learning"}
+                        </span>
+                      </div>
+                      {courseData.totalSessions && (
+                        <div className="flex items-center gap-3">
+                          <Calendar className="h-5 w-5 text-purple-500" />
+                          <span className="text-sm">
+                            {courseData.totalSessions} Sessions
+                          </span>
+                        </div>
+                      )}
+                      {courseData.currentEnrollments !== undefined && (
+                        <div className="flex items-center gap-3">
+                          <Users className="h-5 w-5 text-purple-500" />
+                          <span className="text-sm">
+                            {courseData.currentEnrollments} Students Enrolled
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   )}
-                  
+
                   <p className="text-sm text-muted-foreground text-center italic">
-                    {courseData.enrollment?.offer?.guarantee || "100% Satisfaction Guarantee"}
+                    {courseData.enrollment?.offer?.guarantee ||
+                      "100% Satisfaction Guarantee"}
                   </p>
                 </div>
               </CardContent>

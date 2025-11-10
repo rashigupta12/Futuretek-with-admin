@@ -17,51 +17,94 @@ export default auth(async (req) => {
   const { auth, nextUrl } = req;
   const isLoggedIn = !!auth;
 
+  console.log("🔍 Middleware check:", {
+    path: nextUrl.pathname,
+    isLoggedIn,
+  });
+
+  // 1. Allow API auth routes (NextAuth internal routes)
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
-const isPublicRoute = publicRoutes.some((route) =>
-  route instanceof RegExp ? route.test(nextUrl.pathname) : route === nextUrl.pathname
-);
+  if (isApiAuthRoute) {
+    console.log("✅ API auth route - allowing");
+    return undefined;
+  }
+
+  // 2. Check public APIs - Allow without authentication
   const isPublicApi = publicApis.some((api) =>
     nextUrl.pathname.startsWith(api)
   );
-  const isAuthRoute = authRoutes.includes(nextUrl.pathname);
-
-  if (isApiAuthRoute) {
+  if (isPublicApi) {
+    console.log("✅ Public API - allowing");
     return undefined;
   }
 
+  // 3. Check if route is public (including /courses/*)
+  const isPublicRoute = publicRoutes.some((route) => {
+    const matches = route instanceof RegExp 
+      ? route.test(nextUrl.pathname) 
+      : route === nextUrl.pathname;
+    if (matches) {
+      console.log(`✅ Matched public route: ${route}`);
+    }
+    return matches;
+  });
+
+  // 4. Handle auth routes (login, register, etc.)
+  const isAuthRoute = authRoutes.includes(nextUrl.pathname);
   if (isAuthRoute) {
+    console.log("🔐 Auth route detected");
     if (isLoggedIn) {
+      console.log("↩️ Logged in user on auth route - redirecting to dashboard");
       return Response.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
     }
+    console.log("✅ Allowing auth route");
     return undefined;
   }
 
-  if (!isLoggedIn && !isPublicRoute && !isPublicApi) {
-    return Response.redirect(new URL("/auth/login", nextUrl));
+  // 5. Allow public routes without authentication
+  if (isPublicRoute) {
+    console.log("✅ Public route - allowing");
+    return undefined;
   }
 
-  if (isLoggedIn) {
-    const params: GetTokenParams = { req, secret: process.env.AUTH_SECRET! };
-    if (process.env.NODE_ENV === "production") {
-      params.secureCookie = true;
-    }
-    const token = await getToken(params);
-    if (!token || !token.role) {
-      return NextResponse.redirect(new URL("/auth/login", req.url));
-    }
+  // 6. Redirect non-logged-in users to login for protected routes
+  if (!isLoggedIn) {
+    console.log("🚫 Not logged in, redirecting to login");
+    const loginUrl = new URL("/auth/login", nextUrl);
+    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+    return Response.redirect(loginUrl);
+  }
 
-    for (const pattern in protectedRoutes) {
-      const regex = new RegExp(pattern);
-      if (regex.test(nextUrl.pathname)) {
-        const roles = protectedRoutes[pattern];
-        if (!roles.includes(token.role)) {
-          return NextResponse.redirect(new URL("/auth/login", req.url));
-        }
+  // 7. Role-based access control for logged-in users on protected routes
+  console.log("🔐 Checking role-based access");
+  const params: GetTokenParams = { req, secret: process.env.AUTH_SECRET! };
+  if (process.env.NODE_ENV === "production") {
+    params.secureCookie = true;
+  }
+  const token = await getToken(params);
+
+  if (!token || !token.role) {
+    console.log("🚫 No token or role - redirecting to login");
+    return NextResponse.redirect(new URL("/auth/login", req.url));
+  }
+
+  // Check if current route requires specific roles
+  for (const pattern in protectedRoutes) {
+    const regex = new RegExp(pattern);
+    if (regex.test(nextUrl.pathname)) {
+      const requiredRoles = protectedRoutes[pattern];
+      console.log(`🔐 Protected route matched: ${pattern}, required roles:`, requiredRoles);
+      
+      if (!requiredRoles.includes(token.role)) {
+        console.log(`🚫 User role ${token.role} not authorized`);
+        return NextResponse.redirect(new URL("/auth/login", req.url));
       }
+      
+      console.log(`✅ User role ${token.role} authorized`);
     }
   }
 
+  console.log("✅ Allowing request");
   return undefined;
 });
 
