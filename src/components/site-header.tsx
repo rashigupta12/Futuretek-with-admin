@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Tooltip,
@@ -24,16 +25,42 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { Session } from "next-auth";
 import Link from "next/link";
-import { useState } from "react";
 import { DialogTitle } from "./ui/dialog";
 import { Separator } from "@/components/ui/separator";
 
+type Course = {
+  id: string;
+  title: string;
+  slug: string;
+};
+
 export function SiteHeader() {
-  const { data: session } = useSession();
+
+   const { data: session } = useSession();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
   console.log("session",session)
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
+
+  useEffect(() => {
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch('/api/admin/courses');
+      if (response.ok) {
+        const data = await response.json();
+        setCourses(data.courses || data); // Adjust based on your API response structure
+      }
+    } catch (error) {
+      console.error('Failed to fetch courses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchCourses();
+}, []);
 
   return (
     <header className="bg-background sticky top-0 z-20 border-b">
@@ -50,38 +77,27 @@ export function SiteHeader() {
         </div>
         <nav className="text-muted-foreground hover:[&_a]:text-foreground hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
           <Link href="/" className="hover:text-purple-600 transition-colors">Home</Link>
-          <div className="relative group">
-            <Link href="/courses" className="flex items-center gap-1 hover:text-purple-600 transition-colors">
-              Courses
-              <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
-            </Link>
-            <div className="absolute left-0 top-full hidden group-hover:block bg-background border rounded-lg shadow-lg p-2 w-56 mt-2">
-              <Link
-                href="/courses/kp-astrology"
-                className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm"
-              >
-                KP Astrology
-              </Link>
-              <Link
-                href="/courses/financial-astrology"
-                className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm"
-              >
-                Financial Astrology
-              </Link>
-              <Link
-                href="/courses/vastu-shastra"
-                className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm"
-              >
-                Vastu Shastra
-              </Link>
-              <Link
-                href="/courses/astro-vastu"
-                className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm"
-              >
-                Astro-Vastu
-              </Link>
-            </div>
-          </div>
+         <div className="relative group">
+  <button className="flex items-center gap-1 hover:text-purple-600 transition-colors text-sm font-medium text-muted-foreground hover:text-foreground">
+    Courses
+    <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
+  </button>
+  <div className="absolute left-0 top-full hidden group-hover:block bg-background border rounded-lg shadow-lg p-2 w-56 mt-2 z-50">
+    {loading ? (
+      <div className="px-4 py-2 text-sm text-muted-foreground">Loading...</div>
+    ) : (
+      courses.map((course) => (
+        <Link
+          key={course.id}
+          href={`/courses/${course.slug}`}
+          className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm text-gray-700 hover:text-purple-700"
+        >
+          {course.title}
+        </Link>
+      ))
+    )}
+  </div>
+</div>
           <Link href="/about" className="hover:text-purple-600 transition-colors">About</Link>
           <Link href="/career" className="hover:text-purple-600 transition-colors">Career</Link>
           <Link href="/contact" className="hover:text-purple-600 transition-colors">Contact Us</Link>
@@ -153,7 +169,26 @@ export function SiteHeader() {
   );
 }
 function Sidebar({ session, handleLogout }: { session: Session | null, handleLogout: () => Promise<void> }) {
-  const [isOpen, setIsOpen] = useState(false);
+ const [isOpen, setIsOpen] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+   useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch('/api/admin/courses');
+        if (response.ok) {
+          const data = await response.json();
+          setCourses(data.courses || data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch courses:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
 
   const handleLinkClick = () => {
     setIsOpen(false);
@@ -167,12 +202,12 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
     { href: "/contact", label: "Contact Us", icon: Mail },
   ];
 
-  const courseItems = [
-    { href: "/courses/kp-astrology", label: "KP Astrology" },
-    { href: "/courses/financial-astrology", label: "Financial Astrology" },
-    { href: "/courses/vastu-shastra", label: "Vastu Shastra" },
-    { href: "/courses/astro-vastu", label: "Astro-Vastu" },
-  ];
+  const courseItems = loading 
+    ? [{ href: "#", label: "Loading..." }]
+    : courses.map(course => ({
+        href: `/courses/${course.slug}`,
+        label: course.title
+      }));
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
