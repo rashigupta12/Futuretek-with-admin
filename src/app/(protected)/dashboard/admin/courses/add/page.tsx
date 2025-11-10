@@ -1,4 +1,6 @@
 // src/app/(protected)/dashboard/admin/courses/add/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import {
@@ -9,13 +11,13 @@ import {
   StatusSelect,
   TextInput,
 } from "@/components/courses/course-form";
+import RichTextEditor from "@/components/courses/RichTextEditor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function AddCoursePage() {
   const router = useRouter();
@@ -57,7 +59,7 @@ export default function AddCoursePage() {
     const payload = {
       slug,
       title,
-      tagline: tagline || null,
+      tagline: tagline,
       description,
       instructor: instructor || null,
       duration: duration || null,
@@ -103,6 +105,16 @@ export default function AddCoursePage() {
     }
   };
 
+  useEffect(() => {
+  if (title) {
+    const generatedSlug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+    setSlug(generatedSlug);
+  }
+}, [title]);
+
   return (
     <div className="p-6  mx-auto">
       <Link
@@ -141,11 +153,12 @@ export default function AddCoursePage() {
               />
             </Field>
 
-            <Field label="Tagline">
+            <Field label="Tagline *">
               <TextInput
                 value={tagline}
                 onChange={setTagline}
                 placeholder="Learn KP in its original form..."
+                required
               />
             </Field>
 
@@ -217,41 +230,44 @@ export default function AddCoursePage() {
         </Card>
 
         {/* ── Long Texts ── */}
-        <Card>
+       <Card>
           <CardHeader>
             <CardTitle>Content & SEO</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <Field label="Description *">
-              <Textarea
-                rows={5}
-                required
+              <RichTextEditor
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={setDescription}
+                placeholder="Enter course description..."
+                minHeight="300px"
               />
             </Field>
 
             <Field label="Why Learn Intro">
-              <Textarea
-                rows={3}
+              <RichTextEditor
                 value={whyLearnIntro}
-                onChange={(e) => setWhyLearnIntro(e.target.value)}
+                onChange={setWhyLearnIntro}
+                placeholder="Enter why learn introduction..."
+                minHeight="200px"
               />
             </Field>
 
             <Field label="What You Learn">
-              <Textarea
-                rows={6}
+              <RichTextEditor
                 value={whatYouLearn}
-                onChange={(e) => setWhatYouLearn(e.target.value)}
+                onChange={setWhatYouLearn}
+                placeholder="Enter what students will learn..."
+                minHeight="300px"
               />
             </Field>
 
             <Field label="Disclaimer">
-              <Textarea
-                rows={3}
+              <RichTextEditor
                 value={disclaimer}
-                onChange={(e) => setDisclaimer(e.target.value)}
+                onChange={setDisclaimer}
+                placeholder="Enter disclaimer..."
+                minHeight="200px"
               />
             </Field>
           </CardContent>

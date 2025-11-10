@@ -3,30 +3,84 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import {
+  DateInput,
+  DynamicStringList,
+  DynamicWhyLearn,
+  Field,
+  StatusSelect,
+  TextInput,
+} from "@/components/courses/course-form";
+import RichTextEditor from "@/components/courses/RichTextEditor";
 
 type Course = {
   id: string;
   slug: string;
   title: string;
+  tagline: string | null;
   description: string;
-  status: string;
+  instructor: string | null;
+  duration: string | null;
+  totalSessions: number | null;
   priceINR: number;
   priceUSD: number;
+  status: string;
+  thumbnailUrl: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  registrationDeadline: string | null;
+  whyLearnIntro: string | null;
+  whatYouLearn: string | null;
+  disclaimer: string | null;
+  maxStudents: number | null;
+  currentEnrollments: number;
+  features: string[];
+  whyLearn: { title: string; description: string }[];
+  courseContent: string[];
+  topics: string[];
 };
 
 export default function EditCoursePage() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
-  
-  const [course, setCourse] = useState<Course | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // ── Core fields ─────────────────────────────────────────────────────
+  const [courseId, setCourseId] = useState("");
+  const [courseSlug, setCourseSlug] = useState("");
+  const [title, setTitle] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [description, setDescription] = useState("");
+  const [instructor, setInstructor] = useState("To be announced");
+  const [duration, setDuration] = useState("");
+  const [totalSessions, setTotalSessions] = useState("");
+  const [priceINR, setPriceINR] = useState("");
+  const [priceUSD, setPriceUSD] = useState("");
+  const [status, setStatus] = useState("DRAFT");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [registrationDeadline, setRegistrationDeadline] = useState("");
+  const [whyLearnIntro, setWhyLearnIntro] = useState("");
+  const [whatYouLearn, setWhatYouLearn] = useState("");
+  const [disclaimer, setDisclaimer] = useState("");
+  const [maxStudents, setMaxStudents] = useState("");
+  const [currentEnrollments, setCurrentEnrollments] = useState("0");
+
+  // ── Arrays ───────────────────────────────────────────────────────
+  const [features, setFeatures] = useState<string[]>([""]);
+  const [whyLearn, setWhyLearn] = useState<
+    { title: string; description: string }[]
+  >([{ title: "", description: "" }]);
+  const [courseContent, setCourseContent] = useState<string[]>([""]);
+  const [relatedTopics, setRelatedTopics] = useState<string[]>([""]);
 
   useEffect(() => {
     if (slug) {
@@ -38,14 +92,51 @@ export default function EditCoursePage() {
     try {
       setLoading(true);
       const res = await fetch(`/api/admin/courses/${slug}`);
-      
+
       if (!res.ok) {
         throw new Error("Course not found");
       }
-      
-      const data = await res.json();
 
-      setCourse(data);
+      const data: Course = await res.json();
+
+      // Populate all fields
+      setCourseId(data.id);
+      setCourseSlug(data.slug);
+      setTitle(data.title);
+      setTagline(data.tagline || "");
+      setDescription(data.description);
+      setInstructor(data.instructor || "To be announced");
+      setDuration(data.duration || "");
+      setTotalSessions(data.totalSessions ? String(data.totalSessions) : "");
+      setPriceINR(String(data.priceINR));
+      setPriceUSD(String(data.priceUSD));
+      setStatus(data.status);
+      setThumbnailUrl(data.thumbnailUrl || "");
+
+      // Format dates to YYYY-MM-DD for date inputs
+      setStartDate(data.startDate ? data.startDate.split("T")[0] : "");
+      setEndDate(data.endDate ? data.endDate.split("T")[0] : "");
+      setRegistrationDeadline(
+        data.registrationDeadline ? data.registrationDeadline.split("T")[0] : ""
+      );
+
+      setWhyLearnIntro(data.whyLearnIntro || "");
+      setWhatYouLearn(data.whatYouLearn || "");
+      setDisclaimer(data.disclaimer || "");
+      setMaxStudents(data.maxStudents ? String(data.maxStudents) : "");
+      setCurrentEnrollments(String(data.currentEnrollments));
+
+      // Arrays - ensure at least one empty item if empty
+      setFeatures(data.features?.length > 0 ? data.features : [""]);
+      setWhyLearn(
+        data.whyLearn?.length > 0
+          ? data.whyLearn
+          : [{ title: "", description: "" }]
+      );
+      setCourseContent(
+        data.courseContent?.length > 0 ? data.courseContent : [""]
+      );
+      setRelatedTopics(data.topics?.length > 0 ? data.topics : [""]);
     } catch (error) {
       console.error("Failed to fetch course:", error);
       alert("Course not found");
@@ -55,28 +146,54 @@ export default function EditCoursePage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!course) return;
-    
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+
+    const payload = {
+      slug: courseSlug,
+      title,
+      tagline: tagline || null,
+      description,
+      instructor: instructor || null,
+      duration: duration || null,
+      totalSessions: totalSessions ? Number(totalSessions) : null,
+      priceINR: priceINR ? Number(priceINR) : null,
+      priceUSD: priceUSD ? Number(priceUSD) : null,
+      status,
+      thumbnailUrl: thumbnailUrl || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      registrationDeadline: registrationDeadline || null,
+      whyLearnIntro: whyLearnIntro || null,
+      whatYouLearn: whatYouLearn || null,
+      disclaimer: disclaimer || null,
+      maxStudents: maxStudents ? Number(maxStudents) : null,
+      currentEnrollments: Number(currentEnrollments),
+
+      features: features.filter((f) => f.trim()),
+      whyLearn: whyLearn.filter((w) => w.title.trim() && w.description.trim()),
+      content: courseContent.filter((c) => c.trim()),
+      topics: relatedTopics.filter((t) => t.trim()),
+    };
+
     try {
-      setSaving(true);
-      const res = await fetch(`/api/admin/courses/${course.id}`, {
+      const res = await fetch(`/api/admin/courses/${courseId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(course),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         alert("Course updated successfully!");
         router.push("/dashboard/admin/courses");
       } else {
-        alert("Failed to update course");
+        const err = await res.json();
+        alert(err.error || "Failed to update course");
       }
-    } catch (error) {
-      console.error("Update error:", error);
-      alert("Error updating course");
+    } catch (err) {
+      console.error(err);
+      alert("Unexpected error");
     } finally {
       setSaving(false);
     }
@@ -84,116 +201,241 @@ export default function EditCoursePage() {
 
   if (loading) {
     return (
-      <div className="p-4 flex justify-center items-center min-h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!course) {
-    return (
-      <div className="p-4 text-center">
-        <p>Course not found</p>
-        <Button onClick={() => router.back()} className="mt-4">
-          Go Back
-        </Button>
+      <div className="p-6 flex justify-center items-center min-h-64">
+        <div className="text-muted-foreground">Loading course...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Edit Course</h1>
-          <p className="text-muted-foreground">Editing: {course.title}</p>
-        </div>
-      </div>
+    <div className="p-6 mx-auto">
+      <Link
+        href="/dashboard/admin/courses"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Courses
+      </Link>
 
-      {/* Form */}
-      <div className="bg-card rounded-lg border p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Title</label>
-            <Input
-              value={course.title}
-              onChange={(e) => setCourse({ ...course, title: e.target.value })}
-              placeholder="Course title"
+      <h1 className="text-2xl font-bold mb-2">Edit Course</h1>
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* ── Basic Info ── */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Title *">
+              <TextInput
+                value={title}
+                onChange={setTitle}
+                placeholder="KP Astrology"
+                required
+              />
+            </Field>
+
+            <Field label="Slug *">
+              <TextInput
+                value={courseSlug}
+                onChange={setCourseSlug}
+                placeholder="kp-astrology"
+                required
+              />
+            </Field>
+
+            <Field label="Tagline">
+              <TextInput
+                value={tagline}
+                onChange={setTagline}
+                placeholder="Learn KP in its original form..."
+              />
+            </Field>
+
+            <Field label="Instructor">
+              <TextInput
+                value={instructor}
+                onChange={setInstructor}
+                placeholder="To be announced"
+              />
+            </Field>
+
+            <Field label="Duration">
+              <TextInput
+                value={duration}
+                onChange={setDuration}
+                placeholder="25 live sessions"
+              />
+            </Field>
+
+            <Field label="Total Sessions">
+              <TextInput
+                type="number"
+                value={totalSessions}
+                onChange={setTotalSessions}
+                placeholder="25"
+              />
+            </Field>
+
+            <Field label="Price (INR) *">
+              <TextInput
+                type="number"
+                value={priceINR}
+                onChange={setPriceINR}
+                placeholder="20000"
+                required
+              />
+            </Field>
+
+            <Field label="Price (USD) *">
+              <TextInput
+                type="number"
+                value={priceUSD}
+                onChange={setPriceUSD}
+                placeholder="250"
+                required
+              />
+            </Field>
+
+            <Field label="Thumbnail URL">
+              <TextInput
+                value={thumbnailUrl}
+                onChange={setThumbnailUrl}
+                placeholder="https://..."
+              />
+            </Field>
+
+            <DateInput
+              label="Start Date"
+              value={startDate}
+              onChange={setStartDate}
             />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Slug</label>
-            <Input
-              value={course.slug}
-              onChange={(e) => setCourse({ ...course, slug: e.target.value })}
-              placeholder="course-slug"
+            <DateInput label="End Date" value={endDate} onChange={setEndDate} />
+            <DateInput
+              label="Registration Deadline"
+              value={registrationDeadline}
+              onChange={setRegistrationDeadline}
             />
-          </div>
-        </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Description</label>
-          <Textarea
-            value={course.description}
-            onChange={(e) => setCourse({ ...course, description: e.target.value })}
-            placeholder="Course description"
-            rows={4}
-          />
-        </div>
+            <div className="md:col-span-2">
+              <StatusSelect value={status} onChange={setStatus} />
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Status</label>
-            <Select value={course.status} onValueChange={(value) => setCourse({ ...course, status: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DRAFT">Draft</SelectItem>
-                <SelectItem value="UPCOMING">Upcoming</SelectItem>
-                <SelectItem value="REGISTRATION_OPEN">Registration Open</SelectItem>
-                <SelectItem value="ONGOING">Ongoing</SelectItem>
-                <SelectItem value="COMPLETED">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* ── Long Texts with Rich Text Editor ── */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Content & SEO</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Field label="Description *">
+              <RichTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Enter course description..."
+                minHeight="300px"
+              />
+              {/* <Field label="Description *">
+  <Textarea
+    rows={5}
+    required
+    value={description}
+    onChange={(e) => setDescription(e.target.value)}
+    placeholder="Enter course description..."
+  />
+</Field> */}
+            </Field>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Price (INR)</label>
-            <Input
-              type="number"
-              value={course.priceINR}
-              onChange={(e) => setCourse({ ...course, priceINR: Number(e.target.value) })}
-              placeholder="0"
-            />
-          </div>
+            <Field label="Why Learn Intro">
+              <RichTextEditor
+                value={whyLearnIntro}
+                onChange={setWhyLearnIntro}
+                placeholder="Enter why learn introduction..."
+                minHeight="200px"
+              />
+            </Field>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Price (USD)</label>
-            <Input
-              type="number"
-              value={course.priceUSD}
-              onChange={(e) => setCourse({ ...course, priceUSD: Number(e.target.value) })}
-              placeholder="0"
-            />
-          </div>
-        </div>
+            <Field label="What You Learn">
+              <RichTextEditor
+                value={whatYouLearn}
+                onChange={setWhatYouLearn}
+                placeholder="Enter what students will learn..."
+                minHeight="300px"
+              />
+            </Field>
 
-        <div className="flex justify-end gap-4 pt-4">
-          <Button variant="outline" onClick={() => router.back()}>
-            Cancel
+            <Field label="Disclaimer">
+              <RichTextEditor
+                value={disclaimer}
+                onChange={setDisclaimer}
+                placeholder="Enter disclaimer..."
+                minHeight="200px"
+              />
+            </Field>
+          </CardContent>
+        </Card>
+
+        {/* ── Capacity ── */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Capacity</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Max Students">
+              <TextInput
+                type="number"
+                value={maxStudents}
+                onChange={setMaxStudents}
+                placeholder="50"
+              />
+            </Field>
+
+            <Field label="Current Enrollments">
+              <TextInput
+                type="number"
+                value={currentEnrollments}
+                onChange={setCurrentEnrollments}
+                placeholder="0"
+              />
+            </Field>
+          </CardContent>
+        </Card>
+
+        {/* ── Dynamic Lists ── */}
+        <DynamicStringList
+          title="Features"
+          items={features}
+          setItems={setFeatures}
+          placeholder="25 live sessions on Zoom"
+        />
+
+        <DynamicWhyLearn items={whyLearn} setItems={setWhyLearn} />
+
+        <DynamicStringList
+          title="Course Content"
+          items={courseContent}
+          setItems={setCourseContent}
+          placeholder="The Zodiac and Its Divisions"
+        />
+
+        <DynamicStringList
+          title="Related Topics"
+          items={relatedTopics}
+          setItems={setRelatedTopics}
+          placeholder="Astrology"
+        />
+
+        {/* ── Submit ── */}
+        <div className="flex gap-3">
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving…" : "Save Changes"}
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Save Changes
+          <Button type="button" variant="outline" asChild>
+            <Link href="/dashboard/admin/courses">Cancel</Link>
           </Button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
