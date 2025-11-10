@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { CommissionsTable, CouponsTable, CoursesTable, EnrollmentsTable, PaymentsTable, UsersTable } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from '@/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,8 +16,23 @@ export async function POST(req: NextRequest) {
       courseId,
     } = await req.json();
 
-    const userId = "user-id-from-session";
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+  console.error('Razorpay key secret not configured');
+  return NextResponse.json(
+    { error: "Payment gateway configuration error" },
+    { status: 500 }
+  );
+}
 
+const session = await auth()
+const userId = session?.user?.id
+
+if (!userId) {
+  return NextResponse.json(
+    { error: "Unauthorized: User not logged in" },
+    { status: 401 }
+  );
+}
     // Verify signature
     const crypto = require("crypto");
     const body = razorpay_order_id + "|" + razorpay_payment_id;
@@ -107,13 +123,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json(
-      {
-        message: "Payment verified successfully",
-        enrollment,
-      },
-      { status: 200 }
-    );
+  return NextResponse.json(
+  {
+    success: true,
+    message: "Payment verified successfully",
+    enrollment,
+    paymentId: payment.id
+  },
+  { status: 200 }
+);
   } catch (error) {
     console.error("Payment verification error:", error);
     return NextResponse.json(

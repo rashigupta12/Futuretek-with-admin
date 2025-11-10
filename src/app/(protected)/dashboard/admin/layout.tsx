@@ -324,7 +324,7 @@ export default function AdminLayout({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 ml-64 p-6 mt-16">
+        <main className="flex-1 ml-64 p-6">
           <div className="w-full mx-auto">{children}</div>
         </main>
       </div>

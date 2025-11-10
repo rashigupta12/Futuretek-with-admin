@@ -54,7 +54,7 @@ export default function JyotishiLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   // Get user data from session
   const userName = session?.user?.name || "Agent";
   const userImage = session?.user?.image || "/images/user_alt_icon.png";

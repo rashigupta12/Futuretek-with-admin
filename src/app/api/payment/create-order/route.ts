@@ -1,21 +1,36 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { db } from "@/db";
 import { CouponsTable, CoursesTable, PaymentsTable, UsersTable } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
+import { auth } from '@/auth';
 
-// ✅ Initialize Razorpay once at the top level
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
-// POST - Create payment order with commission calculation
 export async function POST(req: NextRequest) {
   try {
-    const { courseId, couponCode, paymentType, billingAddress } = await req.json();
-    const userId = "user-id-from-session";
+    const { courseId, couponCode, paymentType = "DOMESTIC", billingAddress } = await req.json(); // Add default value
+    
+    const session = await auth()
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized: User not logged in" },
+        { status: 401 }
+      );
+    }
+
+    // Validate paymentType
+    if (!paymentType || !["DOMESTIC", "FOREX"].includes(paymentType)) {
+      return NextResponse.json(
+        { error: "Invalid payment type. Must be DOMESTIC or FOREX" },
+        { status: 400 }
+      );
+    }
 
     // Get course
     const [course] = await db
@@ -28,11 +43,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    // Calculate amount
-    const amount =
-      paymentType === "FOREX"
-        ? parseFloat(course.priceUSD)
-        : parseFloat(course.priceINR);
+    // Calculate amount based on payment type
+    const amount = paymentType === "FOREX" 
+      ? parseFloat(course.priceUSD || "0") 
+      : parseFloat(course.priceINR);
+
+    if (isNaN(amount) || amount <= 0) {
+      return NextResponse.json(
+        { error: "Invalid course price" },
+        { status: 400 }
+      );
+    }
 
     let gstAmount = 0;
     let discountAmount = 0;
@@ -99,29 +120,29 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     let invoiceCounter = 1;
-    if (lastPayment) {
+    if (lastPayment?.invoiceNumber) {
       const lastCounter = parseInt(lastPayment.invoiceNumber.slice(-5));
-      invoiceCounter = lastCounter + 1;
+      invoiceCounter = isNaN(lastCounter) ? 1 : lastCounter + 1;
     }
 
     const invoiceNumber = `FT${financialYear}${invoiceType}${String(
       invoiceCounter
     ).padStart(5, "0")}`;
 
-    // ✅ Create Razorpay order (no require() used)
+    // Create Razorpay order
     const order = await razorpay.orders.create({
       amount: Math.round(finalAmount * 100), // Convert to paise
       currency: paymentType === "FOREX" ? "USD" : "INR",
       receipt: invoiceNumber,
     });
 
-    // Create payment record
+    // Create payment record - Ensure all required fields are included
     const [payment] = await db
       .insert(PaymentsTable)
       .values({
         userId,
         invoiceNumber,
-        paymentType,
+        paymentType, // This was missing - causing the error
         amount: amount.toString(),
         currency: paymentType === "FOREX" ? "USD" : "INR",
         gstAmount: gstAmount.toString(),
@@ -132,7 +153,7 @@ export async function POST(req: NextRequest) {
         commissionAmount: commissionAmount.toString(),
         razorpayOrderId: order.id,
         status: "PENDING",
-        billingAddress,
+        billingAddress: billingAddress || null,
       })
       .returning();
 

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/accordion";
 import { Clock, BookOpen, CheckCircle2, Users, Calendar } from "lucide-react";
 import { notFound } from "next/navigation";
+import { BuyNowButton } from '@/components/checkout/BuyNowButton';
 
 interface CourseData {
   id: string;
@@ -75,7 +76,7 @@ async function getCourse(slug: string): Promise<CourseData | null> {
         return null;
       }
 
-      const errorText = await response.text();
+      // const errorText = await response.text();
       throw new Error("Failed to fetch course");
     }
 
@@ -322,71 +323,77 @@ export default async function CoursePage({
                     `Master ${courseData.title}`}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <span className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-                      {courseData.priceINR
-                        ? `₹${parseFloat(courseData.priceINR).toLocaleString(
-                            "en-IN"
-                          )}`
-                        : "Contact for pricing"}
-                    </span>
-                    <Badge
-                      variant="secondary"
-                      className="bg-purple-500/10 text-purple-500"
-                    >
-                      {courseData.enrollment?.offer?.badge ||
-                        courseData.status ||
-                        "Limited Seats"}
-                    </Badge>
-                  </div>
+    <CardContent className="p-6">
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <span className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
+        {courseData.priceINR
+          ? `₹${parseFloat(courseData.priceINR).toLocaleString("en-IN")}`
+          : "Contact for pricing"}
+      </span>
+      <Badge
+        variant="secondary"
+        className="bg-purple-500/10 text-purple-500"
+      >
+        {courseData.enrollment?.offer?.badge ||
+          courseData.status ||
+          "Limited Seats"}
+      </Badge>
+    </div>
 
-                  {courseData.enrollment?.features ? (
-                    <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
-                      {courseData.enrollment.features.map((feature, index) => {
-                        const IconComponent = getIcon(feature.icon);
-                        return (
-                          <div key={index} className="flex items-center gap-3">
-                            <IconComponent className="h-5 w-5 text-purple-500" />
-                            <span className="text-sm">{feature.text}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Clock className="h-5 w-5 text-purple-500" />
-                        <span className="text-sm">
-                          {courseData.duration || "Self-paced learning"}
-                        </span>
-                      </div>
-                      {courseData.totalSessions && (
-                        <div className="flex items-center gap-3">
-                          <Calendar className="h-5 w-5 text-purple-500" />
-                          <span className="text-sm">
-                            {courseData.totalSessions} Sessions
-                          </span>
-                        </div>
-                      )}
-                      {courseData.currentEnrollments !== undefined && (
-                        <div className="flex items-center gap-3">
-                          <Users className="h-5 w-5 text-purple-500" />
-                          <span className="text-sm">
-                            {courseData.currentEnrollments} Students Enrolled
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+    {courseData.enrollment?.features ? (
+      <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
+        {courseData.enrollment.features.map((feature, index) => {
+          const IconComponent = getIcon(feature.icon);
+          return (
+            <div key={index} className="flex items-center gap-3">
+              <IconComponent className="h-5 w-5 text-purple-500" />
+              <span className="text-sm">{feature.text}</span>
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
+        <div className="flex items-center gap-3">
+          <Clock className="h-5 w-5 text-purple-500" />
+          <span className="text-sm">
+            {courseData.duration || "Self-paced learning"}
+          </span>
+        </div>
+        {courseData.totalSessions && (
+          <div className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-purple-500" />
+            <span className="text-sm">
+              {courseData.totalSessions} Sessions
+            </span>
+          </div>
+        )}
+        {courseData.currentEnrollments !== undefined && (
+          <div className="flex items-center gap-3">
+            <Users className="h-5 w-5 text-purple-500" />
+            <span className="text-sm">
+              {courseData.currentEnrollments} Students Enrolled
+            </span>
+          </div>
+        )}
+      </div>
+    )}
+    <BuyNowButton 
+      course={{
+        id: courseData.id,
+        title: courseData.title,
+        priceINR: courseData.priceINR || "0",
+        slug: courseData.slug
+      }}
+    />
 
-                  <p className="text-sm text-muted-foreground text-center italic">
-                    {courseData.enrollment?.offer?.guarantee ||
-                      "100% Satisfaction Guarantee"}
-                  </p>
-                </div>
-              </CardContent>
+    <p className="text-sm text-muted-foreground text-center italic">
+      {courseData.enrollment?.offer?.guarantee ||
+        "100% Satisfaction Guarantee"}
+    </p>
+  </div>
+</CardContent>
             </Card>
           </div>
         </div>
