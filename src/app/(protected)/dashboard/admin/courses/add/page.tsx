@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function AddCoursePage() {
   const router = useRouter();
@@ -104,6 +104,16 @@ export default function AddCoursePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+  if (title) {
+    const generatedSlug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+    setSlug(generatedSlug);
+  }
+}, [title]);
 
   return (
     <div className="p-6  mx-auto">
