@@ -8,11 +8,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { 
-  ChevronDown, 
-  Menu, 
-  LogIn, 
-  UserPlus, 
+import {
+  ChevronDown,
+  Menu,
+  LogIn,
+  UserPlus,
   LogOut,
   LayoutDashboard,
   Home,
@@ -20,7 +20,7 @@ import {
   Info,
   Briefcase,
   Mail,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { Session } from "next-auth";
@@ -35,32 +35,31 @@ type Course = {
 };
 
 export function SiteHeader() {
-
-   const { data: session } = useSession();
+  const { data: session } = useSession();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  console.log("session",session)
+  console.log("session", session);
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
 
   useEffect(() => {
-  const fetchCourses = async () => {
-    try {
-      const response = await fetch('/api/admin/courses');
-      if (response.ok) {
-        const data = await response.json();
-        setCourses(data.courses || data); // Adjust based on your API response structure
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch("/api/admin/courses");
+        if (response.ok) {
+          const data = await response.json();
+          setCourses(data.courses || data); // Adjust based on your API response structure
+        }
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Failed to fetch courses:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchCourses();
-}, []);
+    fetchCourses();
+  }, []);
 
   return (
     <header className="bg-background sticky top-0 z-20 border-b">
@@ -76,46 +75,76 @@ export function SiteHeader() {
           </Link>
         </div>
         <nav className="text-muted-foreground hover:[&_a]:text-foreground hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
-          <Link href="/" className="hover:text-purple-600 transition-colors">Home</Link>
-         <div className="relative group">
-  <button className="flex items-center gap-1 hover:text-purple-600 transition-colors text-sm font-medium text-muted-foreground hover:text-foreground">
-    Courses
-    <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
-  </button>
-  <div className="absolute left-0 top-full hidden group-hover:block bg-background border rounded-lg shadow-lg p-2 w-56 mt-2 z-50">
-    {loading ? (
-      <div className="px-4 py-2 text-sm text-muted-foreground">Loading...</div>
-    ) : (
-      courses.map((course) => (
-        <Link
-          key={course.id}
-          href={`/courses/${course.slug}`}
-          className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm text-gray-700 hover:text-purple-700"
-        >
-          {course.title}
-        </Link>
-      ))
-    )}
-  </div>
-</div>
-          <Link href="/about" className="hover:text-purple-600 transition-colors">About</Link>
-          <Link href="/career" className="hover:text-purple-600 transition-colors">Career</Link>
-          <Link href="/contact" className="hover:text-purple-600 transition-colors">Contact Us</Link>
+          <Link href="/" className="hover:text-purple-600 transition-colors">
+            Home
+          </Link>
+          <div className="relative group">
+            <button className="flex items-center gap-1 hover:text-purple-600 transition-colors text-sm font-medium text-muted-foreground hover:text-foreground">
+              Courses
+              <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
+            </button>
+            <div className="absolute left-0 top-full hidden group-hover:block bg-background border rounded-lg shadow-lg p-2 w-56 mt-2 z-50">
+              {loading ? (
+                <div className="px-4 py-2 text-sm text-muted-foreground">
+                  Loading...
+                </div>
+              ) : (
+                courses.map((course) => (
+                  <Link
+                    key={course.id}
+                    href={`/courses/${course.slug}`}
+                    className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm text-gray-700 hover:text-purple-700"
+                  >
+                    {course.title}
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+          <Link
+            href="/about"
+            className="hover:text-purple-600 transition-colors"
+          >
+            About
+          </Link>
+          <Link
+            href="/career"
+            className="hover:text-purple-600 transition-colors"
+          >
+            Career
+          </Link>
+          <Link
+            href="/contact"
+            className="hover:text-purple-600 transition-colors"
+          >
+            Contact Us
+          </Link>
         </nav>
         <div className="ml-auto flex items-center gap-2">
           {session ? (
             <>
-              <span className="hidden md:inline text-sm">Welcome, {session.user.name}</span>
+              <span className="hidden md:inline text-sm">
+                Welcome, {session.user.name}
+              </span>
               <Button asChild variant="ghost" className="hidden md:flex">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
-              <Button onClick={handleLogout} variant="outline" className="hidden md:flex">
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="hidden md:flex"
+              >
                 Logout
               </Button>
               {/* Mobile icons */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button asChild variant="ghost" size="icon" className="md:hidden">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                  >
                     <Link href="/dashboard">
                       <LayoutDashboard className="h-5 w-5" />
                     </Link>
@@ -125,7 +154,12 @@ export function SiteHeader() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={handleLogout} variant="ghost" size="icon" className="md:hidden">
+                  <Button
+                    onClick={handleLogout}
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                  >
                     <LogOut className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -143,7 +177,12 @@ export function SiteHeader() {
               {/* Mobile icons */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button asChild variant="ghost" size="icon" className="md:hidden">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                  >
                     <Link href="/auth/login">
                       <LogIn className="h-5 w-5" />
                     </Link>
@@ -153,7 +192,12 @@ export function SiteHeader() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button asChild variant="default" size="icon" className="md:hidden">
+                  <Button
+                    asChild
+                    variant="default"
+                    size="icon"
+                    className="md:hidden"
+                  >
                     <Link href="/auth/register">
                       <UserPlus className="h-5 w-5" />
                     </Link>
@@ -168,20 +212,26 @@ export function SiteHeader() {
     </header>
   );
 }
-function Sidebar({ session, handleLogout }: { session: Session | null, handleLogout: () => Promise<void> }) {
- const [isOpen, setIsOpen] = useState(false);
+function Sidebar({
+  session,
+  handleLogout,
+}: {
+  session: Session | null;
+  handleLogout: () => Promise<void>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-   useEffect(() => {
+  useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await fetch('/api/admin/courses');
+        const response = await fetch("/api/admin/courses");
         if (response.ok) {
           const data = await response.json();
           setCourses(data.courses || data);
         }
       } catch (error) {
-        console.error('Failed to fetch courses:', error);
+        console.error("Failed to fetch courses:", error);
       } finally {
         setLoading(false);
       }
@@ -202,11 +252,11 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
     { href: "/contact", label: "Contact Us", icon: Mail },
   ];
 
-  const courseItems = loading 
+  const courseItems = loading
     ? [{ href: "#", label: "Loading..." }]
-    : courses.map(course => ({
+    : courses.map((course) => ({
         href: `/courses/${course.slug}`,
-        label: course.title
+        label: course.title,
       }));
 
   return (
@@ -226,10 +276,7 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
           </TooltipTrigger>
         </SheetTrigger>
         <TooltipContent align="start">Menu</TooltipContent>
-        <SheetContent
-          side="left"
-          className="flex w-[300px] flex-col p-0 pt-10"
-        >
+        <SheetContent side="left" className="flex w-[300px] flex-col p-0 pt-10">
           <div className="px-6 py-4">
             <Link
               href="/"
@@ -240,15 +287,17 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
               Futuretek
             </Link>
           </div>
-          
+
           <Separator />
-          
+
           {/* User Section */}
           {session && (
             <>
               <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-pink-50">
                 <p className="text-sm text-muted-foreground">Welcome back,</p>
-                <p className="font-semibold text-purple-900">{session.user.name}</p>
+                <p className="font-semibold text-purple-900">
+                  {session.user.name}
+                </p>
               </div>
               <Separator />
             </>
