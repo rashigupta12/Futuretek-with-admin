@@ -11,15 +11,16 @@ import {
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+// ==========================
 // GET - Get single course
+// ==========================
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> } // <-- params is now a Promise
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id: slug } = await context.params; // <-- await params
+  const { id: slug } = await context.params;
 
   try {
-    // 1. Fetch the main course row by slug
     const [course] = await db
       .select()
       .from(CoursesTable)
@@ -27,46 +28,26 @@ export async function GET(
       .limit(1);
 
     if (!course) {
-      return NextResponse.json(
-        { error: "Course not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    // 2. Fetch related tables using the course.id (UUID)
     const [features, whyLearn, content, topics] = await Promise.all([
-      db
-        .select()
-        .from(CourseFeaturesTable)
-        .where(eq(CourseFeaturesTable.courseId, course.id)),
-
-      db
-        .select()
-        .from(CourseWhyLearnTable)
-        .where(eq(CourseWhyLearnTable.courseId, course.id)),
-
-      db
-        .select()
-        .from(CourseContentTable)
-        .where(eq(CourseContentTable.courseId, course.id)),
-
-      db
-        .select()
-        .from(CourseTopicsTable)
-        .where(eq(CourseTopicsTable.courseId, course.id)),
+      db.select().from(CourseFeaturesTable).where(eq(CourseFeaturesTable.courseId, course.id)),
+      db.select().from(CourseWhyLearnTable).where(eq(CourseWhyLearnTable.courseId, course.id)),
+      db.select().from(CourseContentTable).where(eq(CourseContentTable.courseId, course.id)),
+      db.select().from(CourseTopicsTable).where(eq(CourseTopicsTable.courseId, course.id)),
     ]);
 
-    // 3. Shape the response
     return NextResponse.json(
       {
         ...course,
-       features: features.map((f) => f.feature), 
+        features: features.map((f) => f.feature),
         whyLearn: whyLearn.map((w) => ({
           title: w.title,
           description: w.description,
         })),
-        courseContent: content.map((c) => c.content),       
-    topics: topics.map((t) => t.topic),        
+        courseContent: content.map((c) => c.content),
+        topics: topics.map((t) => t.topic),
       },
       { status: 200 }
     );
@@ -79,44 +60,43 @@ export async function GET(
   }
 }
 
-// PUT - Update course
-// PUT - Update course
-// PUT - Update course
+// ==========================
+// PUT - Update a course
+// ==========================
 export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const params = await context.params;  
+  const params = await context.params;
+
   try {
-    const { id } = await context.params;
+    const { id } = params;
     const body = await req.json();
 
     const { features, whyLearn, content, topics, ...courseData } = body;
 
-    // --- CRITICAL FIX: Convert date strings to Date objects ---
-    const dateFields = ["createdAt", "updatedAt", "startDate", "endDate", "registrationDeadline"] as const;
+    const dateFields = [
+      "createdAt",
+      "updatedAt",
+      "startDate",
+      "endDate",
+      "registrationDeadline",
+    ] as const;
 
     const cleanedCourseData = { ...courseData };
 
     for (const field of dateFields) {
       if (cleanedCourseData[field] != null && cleanedCourseData[field] !== "") {
-        // If it's a string like "2025-11-07" or "2025-11-07T...", convert to Date
         if (typeof cleanedCourseData[field] === "string") {
           cleanedCourseData[field] = new Date(cleanedCourseData[field]);
         }
-        // If it's already a Date, leave it
       } else if (cleanedCourseData[field] === "") {
-        // If it's an empty string, set to null
         cleanedCourseData[field] = null;
       }
     }
 
-    // Always set updatedAt to now
     cleanedCourseData.updatedAt = new Date();
 
-    // --- End Fix ---
-
-    // Update course
     const [updatedCourse] = await db
       .update(CoursesTable)
       .set(cleanedCourseData)
@@ -127,7 +107,6 @@ export async function PUT(
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    // --- Update related tables ---
     if (features !== undefined) {
       await db.delete(CourseFeaturesTable).where(eq(CourseFeaturesTable.courseId, id));
       if (features.length > 0) {
@@ -188,6 +167,51 @@ export async function PUT(
     console.error("PUT /api/admin/courses/[id] error:", error);
     return NextResponse.json(
       { error: "Failed to update course", details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// ==========================
+// DELETE - Delete a course
+// ==========================
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
+  try {
+    // Check if course exists
+    const [course] = await db
+      .select()
+      .from(CoursesTable)
+      .where(eq(CoursesTable.id, id))
+      .limit(1);
+
+    if (!course) {
+      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    }
+
+    // Delete related records first
+    await Promise.all([
+      db.delete(CourseFeaturesTable).where(eq(CourseFeaturesTable.courseId, id)),
+      db.delete(CourseWhyLearnTable).where(eq(CourseWhyLearnTable.courseId, id)),
+      db.delete(CourseContentTable).where(eq(CourseContentTable.courseId, id)),
+      db.delete(CourseTopicsTable).where(eq(CourseTopicsTable.courseId, id)),
+    ]);
+
+    // Delete the main course
+    await db.delete(CoursesTable).where(eq(CoursesTable.id, id));
+
+    return NextResponse.json(
+      { message: "Course deleted successfully", deletedId: id },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("DELETE /api/admin/courses/[id] error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete course", details: error.message },
       { status: 500 }
     );
   }
