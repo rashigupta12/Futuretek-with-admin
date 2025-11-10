@@ -8,11 +8,13 @@ import {
   CommissionsTable,
   CouponCoursesTable,
   CouponsTable,
+  CouponTypesTable,
   PaymentsTable,
-  UserCouponsTable
+  UsersTable
 } from "@/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+// app/api/jyotishi/coupons/route.ts
 // GET - List Jyotishi's coupons
 export async function GET(req: NextRequest) {
   try {
@@ -20,19 +22,36 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const isActive = searchParams.get("isActive");
 
-    const conditions = [eq(CouponsTable.createdBy, jyotishiId)];
-    
+    const conditions = [eq(CouponsTable.createdByJyotishiId, jyotishiId)];
+
     if (isActive !== null) {
       conditions.push(eq(CouponsTable.isActive, isActive === "true"));
     }
 
     const coupons = await db
-      .select()
+      .select({
+        id: CouponsTable.id,
+        code: CouponsTable.code,
+        discountType: CouponsTable.discountType,
+        discountValue: CouponsTable.discountValue,
+        maxUsageCount: CouponsTable.maxUsageCount,
+        currentUsageCount: CouponsTable.currentUsageCount,
+        validFrom: CouponsTable.validFrom,
+        validUntil: CouponsTable.validUntil,
+        isActive: CouponsTable.isActive,
+        createdAt: CouponsTable.createdAt,
+        typeName: CouponTypesTable.typeName,
+        typeCode: CouponTypesTable.typeCode,
+      })
       .from(CouponsTable)
+      .leftJoin(
+        CouponTypesTable,
+        eq(CouponsTable.couponTypeId, CouponTypesTable.id)
+      )
       .where(and(...conditions))
       .orderBy(desc(CouponsTable.createdAt));
 
-    // Get usage stats for each coupon
+    // Get usage and commission stats for each coupon
     const couponsWithStats = await Promise.all(
       coupons.map(async (coupon) => {
         const [stats] = await db
@@ -70,49 +89,92 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Create custom coupon
+// POST - Create coupon with type selection
 export async function POST(req: NextRequest) {
   try {
     const jyotishiId = "jyotishi-id-from-session";
     const body = await req.json();
     const {
-      code,
-      type,
-      discountType,
+      couponTypeId,
       discountValue,
       maxUsageCount,
       validFrom,
       validUntil,
       description,
       courseIds,
-      userIds,
     } = body;
 
     // Validate required fields
-    if (
-      !code ||
-      !type ||
-      !discountType ||
-      !discountValue ||
-      !validFrom ||
-      !validUntil
-    ) {
+    if (!couponTypeId || !discountValue || !validFrom || !validUntil) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
+    // Get Jyotishi details
+    const [jyotishi] = await db
+      .select({
+        jyotishiCode: UsersTable.jyotishiCode,
+        commissionRate: UsersTable.commissionRate,
+      })
+      .from(UsersTable)
+      .where(eq(UsersTable.id, jyotishiId))
+      .limit(1);
+
+    if (!jyotishi || !jyotishi.jyotishiCode) {
+      return NextResponse.json(
+        { error: "Jyotishi code not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get coupon type
+    const [couponType] = await db
+      .select()
+      .from(CouponTypesTable)
+      .where(
+        and(
+          eq(CouponTypesTable.id, couponTypeId),
+          eq(CouponTypesTable.isActive, true)
+        )
+      )
+      .limit(1);
+
+    if (!couponType) {
+      return NextResponse.json(
+        { error: "Coupon type not found or inactive" },
+        { status: 404 }
+      );
+    }
+
+    // Validate discount value against max limit
+    if (
+      couponType.maxDiscountLimit &&
+      parseFloat(discountValue) > parseFloat(couponType.maxDiscountLimit)
+    ) {
+      return NextResponse.json(
+        {
+          error: `Discount value exceeds maximum limit of ${couponType.maxDiscountLimit}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Generate coupon code: COUP[JyotishiCode][TypeCode][DiscountValue]
+    const formattedDiscount = discountValue.toString().replace(".", "");
+    const couponCode = `COUP${jyotishi.jyotishiCode}${couponType.typeCode}${formattedDiscount}`;
+
     // Check if code already exists
     const [existingCoupon] = await db
       .select()
       .from(CouponsTable)
-      .where(eq(CouponsTable.code, code.toUpperCase()))
+      .where(eq(CouponsTable.code, couponCode))
       .limit(1);
 
     if (existingCoupon) {
       return NextResponse.json(
-        { error: "Coupon code already exists" },
+        { error: "Coupon code already exists. Try a different discount value." },
         { status: 400 }
       );
     }
@@ -121,20 +183,20 @@ export async function POST(req: NextRequest) {
     const [coupon] = await db
       .insert(CouponsTable)
       .values({
-        code: code.toUpperCase(),
-        type,
-        discountType,
+        code: couponCode,
+        couponTypeId,
+        createdByJyotishiId: jyotishiId,
+        discountType: couponType.discountType,
         discountValue,
         maxUsageCount,
         validFrom: new Date(validFrom),
         validUntil: new Date(validUntil),
         description,
-        createdBy: jyotishiId,
       })
       .returning();
 
-    // Link courses for COMBO type
-    if (type === "COMBO" && courseIds && courseIds.length > 0) {
+    // Link courses if provided
+    if (courseIds && courseIds.length > 0) {
       await db.insert(CouponCoursesTable).values(
         courseIds.map((courseId: string) => ({
           couponId: coupon.id,
@@ -143,18 +205,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Link users for CUSTOM type
-    if (type === "CUSTOM" && userIds && userIds.length > 0) {
-      await db.insert(UserCouponsTable).values(
-        userIds.map((userId: string) => ({
-          couponId: coupon.id,
-          userId,
-        }))
-      );
-    }
-
     return NextResponse.json(
-      { message: "Coupon created successfully", coupon },
+      {
+        message: "Coupon created successfully",
+        coupon: {
+          ...coupon,
+          typeName: couponType.typeName,
+          jyotishiCode: jyotishi.jyotishiCode,
+        },
+      },
       { status: 201 }
     );
   } catch (error) {

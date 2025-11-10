@@ -1,8 +1,7 @@
 /* eslint-disable  @typescript-eslint/no-require-imports */
 // app/api/payment/verify/route.ts
 import { db } from "@/db";
-import { CoursesTable, EnrollmentsTable, PaymentsTable } from "@/db/schema";
-import { createCommissionRecord } from "@/lib/helper";
+import { CommissionsTable, CouponsTable, CoursesTable, EnrollmentsTable, PaymentsTable, UsersTable } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -16,7 +15,7 @@ export async function POST(req: NextRequest) {
       courseId,
     } = await req.json();
 
-    const userId = "user-id-from-session"; // Replace this with actual session retrieval logic
+    const userId = "user-id-from-session";
 
     // Verify signature
     const crypto = require("crypto");
@@ -68,7 +67,7 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    // Link enrollment to payment
+    // Update enrollment in payment
     await db
       .update(PaymentsTable)
       .set({ enrollmentId: enrollment.id })
@@ -79,19 +78,40 @@ export async function POST(req: NextRequest) {
       sql`UPDATE ${CoursesTable} SET current_enrollments = current_enrollments + 1 WHERE id = ${courseId}`
     );
 
-    // Create commission record if coupon was used
+    // Update coupon usage count
     if (payment.couponId) {
-      await createCommissionRecord(
-        paymentId,
-        courseId,
-        userId,
-        payment.couponId,
-        parseFloat(payment.finalAmount)
+      await db.execute(
+        sql`UPDATE ${CouponsTable} SET current_usage_count = current_usage_count + 1 WHERE id = ${payment.couponId}`
       );
+
+      // Create commission record if Jyotishi coupon was used
+      if (payment.jyotishiId && parseFloat(payment.commissionAmount) > 0) {
+        // Get Jyotishi commission rate
+        const [jyotishi] = await db
+          .select({ commissionRate: UsersTable.commissionRate })
+          .from(UsersTable)
+          .where(eq(UsersTable.id, payment.jyotishiId))
+          .limit(1);
+
+        await db.insert(CommissionsTable).values({
+          jyotishiId: payment.jyotishiId,
+          paymentId: payment.id,
+          courseId,
+          studentId: userId,
+          couponId: payment.couponId,
+          commissionRate: jyotishi?.commissionRate || "0",
+          saleAmount: payment.finalAmount,
+          commissionAmount: payment.commissionAmount,
+          status: "PENDING",
+        });
+      }
     }
 
     return NextResponse.json(
-      { message: "Payment verified successfully", enrollment },
+      {
+        message: "Payment verified successfully",
+        enrollment,
+      },
       { status: 200 }
     );
   } catch (error) {
@@ -102,3 +122,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

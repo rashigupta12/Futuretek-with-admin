@@ -38,7 +38,7 @@ type SingleNavItem = {
 type GroupNavItem = {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  key: "courses" | "blogs" | "coupons" | "certificates";
+  key: "courses" | "blogs" | "coupons" | "certificates"|"agent";
   subItems: {
     title: string;
     href: string;
@@ -57,12 +57,13 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   const [expandedMenus, setExpandedMenus] = useState<
-    Record<"courses" | "blogs" | "coupons" | "certificates", boolean>
+    Record<"courses" | "blogs" | "coupons" | "certificates"|"agent", boolean>
   >({
     courses: true,
     blogs: false,
     coupons: false,
     certificates: false,
+    agent:false,
   });
 
   const handleLogout = async () => {
@@ -105,6 +106,20 @@ export default function AdminLayout({
       subItems: [
         { title: "All Blogs", href: "/dashboard/admin/blogs", icon: List },
         { title: "Add Blog", href: "/dashboard/admin/blogs/add", icon: Plus },
+      ],
+    },
+
+     {
+      title: "Agent",
+      icon: BookOpen,
+      key: "agent",
+      subItems: [
+        { title: "All Agent", href: "/dashboard/admin/agent", icon: List },
+        {
+          title: "Add agent",
+          href: "/dashboard/admin/agent/add",
+          icon: Plus,
+        },
       ],
     },
     {

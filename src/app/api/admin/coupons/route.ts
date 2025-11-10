@@ -9,98 +9,88 @@ import {
   UserCouponsTable,
   CouponType,
   DiscountType,
+  CouponTypesTable,
+  UsersTable,
 } from "@/db/schema";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 
 type CouponTypeValue = "STANDARD" | "CUSTOM" | "COMBO";
 type DiscountTypeValue = "PERCENTAGE" | "FIXED_AMOUNT";
 
-// POST - Create coupon
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const body = await req.json();
-    const {
-      code,
-      type,
-      discountType,
-      discountValue,
-      maxUsageCount,
-      validFrom,
-      validUntil,
-      description,
-      courseIds,
-      userIds,
-       createdBy
-    } = body;
+    const { searchParams } = new URL(req.url);
+    const jyotishiId = searchParams.get("jyotishiId");
+    const typeId = searchParams.get("typeId");
+    const isActive = searchParams.get("isActive");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const offset = (page - 1) * limit;
 
-    // Validate required fields
-    if (!code || !type || !discountType || !discountValue || !validFrom || !validUntil) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    const conditions = [];
+    if (jyotishiId) {
+      conditions.push(eq(CouponsTable.createdByJyotishiId, jyotishiId));
+    }
+    if (typeId) {
+      conditions.push(eq(CouponsTable.couponTypeId, typeId));
+    }
+    if (isActive !== null) {
+      conditions.push(eq(CouponsTable.isActive, isActive === "true"));
     }
 
-    if (!createdBy) {
-      return NextResponse.json(
-        { error: "Unauthorized: Admin user not found" },
-        { status: 401 }
-      );
-    }
-
-    // Validate enum values
-    const validTypes: CouponTypeValue[] = ["STANDARD", "CUSTOM", "COMBO"];
-const validDiscountTypes: DiscountTypeValue[] = ["PERCENTAGE", "FIXED_AMOUNT"];
-    if (!validTypes.includes(type)) {
-      return NextResponse.json({ error: "Invalid coupon type" }, { status: 400 });
-    }
-    if (!validDiscountTypes.includes(discountType)) {
-      return NextResponse.json({ error: "Invalid discount type" }, { status: 400 });
-    }
-
-    const [coupon] = await db
-      .insert(CouponsTable)
-      .values({
-        code: code.toUpperCase(),
-        type,
-        discountType,
-        discountValue: String(discountValue), // Drizzle expects string for decimal
-        maxUsageCount: maxUsageCount ? Number(maxUsageCount) : undefined,
-        validFrom: new Date(validFrom),
-        validUntil: new Date(validUntil),
-        description,
-        createdBy, // This was missing!
+    const coupons = await db
+      .select({
+        id: CouponsTable.id,
+        code: CouponsTable.code,
+        discountValue: CouponsTable.discountValue,
+        discountType: CouponsTable.discountType,
+        currentUsageCount: CouponsTable.currentUsageCount,
+        maxUsageCount: CouponsTable.maxUsageCount,
+        isActive: CouponsTable.isActive,
+        validUntil: CouponsTable.validUntil,
+        createdAt: CouponsTable.createdAt,
+        typeName: CouponTypesTable.typeName,
+        typeCode: CouponTypesTable.typeCode,
+        jyotishiName: UsersTable.name,
+        jyotishiCode: UsersTable.jyotishiCode,
       })
-      .returning();
+      .from(CouponsTable)
+      .leftJoin(
+        CouponTypesTable,
+        eq(CouponsTable.couponTypeId, CouponTypesTable.id)
+      )
+      .leftJoin(
+        UsersTable,
+        eq(CouponsTable.createdByJyotishiId, UsersTable.id)
+      )
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(CouponsTable.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    // Link courses for COMBO type
-    if (type === "COMBO" && Array.isArray(courseIds) && courseIds.length > 0) {
-      await db.insert(CouponCoursesTable).values(
-        courseIds.map((courseId: string) => ({
-          couponId: coupon.id,
-          courseId,
-        }))
-      );
-    }
-
-    // Link users for CUSTOM type
-    if (type === "CUSTOM" && Array.isArray(userIds) && userIds.length > 0) {
-      await db.insert(UserCouponsTable).values(
-        userIds.map((userId: string) => ({
-          couponId: coupon.id,
-          userId,
-        }))
-      );
-    }
+    // Get total count
+    const [{ count }] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(CouponsTable)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     return NextResponse.json(
-      { message: "Coupon created successfully", coupon },
-      { status: 201 }
+      {
+        coupons,
+        pagination: {
+          page,
+          limit,
+          total: count,
+          totalPages: Math.ceil(count / limit),
+        },
+      },
+      { status: 200 }
     );
-  } catch (error: any) {
-    console.error("Error creating coupon:", error);
+  } catch (error) {
+    console.error("Error fetching coupons:", error);
     return NextResponse.json(
-      { error: "Failed to create coupon", details: error.message },
+      { error: "Failed to fetch coupons" },
       { status: 500 }
     );
   }
