@@ -16,11 +16,12 @@ import {
   BookOpen,
   CheckCircle,
   Clock,
-  IndianRupee,
   Loader2,
   Star,
   TrendingUp,
   Tag,
+  Sparkles,
+  Award,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -65,16 +66,13 @@ export function CoursesCatalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /* -------------------------------------------------------------
-     1. Fetch courses + enrollments + coupon prices
-     ------------------------------------------------------------- */
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        // 1. Public courses - use the public API endpoint
+        // Fetch courses first and show them immediately
         const coursesRes = await fetch("/api/courses");
         if (!coursesRes.ok) {
           throw new Error(`Failed to fetch courses: ${coursesRes.status}`);
@@ -87,57 +85,44 @@ export function CoursesCatalog() {
         
         const data = await coursesRes.json();
         const rawCourses = data.courses || [];
-
-        let enrolledIds = new Set<string>();
-        if (userId) {
-          try {
-            const enrollRes = await fetch(`/api/user/enrollments`);
-            if (enrollRes.ok) {
-              const enrollData = await enrollRes.json();
-              const enrollments = enrollData.enrollments || [];
-              if (Array.isArray(enrollments)) {
-                enrolledIds = new Set(
-                  enrollments
-                    .filter((e: any) => e.status === "ACTIVE" || e.status === "COMPLETED")
-                    .map((e: any) => e.courseId)
-                );
-              }
-            }
-          } catch (err) {
-            console.error("Error fetching enrollments:", err);
-            // Continue without enrollment data
-          }
-        }
-
+        
+        // Set courses immediately with base prices
         setCourses(rawCourses);
-        setEnrolledCourseIds(enrolledIds);
+        const basePrices: Record<string, CoursePriceData> = {};
+        rawCourses.forEach((course: Course) => {
+          basePrices[course.id] = {
+            originalPrice: course.priceINR.toString(),
+            finalPrice: course.priceINR.toString(),
+            discountAmount: "0",
+            hasAssignedCoupon: false
+          };
+        });
+        setCoursePrices(basePrices);
+        setLoading(false); // Show UI immediately
 
-        // 3. Fetch discounted prices for each course (only if user is logged in)
+        // If user is logged in, fetch enrollments and prices in parallel (non-blocking)
         if (userId && rawCourses.length > 0) {
-          const pricePromises = rawCourses.map(async (course: Course) => {
-            try {
-              const priceRes = await fetch(`/api/courses/${course.slug}`);
-              
-              if (priceRes.ok) {
-                const contentType = priceRes.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                  const data = await priceRes.json();
-                  return {
-                    courseId: course.id,
-                    priceData: data.course
-                  };
-                }
-              }
-              return null;
-            } catch (err) {
-              console.error(`Error fetching price for course ${course.id}:`, err);
-              return null;
-            }
-          });
+          // Fetch enrollments and prices in parallel
+          const [enrollData, ...priceResults] = await Promise.all([
+            fetch(`/api/user/enrollments`)
+              .then(res => res.ok ? res.json() : null)
+              .catch(() => null),
+            // Fetch all course prices in parallel (limit to 10 concurrent requests)
+            ...batchFetch(rawCourses, 10)
+          ]);
 
-          const priceResults = await Promise.all(pricePromises);
-          const pricesMap: Record<string, CoursePriceData> = {};
+          // Update enrollments
+          if (enrollData?.enrollments && Array.isArray(enrollData.enrollments)) {
+            const enrolledIds = new Set<string>(
+              enrollData.enrollments
+                .filter((e: any) => e.status === "ACTIVE" || e.status === "COMPLETED")
+                .map((e: any) => e.courseId as string)
+            );
+            setEnrolledCourseIds(enrolledIds);
+          }
 
+          // Update prices
+          const pricesMap: Record<string, CoursePriceData> = { ...basePrices };
           priceResults.forEach(result => {
             if (result && result.priceData) {
               pricesMap[result.courseId] = {
@@ -149,30 +134,35 @@ export function CoursesCatalog() {
               };
             }
           });
-
           setCoursePrices(pricesMap);
-        } else {
-          // For non-logged-in users, initialize with base prices
-          const basePrices: Record<string, CoursePriceData> = {};
-          rawCourses.forEach((course: Course) => {
-            basePrices[course.id] = {
-              originalPrice: course.priceINR.toString(),
-              finalPrice: course.priceINR.toString(),
-              discountAmount: "0",
-              hasAssignedCoupon: false
-            };
-          });
-          setCoursePrices(basePrices);
         }
       } catch (err) {
         console.error("Catalog load error:", err);
         setError(err instanceof Error ? err.message : "Failed to load courses");
-      } finally {
         setLoading(false);
       }
     }
 
-    // Wait for session to be determined
+    // Helper function to batch fetch with concurrency limit
+    function batchFetch(courses: Course[], concurrency: number) {
+      return courses.map(course => 
+        fetch(`/api/courses/${course.slug}`)
+          .then(res => {
+            if (res.ok) {
+              const contentType = res.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                return res.json().then(data => ({
+                  courseId: course.id,
+                  priceData: data.course
+                }));
+              }
+            }
+            return null;
+          })
+          .catch(() => null)
+      );
+    }
+
     if (status !== "loading") {
       fetchData();
     }
@@ -192,36 +182,37 @@ export function CoursesCatalog() {
     > = {
       REGISTRATION_OPEN: {
         label: "Enrolling Now",
-        color: "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm",
-        icon: <TrendingUp className="h-3 w-3" />,
+        color: "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md border-0",
+        icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
       UPCOMING: {
         label: "Coming Soon",
-        color: "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm",
-        icon: <Clock className="h-3 w-3" />,
+        color: "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md border-0",
+        icon: <Clock className="h-3.5 w-3.5" />,
       },
       ONGOING: {
         label: "In Progress",
-        color: "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm",
-        icon: <BookOpen className="h-3 w-3" />,
+        color: "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md border-0",
+        icon: <BookOpen className="h-3.5 w-3.5" />,
       },
       COMPLETED: {
         label: "Completed",
-        color: "bg-gray-100 text-gray-700 border border-gray-300",
+        color: "bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-sm border-0",
+        icon: <CheckCircle className="h-3.5 w-3.5" />,
       },
       DRAFT: {
         label: "Draft",
-        color: "bg-gray-100 text-gray-700 border border-gray-300",
+        color: "bg-gray-100 text-gray-600 border border-gray-300",
       },
       ARCHIVED: {
         label: "Archived",
-        color: "bg-gray-100 text-gray-700 border border-gray-300",
+        color: "bg-gray-100 text-gray-600 border border-gray-300",
       },
     };
     const { label, color, icon } = cfg[status] ?? cfg.DRAFT;
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${color}`}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${color}`}
       >
         {icon}
         {label}
@@ -255,19 +246,16 @@ export function CoursesCatalog() {
     };
   };
 
-  /* -------------------------------------------------------------
-     Render: Loading / Error / Empty
-     ------------------------------------------------------------- */
   if (status === "loading" || loading) {
     return (
-      <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
+      <section className="py-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-600" />
+          <div className="text-center bg-white/60 backdrop-blur-sm rounded-3xl p-12 shadow-xl border border-white/20">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <Loader2 className="h-10 w-10 animate-spin text-white" />
             </div>
-            <p className="text-slate-600 font-semibold">Loading courses...</p>
-            <p className="text-sm text-slate-500 mt-1">Please wait a moment</p>
+            <p className="text-gray-900 font-bold text-xl mb-2">Loading courses...</p>
+            <p className="text-sm text-gray-600">Discovering amazing learning opportunities</p>
           </div>
         </div>
       </section>
@@ -276,21 +264,21 @@ export function CoursesCatalog() {
 
   if (error) {
     return (
-      <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
+      <section className="py-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center bg-white rounded-3xl border-2 border-red-100 p-12 shadow-lg">
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="h-8 w-8 text-red-500" />
+          <div className="text-center bg-white rounded-3xl border-0 p-12 shadow-2xl">
+            <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <AlertCircle className="h-10 w-10 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
               Unable to Load Courses
             </h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">{error}</p>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto text-lg">{error}</p>
             <Button
               onClick={() => window.location.reload()}
-              className="bg-gray-900 hover:bg-gray-800 px-6 py-3 h-auto"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 h-auto text-base font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
             >
-              <ArrowRight className="h-4 w-4 mr-2" />
+              <ArrowRight className="h-5 w-5 mr-2" />
               Try Again
             </Button>
           </div>
@@ -301,16 +289,16 @@ export function CoursesCatalog() {
 
   if (courses.length === 0) {
     return (
-      <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
+      <section className="py-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center bg-white rounded-3xl border-2 border-slate-200 p-12 shadow-lg">
-            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="h-8 w-8 text-slate-400" />
+          <div className="text-center bg-white rounded-3xl border-0 p-12 shadow-2xl max-w-2xl mx-auto">
+            <div className="w-20 h-20 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <BookOpen className="h-10 w-10 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
               No Courses Available Yet
             </h3>
-            <p className="text-gray-600 mb-1">
+            <p className="text-gray-600 mb-2 text-lg">
               Check back soon for new courses!
             </p>
             <p className="text-sm text-gray-500">
@@ -323,25 +311,27 @@ export function CoursesCatalog() {
   }
 
   return (
-    <section className="py-6 bg-gradient-to-b from-slate-50 to-white">
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+    <section className="py-16 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200 rounded-full blur-3xl opacity-20 animate-pulse"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200 rounded-full blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
+
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-full px-4 py-2 text-sm font-medium mb-6 border border-blue-100">
-            <Star className="h-4 w-4" />
-            <span>Our Courses</span>
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full px-5 py-2.5 text-sm font-bold mb-6 border-0 shadow-lg">
+            <Sparkles className="h-4 w-4 fill-yellow-300 text-yellow-300" />
+            <span>Our Premium Courses</span>
+            <Award className="h-4 w-4" />
           </div>
-          <h2 className="text-4xl font-bold text-slate-800 mb-4">
+          <h2 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-5">
             Featured Courses
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Master ancient sciences with our comprehensive curriculum designed
             by expert practitioners
           </p>
         </div>
 
-        {/* Courses Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-12">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-12">
           {courses.map((course) => {
             const isEnrolled = userId ? enrolledCourseIds.has(course.id) : false;
             const priceInfo = getDisplayPrice(course);
@@ -349,56 +339,53 @@ export function CoursesCatalog() {
             return (
               <Card
                 key={course.id}
-                className="flex flex-col group hover:shadow-xl transition-all duration-300 border border-slate-200 bg-white hover:border-blue-300 overflow-hidden relative hover:-translate-y-1"
+                className="flex flex-col group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm overflow-hidden relative hover:-translate-y-2 shadow-lg"
               >
-                {/* Golden Top Border */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 group-hover:h-1.5 transition-all duration-300"></div>
 
-                <CardHeader className="pb-4 pt-6 relative">
+                <CardHeader className="pb-6 pt-6 relative">
                   {getStatusBadge(course.status)}
-                  <CardTitle className="line-clamp-2 text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-tight mt-2">
+                  <CardTitle className="line-clamp-2 text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight mt-10 pt-5">
                     {course.title}
                   </CardTitle>
                 </CardHeader>
 
                 <CardContent className="flex-1 pb-4">
-                  <CardDescription className="line-clamp-3 text-slate-600 leading-relaxed text-sm mb-6">
+                  <CardDescription className="line-clamp-3 text-gray-600 leading-relaxed mb-6">
                     {getPlainText(course.description)}
                   </CardDescription>
 
-                  <div className="space-y-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                    {/* Coupon Badge - Only show for logged-in users with assigned coupons */}
+                  <div className="space-y-3 bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-xl p-4 border border-gray-200 shadow-sm">
                     {userId && priceInfo.hasDiscount && priceInfo.appliedCoupon && (
-                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                        <Tag className="h-3 w-3 text-green-600" />
-                        <span className="text-xs font-medium text-green-700">
-                          Coupon {priceInfo.appliedCoupon.code} Applied!
+                      <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg px-3 py-2.5 shadow-md">
+                        <div className="p-1 bg-white/20 rounded">
+                          <Tag className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <span className="text-xs font-bold text-white">
+                          {priceInfo.appliedCoupon.code} Applied!
                         </span>
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-slate-700 font-medium">
-                        
-                        {/* <span className="font-semibold">INR</span> */}
-                      </div>
-                      <div className="text-right">
+                    <div className="flex items-center justify-between">
+                      <div className="text-right flex-1">
                         {priceInfo.hasDiscount ? (
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-gray-900 text-base">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="font-bold text-gray-900 text-xl">
                                 ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
                               </span>
                               <span className="text-sm text-gray-500 line-through">
                                 ₹{priceInfo.originalPrice.toLocaleString("en-IN")}
                               </span>
                             </div>
-                            <div className="text-xs text-green-600 font-medium">
+                            <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">
+                              <Sparkles className="h-3 w-3" />
                               Save ₹{priceInfo.discountAmount.toLocaleString("en-IN")}
                             </div>
                           </div>
                         ) : (
-                          <span className="font-bold text-gray-900 text-base">
+                          <span className="font-bold text-gray-900 text-xl">
                             ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
                           </span>
                         )}
@@ -407,13 +394,12 @@ export function CoursesCatalog() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="flex flex-col gap-2 pt-4 border-t border-slate-100">
-                  <div className="flex gap-4 w-full">
-                    {/* Learn More */}
+                <CardFooter className="flex flex-col gap-3 pt-4 border-t border-gray-100 bg-gradient-to-br from-gray-50/50 to-transparent">
+                  <div className="flex gap-3 w-full">
                     <Button
                       asChild
                       size="sm"
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all duration-200 h-10 font-semibold"
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-xl transition-all duration-300 h-11 font-bold border-0 rounded-lg"
                     >
                       <Link
                         href={`/courses/${course.slug}`}
@@ -424,22 +410,21 @@ export function CoursesCatalog() {
                       </Link>
                     </Button>
 
-                    {/* Buy Now / Enrolled */}
                     {isEnrolled ? (
                       <Button
                         disabled
                         size="sm"
                         variant="outline"
-                        className="flex-1 border border-green-300 text-green-700 bg-green-50 cursor-not-allowed h-10 font-medium flex items-center justify-center"
+                        className="flex-1 border-0 bg-gradient-to-r from-green-500 to-emerald-600 text-white cursor-not-allowed h-11 font-bold rounded-lg shadow-md"
                       >
-                        <CheckCircle className="h-4 w-4 mr-1" />
+                        <CheckCircle className="h-4 w-4 mr-2" />
                         Enrolled
                       </Button>
                     ) : (
                       <Button
                         asChild
                         size="sm"
-                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-lg transition-all duration-200 h-10 font-semibold"
+                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-xl transition-all duration-300 h-11 font-bold border-0 rounded-lg"
                       >
                         <Link 
                           href={`/courses/${course.slug}`}
@@ -456,20 +441,6 @@ export function CoursesCatalog() {
             );
           })}
         </div>
-
-        {/* View All */}
-        {/* <div className="text-center">
-          <Button
-            asChild
-            variant="outline"
-            className="border border-slate-300 text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all duration-300 px-6 py-3 h-auto font-semibold text-base group shadow-sm hover:shadow-md"
-          >
-            <Link href="/courses" className="flex items-center gap-3">
-              Explore All Courses
-              <BookOpen className="h-5 w-5 group-hover:scale-110 transition-transform" />
-            </Link>
-          </Button>
-        </div> */}
       </div>
     </section>
   );
