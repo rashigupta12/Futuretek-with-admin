@@ -6,12 +6,11 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { format } from "date-fns";
-import { AlertCircle, IndianRupee, Loader2 } from "lucide-react";
+import { AlertCircle, IndianRupee, Loader2, Download, ExternalLink } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -40,7 +39,7 @@ export default function PaymentsPage() {
       if (!userId) return;
       try {
         setLoading(true);
-        const res = await fetch(`/api/user/payments`);
+        const res = await fetch('/api/user/payments');
         if (!res.ok) throw new Error("Failed to load payments");
 
         const data = await res.json();
@@ -57,21 +56,44 @@ export default function PaymentsPage() {
 
   const getStatusBadge = (status: Payment["status"]) => {
     const config = {
-      COMPLETED: { label: "Completed", color: "bg-green-100 text-green-700" },
-      PENDING: { label: "Pending", color: "bg-yellow-100 text-yellow-700" },
-      FAILED: { label: "Failed", color: "bg-red-100 text-red-700" },
-      REFUNDED: { label: "Refunded", color: "bg-purple-100 text-purple-700" },
+      COMPLETED: {
+        label: "Completed",
+        color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        icon: "✓"
+      },
+      PENDING: {
+        label: "Pending",
+        color: "bg-amber-50 text-amber-700 border-amber-200",
+        icon: "⏳"
+      },
+      FAILED: {
+        label: "Failed",
+        color: "bg-red-50 text-red-700 border-red-200",
+        icon: "✕"
+      },
+      REFUNDED: {
+        label: "Refunded",
+        color: "bg-blue-50 text-blue-700 border-blue-200",
+        icon: "↩"
+      },
     };
-    const { label, color } = config[status] || config.PENDING;
-    return <Badge className={color}>{label}</Badge>;
+    const { label, color, icon } = config[status] || config.PENDING;
+    return (
+      <Badge variant="outline" className={`${color} font-medium`}>
+        {icon} {label}
+      </Badge>
+    );
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mx-auto mb-3" />
-          <p className="text-gray-600">Loading payment history...</p>
+          <div className="relative">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <div className="absolute inset-0 rounded-full border-2 border-amber-400/30 animate-ping"></div>
+          </div>
+          <p className="text-gray-600 font-medium">Loading payment history...</p>
         </div>
       </div>
     );
@@ -81,10 +103,16 @@ export default function PaymentsPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center max-w-md">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-gray-900">Error</h3>
-          <p className="text-gray-600 mt-1">{error}</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">
+          <div className="relative inline-block mb-4">
+            <AlertCircle className="h-16 w-16 text-blue-600 mx-auto" />
+            <div className="absolute -inset-2 bg-blue-100 rounded-full blur-sm"></div>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Payments</h3>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
             Try Again
           </Button>
         </div>
@@ -96,17 +124,18 @@ export default function PaymentsPage() {
     return (
       <div className="text-center py-20">
         <div className="max-w-md mx-auto">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <IndianRupee className="h-10 w-10 text-gray-400" />
+          <div className="relative w-24 h-24 bg-gradient-to-br from-blue-50 to-amber-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100">
+            <IndianRupee className="h-12 w-12 text-amber-500" />
+            <div className="absolute inset-0 rounded-full border-2 border-amber-200 animate-pulse"></div>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            No Payments Yet
-          </h3>
-          <p className="text-gray-600 mb-6">
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">No Payments Yet</h3>
+          <p className="text-gray-600 mb-8 text-lg">
             Your payment history will appear here once you enroll in a course.
           </p>
-          <Button asChild>
-            <Link href="/courses">Explore Courses</Link>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3">
+            <Link href="/courses" className="flex items-center gap-2">
+              Explore Courses <ExternalLink className="h-4 w-4" />
+            </Link>
           </Button>
         </div>
       </div>
@@ -115,56 +144,111 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="text-center sm:text-left">
         <h1 className="text-3xl font-bold text-gray-900">Payment History</h1>
-        <p className="text-gray-600 mt-1">
+        <p className="text-gray-600 mt-2">
           View all your course purchases and invoices
         </p>
       </div>
 
+      {/* Summary Stats - Improved Styling */}
+     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+  {/* Total Payments */}
+  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5 text-blue-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
+    <div className="text-center">
+      <p className="text-3xl font-bold">{payments.length}</p>
+      <p className="text-sm font-medium text-blue-500 mt-1">Total Payments</p>
+    </div>
+  </div>
+
+  {/* Completed */}
+  <div className="bg-gradient-to-br from-amber-50 to-yellow-100 border border-yellow-200 rounded-2xl p-5 text-yellow-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
+    <div className="text-center">
+      <p className="text-3xl font-bold">
+        {payments.filter(p => p.status === "COMPLETED").length}
+      </p>
+      <p className="text-sm font-medium text-yellow-600 mt-1">Completed</p>
+    </div>
+  </div>
+
+  {/* Pending */}
+  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5 text-blue-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
+    <div className="text-center">
+      <p className="text-3xl font-bold">
+        {payments.filter(p => p.status === "PENDING").length}
+      </p>
+      <p className="text-sm font-medium text-blue-600 mt-1">Pending</p>
+    </div>
+  </div>
+
+  {/* Total Spent */}
+  <div className="bg-gradient-to-br from-yellow-50 to-amber-100 border border-amber-200 rounded-2xl p-5 text-amber-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
+    <div className="text-center">
+      <p className="text-3xl font-bold">
+        ₹{payments
+          .filter(p => p.status === "COMPLETED")
+          .reduce((sum, p) => sum + Number(p.finalAmount), 0)
+          .toLocaleString("en-IN")}
+      </p>
+      <p className="text-sm font-medium text-amber-600 mt-1">Total Spent</p>
+    </div>
+  </div>
+</div>
+
+
       <div className="space-y-4">
         {payments.map((payment) => (
-          <Card key={payment.id} className="hover:shadow-md transition-shadow">
+          <Card 
+            key={payment.id} 
+            className="hover:shadow-md transition-all duration-200 border-gray-200 hover:border-blue-200 relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-600 to-amber-500"></div>
+            
             <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{payment.courseTitle}</CardTitle>
-                  <CardDescription>
-                    Invoice Number: {payment.invoiceNumber}
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg text-gray-900 font-semibold">
+                    {payment.courseTitle}
+                  </CardTitle>
+                  <CardDescription className="flex items-center gap-2 text-gray-500">
+                    <span className="font-mono bg-gray-50 px-2 py-1 rounded text-sm border">
+                      #{payment.invoiceNumber}
+                    </span>
+                    <span className="text-sm">
+                      {format(new Date(payment.createdAt), "MMM dd, yyyy 'at' hh:mm a")}
+                    </span>
                   </CardDescription>
                 </div>
                 {getStatusBadge(payment.status)}
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Amount</span>
-                <span className="text-xl font-bold text-gray-900">
-                  ₹{Number(payment.finalAmount).toLocaleString("en-IN")}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Base Price</span>
-                <span className="font-medium">
-                  ₹{Number(payment.amount).toLocaleString("en-IN")}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Paid on</span>
-                <span className="font-medium">
-                  {format(new Date(payment.createdAt), "dd MMM yyyy, hh:mm a")}
-                </span>
+            <CardContent className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-600">Amount Paid</p>
+                  <p className="text-2xl font-bold text-gray-900 flex items-center gap-1">
+                    <IndianRupee className="h-5 w-5 text-amber-600" />
+                    {Number(payment.finalAmount).toLocaleString("en-IN")}
+                    {payment.amount !== payment.finalAmount && (
+                      <span className="text-sm text-gray-500 line-through ml-2">
+                        ₹{Number(payment.amount).toLocaleString("en-IN")}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                  disabled
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Invoice
+                </Button>
               </div>
             </CardContent>
-
-            <CardFooter className="pt-3 border-t bg-gray-50">
-              <span className="text-xs text-gray-500">
-                Invoice download coming soon
-              </span>
-            </CardFooter>
           </Card>
         ))}
       </div>

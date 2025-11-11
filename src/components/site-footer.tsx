@@ -6,11 +6,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  ArrowRight,
   Star,
-  Globe,
-  BookOpen,
-  Users
+  
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";

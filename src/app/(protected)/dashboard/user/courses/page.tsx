@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
   AlertCircle,
   BookOpen,
@@ -33,7 +32,7 @@ interface RawEnrollment {
   certificateIssued: boolean;
   certificateUrl?: string | null;
   courseThumbnail?: string | null;
-  // progress is **not** in the payload – we’ll calculate a fake one
+  // progress is **not** in the payload – we'll calculate a fake one
 }
 
 export default function MyCoursesPage() {
@@ -75,12 +74,12 @@ export default function MyCoursesPage() {
      ------------------------------------------------------------- */
   const getStatusBadge = (status: RawEnrollment["status"]) => {
     const cfg = {
-      ACTIVE: { label: "In Progress", color: "bg-blue-100 text-blue-700" },
-      COMPLETED: { label: "Completed", color: "bg-green-100 text-green-700" },
-      PENDING: { label: "Pending", color: "bg-yellow-100 text-yellow-700" },
+      ACTIVE: { label: "In Progress", color: "bg-blue-100 text-blue-700 border-blue-200" },
+      COMPLETED: { label: "Completed", color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
+      PENDING: { label: "Pending", color: "bg-slate-100 text-slate-600 border-slate-200" },
     };
     const { label, color } = cfg[status];
-    return <Badge className={color}>{label}</Badge>;
+    return <Badge className={`${color} border`}>{label}</Badge>;
   };
 
   // Fake progress – you can replace with real data later
@@ -104,8 +103,8 @@ export default function MyCoursesPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mx-auto mb-3" />
-          <p className="text-gray-600">Loading your courses...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto mb-3" />
+          <p className="text-slate-600">Loading your courses...</p>
         </div>
       </div>
     );
@@ -116,9 +115,12 @@ export default function MyCoursesPage() {
       <div className="flex items-center justify-center py-20">
         <div className="text-center max-w-md">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-gray-900">Error</h3>
-          <p className="text-gray-600 mt-1">{error}</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">
+          <h3 className="text-lg font-semibold text-slate-900">Error</h3>
+          <p className="text-slate-600 mt-1">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+          >
             Try Again
           </Button>
         </div>
@@ -130,16 +132,19 @@ export default function MyCoursesPage() {
     return (
       <div className="text-center py-20">
         <div className="max-w-md mx-auto">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="h-10 w-10 text-gray-400" />
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-blue-200">
+            <BookOpen className="h-10 w-10 text-blue-600" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <h3 className="text-xl font-semibold text-blue-900 mb-2">
             No Courses Yet
           </h3>
-          <p className="text-gray-600 mb-6">
+          <p className="text-slate-600 mb-6">
             Start your learning journey by enrolling in a course!
           </p>
-          <Button asChild>
+          <Button 
+            asChild 
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md"
+          >
             <Link href="/courses">Browse Courses</Link>
           </Button>
         </div>
@@ -152,13 +157,20 @@ export default function MyCoursesPage() {
      ------------------------------------------------------------- */
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">My Courses</h1>
-        <p className="text-gray-600 mt-1">
-          Continue learning and track your progress
-        </p>
+      {/* Header */}
+      <div className="relative">
+        <div className="absolute -left-1 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-600 to-yellow-500 rounded-full"></div>
+        <div className="pl-4">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent">
+            My Courses
+          </h1>
+          <p className="text-slate-600 mt-1">
+            Continue learning and track your progress
+          </p>
+        </div>
       </div>
 
+      {/* Courses Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {enrollments.map((enrollment) => {
           const isCompleted = enrollment.status === "COMPLETED";
@@ -168,32 +180,37 @@ export default function MyCoursesPage() {
           return (
             <Card
               key={enrollment.id}
-              className="hover:shadow-lg transition-shadow duration-300 flex flex-col"
+              className="border border-blue-100 bg-white hover:shadow-lg hover:border-blue-200 transition-all duration-300 flex flex-col relative overflow-hidden group"
             >
-              {/* Thumbnail (optional) */}
+              {/* Golden top accent for completed courses */}
+              {isCompleted && (
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
+              )}
+
+              {/* Thumbnail */}
               {enrollment.courseThumbnail ? (
-                <div className="h-40 rounded-t-lg overflow-hidden bg-gray-100">
+                <div className="h-40 overflow-hidden bg-slate-100">
                   <img
                     src={enrollment.courseThumbnail}
                     alt={enrollment.courseTitle}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
               ) : (
-                <div className="h-40 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-t-lg flex items-center justify-center">
-                  <BookOpen className="h-16 w-16 text-indigo-600 opacity-30" />
+                <div className="h-40 bg-gradient-to-br from-blue-100 via-blue-50 to-yellow-50 flex items-center justify-center">
+                  <BookOpen className="h-16 w-16 text-blue-600 opacity-20" />
                 </div>
               )}
 
-              <CardHeader className="pb-4 flex-1">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg line-clamp-2">
+              <CardHeader className={`pb-4 flex-1 ${isCompleted ? 'pt-5' : 'pt-4'}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-lg line-clamp-2 text-blue-900">
                     {enrollment.courseTitle}
                   </CardTitle>
                   {getStatusBadge(enrollment.status)}
                 </div>
 
-                <CardDescription className="mt-2 text-sm text-gray-600">
+                <CardDescription className="mt-2 text-sm text-slate-600">
                   Enrolled on {formatDate(enrollment.enrolledAt)}
                 </CardDescription>
               </CardHeader>
@@ -202,26 +219,39 @@ export default function MyCoursesPage() {
                 {/* Progress */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Progress</span>
-                    <span className="font-medium">{progress}%</span>
+                    <span className="text-slate-600">Progress</span>
+                    <span className="font-semibold text-blue-900">{progress}%</span>
                   </div>
-                  <Progress value={progress} className="h-2" />
+                  <div className="w-full bg-blue-50 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className={`h-2.5 rounded-full transition-all duration-500 ${
+                        isCompleted 
+                          ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' 
+                          : 'bg-gradient-to-r from-blue-500 to-blue-600 group-hover:from-blue-600 group-hover:to-blue-700'
+                      }`}
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
                 </div>
 
                 {/* Certificate info */}
                 {isCompleted && (
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-sm pt-2">
                     {hasCertificate ? (
                       <>
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <span className="text-green-700 font-medium">
+                        <div className="p-1 bg-yellow-100 rounded">
+                          <CheckCircle2 className="h-4 w-4 text-yellow-600" />
+                        </div>
+                        <span className="text-yellow-700 font-medium">
                           Certificate Issued
                         </span>
                       </>
                     ) : (
                       <>
-                        <AlertCircle className="h-4 w-4 text-orange-600" />
-                        <span className="text-orange-700">
+                        <div className="p-1 bg-orange-100 rounded">
+                          <AlertCircle className="h-4 w-4 text-orange-600" />
+                        </div>
+                        <span className="text-orange-700 font-medium">
                           Certificate pending
                         </span>
                       </>
@@ -230,34 +260,15 @@ export default function MyCoursesPage() {
                 )}
               </CardContent>
 
-              <CardFooter className="pt-4 border-t bg-gray-50 flex gap-2">
-                {/* Primary CTA */}
-                {/* <Button
-                  asChild
-                  className={`flex-1 ${
-                    isCompleted
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-indigo-600 hover:bg-indigo-700"
-                  }`}
-                >
-                  <Link href={`/courses/${enrollment.courseTitle.toLowerCase()}`}>
-                    {isCompleted ? (
-                      <>
-                        <PlayCircle className="h-4 w-4 mr-2" />
-                        View Course
-                      </>
-                    ) : (
-                      <>
-                        <PlayCircle className="h-4 w-4 mr-2" />
-                        Continue Learning
-                      </>
-                    )}
-                  </Link>
-                </Button> */}
-
+              <CardFooter className="pt-4 border-t border-blue-50 bg-gradient-to-r from-blue-50/50 to-transparent flex gap-2">
                 {/* Certificate download (only if issued) */}
                 {hasCertificate && (
-                  <Button asChild variant="outline" size="icon">
+                  <Button 
+                    asChild 
+                    variant="outline" 
+                    size="icon"
+                    className="border-yellow-200 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 hover:text-yellow-800"
+                  >
                     <a
                       href={enrollment.certificateUrl!}
                       target="_blank"

@@ -14,9 +14,19 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Clock, BookOpen, CheckCircle2, Users, Calendar, Star, Target, Zap, Shield } from "lucide-react";
+import {
+  Clock,
+  BookOpen,
+  CheckCircle2,
+  Users,
+  Calendar,
+  Star,
+  Target,
+  Zap,
+  Shield,
+} from "lucide-react";
 import { notFound } from "next/navigation";
-import { BuyNowButton } from '@/components/checkout/BuyNowButton';
+import { BuyNowButton } from "@/components/checkout/BuyNowButton";
 
 interface CourseData {
   id: string;
@@ -112,25 +122,28 @@ async function getCourse(slug: string): Promise<CourseData | null> {
 }
 
 // Helper function to safely render HTML content
-function SafeHTML({ content, className = "" }: { content: string; className?: string }) {
+function SafeHTML({
+  content,
+  className = "",
+}: {
+  content: string;
+  className?: string;
+}) {
   return (
-    <div 
-      className={className}
-      dangerouslySetInnerHTML={{ __html: content }} 
-    />
+    <div className={className} dangerouslySetInnerHTML={{ __html: content }} />
   );
 }
 
 // Helper function to clean and extract plain text from HTML
 function getPlainText(htmlContent: string): string {
-  if (!htmlContent) return '';
-  
+  if (!htmlContent) return "";
+
   // Remove HTML tags and extract text
   const text = htmlContent
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
+    .replace(/\s+/g, " ") // Replace multiple spaces with single space
     .trim();
-  
+
   return text;
 }
 
@@ -216,7 +229,9 @@ export default async function CoursePage({
                       <Users className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900">Instructor</div>
+                      <div className="font-semibold text-slate-900">
+                        Instructor
+                      </div>
                       <div className="text-slate-600">
                         {courseData.instructor || "Expert Instructor"}
                       </div>
@@ -227,7 +242,9 @@ export default async function CoursePage({
                       <Clock className="h-6 w-6 text-yellow-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900">Duration</div>
+                      <div className="font-semibold text-slate-900">
+                        Duration
+                      </div>
                       <div className="text-slate-600">
                         {courseData.duration || "Flexible Schedule"}
                       </div>
@@ -243,13 +260,14 @@ export default async function CoursePage({
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl flex items-center gap-3 text-slate-800">
                     <div className="w-2 h-8 bg-gradient-to-b from-yellow-500 to-yellow-600 rounded-full"></div>
-                    What's Included
+                    What&apos;s Included{" "}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 gap-4">
                     {courseData.features.map((feature, index) => {
-                      const text = typeof feature === "string" ? feature : feature.feature;
+                      const text =
+                        typeof feature === "string" ? feature : feature.feature;
                       return (
                         <div
                           key={index}
@@ -258,7 +276,9 @@ export default async function CoursePage({
                           <div className="p-2 bg-yellow-100 rounded-lg group-hover:scale-110 transition-transform">
                             <CheckCircle2 className="h-5 w-5 text-yellow-600" />
                           </div>
-                          <span className="font-medium text-slate-800 leading-snug">{text}</span>
+                          <span className="font-medium text-slate-800 leading-snug">
+                            {text}
+                          </span>
                         </div>
                       );
                     })}
@@ -282,10 +302,14 @@ export default async function CoursePage({
                   )}
                 </CardHeader>
                 <CardContent>
-                  <Accordion type="single" collapsible className="w-full space-y-4">
+                  <Accordion
+                    type="single"
+                    collapsible
+                    className="w-full space-y-4"
+                  >
                     {courseData.whyLearn.map((item, index) => (
-                      <AccordionItem 
-                        key={index} 
+                      <AccordionItem
+                        key={index}
                         value={`item-${index}`}
                         className="border border-slate-200 rounded-xl px-4 hover:border-blue-200 transition-colors"
                       >
@@ -306,23 +330,29 @@ export default async function CoursePage({
             )}
 
             {/* Course Content */}
-            {((courseData.courseContent && courseData.courseContent.length > 0) || courseData.whatYouLearn) && (
+            {((courseData.courseContent &&
+              courseData.courseContent.length > 0) ||
+              courseData.whatYouLearn) && (
               <Card className="border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl flex items-center gap-3 text-slate-800">
                     <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
-                    {courseData.courseContent && courseData.courseContent.length > 0
+                    {courseData.courseContent &&
+                    courseData.courseContent.length > 0
                       ? "Course Curriculum"
                       : "What You'll Learn"}
                   </CardTitle>
-                  {courseData.courseContent && courseData.courseContent.length > 0 && (
-                    <CardDescription className="text-lg text-slate-600">
-                      Comprehensive curriculum with {courseData.courseContent.length} detailed modules
-                    </CardDescription>
-                  )}
+                  {courseData.courseContent &&
+                    courseData.courseContent.length > 0 && (
+                      <CardDescription className="text-lg text-slate-600">
+                        Comprehensive curriculum with{" "}
+                        {courseData.courseContent.length} detailed modules
+                      </CardDescription>
+                    )}
                 </CardHeader>
                 <CardContent>
-                  {courseData.courseContent && courseData.courseContent.length > 0 ? (
+                  {courseData.courseContent &&
+                  courseData.courseContent.length > 0 ? (
                     <div className="space-y-3">
                       {courseData.courseContent.map((content, index) => (
                         <div
@@ -333,7 +363,9 @@ export default async function CoursePage({
                             <BookOpen className="h-5 w-5 text-blue-600" />
                           </div>
                           <div className="flex-1">
-                            <span className="font-medium text-slate-800 leading-relaxed">{content}</span>
+                            <span className="font-medium text-slate-800 leading-relaxed">
+                              {content}
+                            </span>
                           </div>
                           <div className="px-3 py-1 bg-slate-100 rounded-full text-sm text-slate-600 font-medium">
                             {index + 1}
@@ -356,16 +388,17 @@ export default async function CoursePage({
             <Card className="border border-slate-200 shadow-2xl hover:shadow-3xl transition-all duration-300 bg-white sticky top-8">
               {/* Golden Top Border */}
               <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-t-2xl"></div>
-              
+
               <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl text-white pb-6 pt-8">
                 <CardTitle className="text-2xl font-bold">
                   {courseData.enrollment?.title || `Enroll Now`}
                 </CardTitle>
                 <CardDescription className="text-blue-100 text-lg">
-                  {courseData.enrollment?.description || `Start your journey today`}
+                  {courseData.enrollment?.description ||
+                    `Start your journey today`}
                 </CardDescription>
               </CardHeader>
-              
+
               <CardContent className="p-6">
                 <div className="space-y-6">
                   {/* Price Section */}
@@ -373,7 +406,9 @@ export default async function CoursePage({
                     <div className="flex items-center justify-center gap-3 mb-2">
                       <span className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
                         {courseData.priceINR
-                          ? `₹${parseFloat(courseData.priceINR).toLocaleString("en-IN")}`
+                          ? `₹${parseFloat(courseData.priceINR).toLocaleString(
+                              "en-IN"
+                            )}`
                           : "Contact Us"}
                       </span>
                       {courseData.priceINR && (
@@ -393,11 +428,16 @@ export default async function CoursePage({
                       courseData.enrollment.features.map((feature, index) => {
                         const IconComponent = getIcon(feature.icon);
                         return (
-                          <div key={index} className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                          <div
+                            key={index}
+                            className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200"
+                          >
                             <div className="p-2 bg-blue-100 rounded-lg">
                               <IconComponent className="h-5 w-5 text-blue-600" />
                             </div>
-                            <span className="font-medium text-slate-800 text-sm">{feature.text}</span>
+                            <span className="font-medium text-slate-800 text-sm">
+                              {feature.text}
+                            </span>
                           </div>
                         );
                       })
@@ -436,12 +476,12 @@ export default async function CoursePage({
                   </div>
 
                   {/* Buy Now Button */}
-                  <BuyNowButton 
+                  <BuyNowButton
                     course={{
                       id: courseData.id,
                       title: courseData.title,
                       priceINR: courseData.priceINR || "0",
-                      slug: courseData.slug
+                      slug: courseData.slug,
                     }}
                   />
 
@@ -450,7 +490,8 @@ export default async function CoursePage({
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <Shield className="h-5 w-5 text-yellow-600" />
                       <span className="font-semibold text-yellow-800 text-sm">
-                        {courseData.enrollment?.offer?.guarantee || "30-Day Money-Back Guarantee"}
+                        {courseData.enrollment?.offer?.guarantee ||
+                          "30-Day Money-Back Guarantee"}
                       </span>
                     </div>
                     <p className="text-yellow-700 text-xs">
@@ -461,7 +502,9 @@ export default async function CoursePage({
                   {/* Quick Info */}
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="font-bold text-blue-900">{courseData.totalSessions || 10}+</div>
+                      <div className="font-bold text-blue-900">
+                        {courseData.totalSessions || 10}+
+                      </div>
                       <div className="text-xs text-blue-600">Sessions</div>
                     </div>
                     <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
