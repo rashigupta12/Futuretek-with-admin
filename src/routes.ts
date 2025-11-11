@@ -17,10 +17,11 @@ export const publicRoutes: (string|RegExp)[] = [
 
 // APIs which are accessible to all.
 export const publicApis: string[] = [
+  "/api/courses",           // Add this
+  "/api/courses/",          // Add this too
   "/api/admin/courses",
-  "/api/admin/courses/",  // Add trailing slash pattern
+  "/api/admin/courses/",
 ];
-
 // Routes which are used for authentication.
 export const authRoutes: string[] = [
   "/auth/error",

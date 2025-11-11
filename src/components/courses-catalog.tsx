@@ -74,46 +74,66 @@ export function CoursesCatalog() {
         setLoading(true);
         setError(null);
 
-        // 1. Public courses
+        // 1. Public courses - use the public API endpoint
         const coursesRes = await fetch("/api/courses");
-        if (!coursesRes.ok) throw new Error(`HTTP ${coursesRes.status}`);
-        const { courses: rawCourses } = await coursesRes.json();
+        if (!coursesRes.ok) {
+          throw new Error(`Failed to fetch courses: ${coursesRes.status}`);
+        }
+        
+        const contentType = coursesRes.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Invalid response format from server');
+        }
+        
+        const data = await coursesRes.json();
+        const rawCourses = data.courses || [];
 
         // 2. Enrollments (only if logged in)
         let enrolledIds = new Set<string>();
         if (userId) {
-          const enrollRes = await fetch(`/api/user/enrollments`);
-          if (enrollRes.ok) {
-            const { enrollments } = await enrollRes.json();
-            if (Array.isArray(enrollments)) {
-              enrolledIds = new Set(
-                enrollments
-                  .filter((e: any) => e.status === "ACTIVE" || e.status === "COMPLETED")
-                  .map((e: any) => e.courseId)
-              );
+          try {
+            const enrollRes = await fetch(`/api/user/enrollments`);
+            if (enrollRes.ok) {
+              const enrollData = await enrollRes.json();
+              const enrollments = enrollData.enrollments || [];
+              if (Array.isArray(enrollments)) {
+                enrolledIds = new Set(
+                  enrollments
+                    .filter((e: any) => e.status === "ACTIVE" || e.status === "COMPLETED")
+                    .map((e: any) => e.courseId)
+                );
+              }
             }
+          } catch (err) {
+            console.error("Error fetching enrollments:", err);
+            // Continue without enrollment data
           }
         }
 
-        setCourses(rawCourses ?? []);
+        setCourses(rawCourses);
         setEnrolledCourseIds(enrolledIds);
 
-        // 3. Fetch discounted prices for each course (if user is logged in)
-        if (userId && rawCourses?.length > 0) {
+        // 3. Fetch discounted prices for each course (only if user is logged in)
+        if (userId && rawCourses.length > 0) {
           const pricePromises = rawCourses.map(async (course: Course) => {
             try {
               const priceRes = await fetch(`/api/courses/${course.slug}`);
+              
               if (priceRes.ok) {
-                const data = await priceRes.json();
-                return {
-                  courseId: course.id,
-                  priceData: data.course
-                };
+                const contentType = priceRes.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                  const data = await priceRes.json();
+                  return {
+                    courseId: course.id,
+                    priceData: data.course
+                  };
+                }
               }
+              return null;
             } catch (err) {
               console.error(`Error fetching price for course ${course.id}:`, err);
+              return null;
             }
-            return null;
           });
 
           const priceResults = await Promise.all(pricePromises);
@@ -122,7 +142,7 @@ export function CoursesCatalog() {
           priceResults.forEach(result => {
             if (result && result.priceData) {
               pricesMap[result.courseId] = {
-                originalPrice: result.priceData.priceINR || result.priceData.originalPrice,
+                originalPrice: result.priceData.originalPrice || result.priceData.priceINR,
                 finalPrice: result.priceData.finalPrice || result.priceData.priceINR,
                 discountAmount: result.priceData.discountAmount || "0",
                 appliedCoupon: result.priceData.appliedCoupon,
@@ -132,10 +152,22 @@ export function CoursesCatalog() {
           });
 
           setCoursePrices(pricesMap);
+        } else {
+          // For non-logged-in users, initialize with base prices
+          const basePrices: Record<string, CoursePriceData> = {};
+          rawCourses.forEach((course: Course) => {
+            basePrices[course.id] = {
+              originalPrice: course.priceINR.toString(),
+              finalPrice: course.priceINR.toString(),
+              discountAmount: "0",
+              hasAssignedCoupon: false
+            };
+          });
+          setCoursePrices(basePrices);
         }
       } catch (err) {
         console.error("Catalog load error:", err);
-        setError(err instanceof Error ? err.message : "Failed to load");
+        setError(err instanceof Error ? err.message : "Failed to load courses");
       } finally {
         setLoading(false);
       }
@@ -342,8 +374,8 @@ export function CoursesCatalog() {
                   </CardDescription>
 
                   <div className="space-y-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                    {/* Coupon Badge */}
-                    {priceInfo.hasDiscount && priceInfo.appliedCoupon && (
+                    {/* Coupon Badge - Only show for logged-in users with assigned coupons */}
+                    {userId && priceInfo.hasDiscount && priceInfo.appliedCoupon && (
                       <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                         <Tag className="h-3 w-3 text-green-600" />
                         <span className="text-xs font-medium text-green-700">
