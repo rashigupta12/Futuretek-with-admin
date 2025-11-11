@@ -379,10 +379,8 @@ export function CoursesCatalog() {
 
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 text-slate-700 font-medium">
-                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-200">
-                          <IndianRupee className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <span className="font-semibold">INR</span>
+                        
+                        {/* <span className="font-semibold">INR</span> */}
                       </div>
                       <div className="text-right">
                         {priceInfo.hasDiscount ? (
