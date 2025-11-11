@@ -26,7 +26,7 @@ export default async function Page() {
       <div className="flex flex-col gap-20">
         <HeroSection />
 
-        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
           {/* Why Choose Us Section */}
           <section className="py-2">
             <div className="text-center mb-12">

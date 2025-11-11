@@ -302,7 +302,7 @@ export function CoursesCatalog() {
   if (courses.length === 0) {
     return (
       <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center bg-white rounded-3xl border-2 border-slate-200 p-12 shadow-lg">
             <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <BookOpen className="h-8 w-8 text-slate-400" />
@@ -323,8 +323,8 @@ export function CoursesCatalog() {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-b from-slate-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-6 bg-gradient-to-b from-slate-50 to-white">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-full px-4 py-2 text-sm font-medium mb-6 border border-blue-100">
