@@ -205,7 +205,7 @@ export function CoursesCatalog() {
                     <span className="font-bold text-gray-900 text-base">₹{course.priceINR?.toLocaleString('en-IN')}</span>
                   </div>
                   
-                  <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200">
+                  {/* <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200">
                     <div className="flex items-center gap-2 text-gray-600">
                       <Users className="h-4 w-4 text-gray-500" />
                       <span>Students</span>
@@ -214,7 +214,7 @@ export function CoursesCatalog() {
                       <span className="font-semibold text-gray-900">{course.currentEnrollments || 0}</span>
                       <span className="text-gray-500">enrolled</span>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </CardContent>
               

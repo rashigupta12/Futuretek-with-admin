@@ -101,7 +101,7 @@ export default async function Page() {
         <CoursesCatalog />
 
         {/* Curriculum Focus Section */}
-        <section className="py-16">
+        <section className="py-4">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 text-gray-600 mb-4">
               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
@@ -109,7 +109,7 @@ export default async function Page() {
               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
             </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Curriculum Focus
+              What You will Learn
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Specialized disciplines combining ancient wisdom with practical application
@@ -189,7 +189,7 @@ export default async function Page() {
               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
             </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Learning Methodology
+              Why Learn with Us
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Structured approach for comprehensive understanding and skill development
@@ -247,31 +247,51 @@ export default async function Page() {
         <Testimonials />
 
         {/* CTA Section */}
-        <section className="py-16 bg-gray-900 rounded-2xl">
-          <div className="max-w-3xl mx-auto text-center px-6">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Begin Your Professional Journey
-            </h2>
-            <p className="text-xl text-gray-300 mb-8 leading-relaxed">
-              Join FutureTek Academy to master ancient sciences with modern professional standards. 
-              Transform your knowledge into practical expertise.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button asChild size="lg" className="bg-white text-gray-900 hover:bg-gray-100 border border-white">
-                <Link href="/courses" className="flex items-center gap-2">
-                  Explore Courses
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="border-gray-600 text-white hover:bg-gray-800">
-                <Link href="/contact">Schedule Consultation</Link>
-              </Button>
-            </div>
-            <p className="text-gray-400 text-sm mt-6">
-              Professional certification available upon course completion
-            </p>
-          </div>
-        </section>
+       <section className="py-16 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-2xl mb-10 relative overflow-hidden">
+  {/* Background Pattern */}
+  <div className="absolute inset-0 opacity-10">
+    <div className="absolute inset-0" style={{
+      backgroundImage: `radial-gradient(circle at 25% 25%, #ffffff 2px, transparent 0),
+                        radial-gradient(circle at 75% 75%, #ffffff 1px, transparent 0)`,
+      backgroundSize: '50px 50px',
+      backgroundPosition: '0 0, 25px 25px'
+    }}></div>
+  </div>
+  
+  {/* Shine Effect */}
+  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+  
+  <div className="max-w-3xl mx-auto text-center px-6 relative z-10">
+    <h2 className="text-3xl font-bold text-white mb-4">
+      Begin Your Professional Journey
+    </h2>
+    <p className="text-xl text-gray-200 mb-8 leading-relaxed">
+      Join FutureTek Academy to master ancient sciences with modern professional standards. 
+      Transform your knowledge into practical expertise.
+    </p>
+    <div className="flex flex-col sm:flex-row justify-center gap-4">
+      <Button asChild size="lg" className="bg-white text-gray-900 hover:bg-gray-100 border border-white shadow-lg hover:shadow-xl transition-all duration-300">
+        <Link href="/courses" className="flex items-center gap-2">
+          Explore Courses
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Button>
+    <Button
+  asChild
+  variant="outline"
+  size="lg"
+  className="bg-transparent border-white/30 text-white hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 hover:border-transparent transition-all duration-300"
+>
+  <Link href="/contact">Schedule Consultation</Link>
+</Button>
+
+
+    </div>
+    <p className="text-gray-300 text-sm mt-6">
+      Professional certification available upon course completion
+    </p>
+  </div>
+</section>
       </div>
     </div>
   );
