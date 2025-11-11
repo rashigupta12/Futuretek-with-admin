@@ -1,7 +1,7 @@
+/*eslint-disable @typescript-eslint/no-explicit-any*/
 'use client';
 
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -10,20 +10,20 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useEffect, useState } from 'react';
 import {
-  Users,
+  AlertCircle,
+  ArrowRight,
+  BookOpen,
+  CheckCircle,
   Clock,
   IndianRupee,
   Loader2,
-  AlertCircle,
-  BookOpen,
-  ArrowRight,
   Star,
-  TrendingUp,
-  CheckCircle,
+  TrendingUp
 } from 'lucide-react';
 import { useSession } from 'next-auth/react'; // <-- NEW
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 interface Course {
   id: string;
@@ -205,7 +205,7 @@ export function CoursesCatalog() {
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">No Courses Available Yet</h3>
             <p className="text-gray-600 mb-1">Check back soon for new courses!</p>
-            <p className="text-sm text-gray-500">We're preparing something amazing for you.</p>
+            <p className="text-sm text-gray-500">We&apos;re preparing something amazing for you.</p>
           </div>
         </div>
       </section>

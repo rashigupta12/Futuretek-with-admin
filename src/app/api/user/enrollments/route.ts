@@ -1,4 +1,3 @@
-import { Session } from 'next-auth';
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { db } from "@/db";
 import { CoursesTable, EnrollmentsTable } from "@/db/schema";

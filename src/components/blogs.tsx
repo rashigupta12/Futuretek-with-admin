@@ -75,7 +75,7 @@ export function Blogs() {
 }
 
 // Extracted Blog Card Component
-function BlogCard({ post, index }: { post: typeof blogPosts[0]; index: number }) {
+function BlogCard({ post }: { post: typeof blogPosts[0]; index: number }) {
   return (
     <Card className="group h-full bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col">
       {/* Optional: Add image placeholder later */}

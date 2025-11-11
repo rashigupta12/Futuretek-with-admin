@@ -1,7 +1,16 @@
+/*eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/courses/[course]/page.tsx
 'use client';
 
-import React, { useEffect, useState } from "react";
+import { BuyNowButton } from "@/components/checkout/BuyNowButton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,31 +18,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Clock,
   BookOpen,
-  CheckCircle2,
-  Users,
   Calendar,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Shield,
   Star,
   Target,
-  Zap,
-  Shield,
-  Loader2,
-  AlertCircle,
+  Users,
+  Zap
 } from "lucide-react";
-import { notFound } from "next/navigation";
-import { BuyNowButton } from "@/components/checkout/BuyNowButton";
 import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
 interface CourseData {
   id: string;
@@ -293,7 +293,7 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl flex items-center gap-3">
                     <div className="w-2 h-8 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full" />
-                    What's Included
+                    What&apos;s Included
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Tooltip,
@@ -9,25 +9,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  ChevronDown,
-  Menu,
-  LogIn,
-  UserPlus,
-  LogOut,
-  LayoutDashboard,
-  Home,
   BookOpen,
-  Info,
   Briefcase,
+  ChevronDown,
+  Home,
+  Info,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
   Mail,
-  Sparkles,
+  Menu,
+  UserPlus
 } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
 import { Session } from "next-auth";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { DialogTitle } from "./ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
 import { FuturetekLogo } from "./FutureTekLogo";
+import { DialogTitle } from "./ui/dialog";
 
 type Course = {
   id: string;
