@@ -27,6 +27,7 @@ import { Session } from "next-auth";
 import Link from "next/link";
 import { DialogTitle } from "./ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { FuturetekLogo } from "./FutureTekLogo";
 
 type Course = {
   id: string;
@@ -66,13 +67,17 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-screen-xl items-center gap-4 px-4">
         <div className="mr-10 flex items-center gap-3">
           <Sidebar session={session} handleLogout={handleLogout} />
-          <Link
+          {/* <Link
             href="/"
             className="flex items-center gap-2 px-2 text-xl font-bold tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
           >
             <Sparkles className="h-6 w-6 text-purple-600" />
             Futuretek
-          </Link>
+          </Link> */}
+
+            <Link href="/">
+    <FuturetekLogo width={180} height={54} />
+  </Link>
         </div>
         <nav className="text-muted-foreground hover:[&_a]:text-foreground hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
           <Link href="/" className="hover:text-purple-600 transition-colors">
@@ -278,14 +283,20 @@ function Sidebar({
         <TooltipContent align="start">Menu</TooltipContent>
         <SheetContent side="left" className="flex w-[300px] flex-col p-0 pt-10">
           <div className="px-6 py-4">
-            <Link
+            {/* <Link
               href="/"
               onClick={handleLinkClick}
               className="flex items-center gap-2 text-xl font-bold tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
             >
               <Sparkles className="h-6 w-6 text-purple-600" />
               Futuretek
-            </Link>
+            </Link> */}
+
+           
+  <Link href="/">
+    <FuturetekLogo width={180} height={54} />
+  </Link>
+
           </div>
 
           <Separator />

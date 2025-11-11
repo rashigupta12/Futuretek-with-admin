@@ -14,7 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Clock, BookOpen, CheckCircle2, Users, Calendar } from "lucide-react";
+import { Clock, BookOpen, CheckCircle2, Users, Calendar, Star, Target, Zap, Shield } from "lucide-react";
 import { notFound } from "next/navigation";
 import { BuyNowButton } from '@/components/checkout/BuyNowButton';
 
@@ -59,7 +59,6 @@ interface CourseData {
 
 async function getCourse(slug: string): Promise<CourseData | null> {
   try {
-    // Use absolute URL for server-side fetch
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const url = `${baseUrl}/api/admin/courses/${slug}`;
 
@@ -68,28 +67,23 @@ async function getCourse(slug: string): Promise<CourseData | null> {
       headers: {
         "Content-Type": "application/json",
       },
-      cache: "no-store", // Disable caching for debugging
+      cache: "no-store",
     });
 
     if (!response.ok) {
       if (response.status === 404) {
         return null;
       }
-
-      // const errorText = await response.text();
       throw new Error("Failed to fetch course");
     }
 
     const data = await response.json();
-
-    // The API returns the course directly, not wrapped
     const course = data;
 
     if (!course || !course.id) {
       return null;
     }
 
-    // Parse features if they're JSON strings
     if (course.features && Array.isArray(course.features)) {
       course.features = course.features.map(
         (f: string | { feature: string }) => {
@@ -106,7 +100,6 @@ async function getCourse(slug: string): Promise<CourseData | null> {
       );
     }
 
-    // Map topics to relatedTopics
     if (course.topics && !course.relatedTopics) {
       course.relatedTopics = course.topics;
     }
@@ -118,13 +111,35 @@ async function getCourse(slug: string): Promise<CourseData | null> {
   }
 }
 
+// Helper function to safely render HTML content
+function SafeHTML({ content, className = "" }: { content: string; className?: string }) {
+  return (
+    <div 
+      className={className}
+      dangerouslySetInnerHTML={{ __html: content }} 
+    />
+  );
+}
+
+// Helper function to clean and extract plain text from HTML
+function getPlainText(htmlContent: string): string {
+  if (!htmlContent) return '';
+  
+  // Remove HTML tags and extract text
+  const text = htmlContent
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .trim();
+  
+  return text;
+}
+
 export default async function CoursePage({
   params,
 }: {
   params: Promise<{ course: string }>;
 }) {
   const { course } = await params;
-
   const courseData = await getCourse(course);
 
   if (!courseData) {
@@ -138,29 +153,37 @@ export default async function CoursePage({
       Clock,
       Calendar,
       Users,
+      Star,
+      Target,
+      Zap,
+      Shield,
     };
-    return icons[iconName as keyof typeof icons] || Clock;
+    return icons[iconName as keyof typeof icons] || CheckCircle2;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/50">
-      {/* Hero Section */}
-      <div className="relative py-12 mb-8 bg-gradient-to-r from-purple-500/10 to-blue-500/10">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50/20">
+      {/* Enhanced Hero Section */}
+      <div className="relative py-16 bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="max-w-4xl">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium mb-6">
+              <Star className="w-4 h-4" />
+              Transform Your Astrological Knowledge
+            </div>
+            <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
               {courseData.title}
             </h1>
-            <p className="text-xl text-muted-foreground mb-6">
-              {courseData.tagline || courseData.description}
+            <p className="text-xl text-blue-100 mb-8 leading-relaxed max-w-3xl">
+              {getPlainText(courseData.tagline || courseData.description)}
             </p>
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-3">
               {(courseData.relatedTopics || courseData.topics || []).map(
                 (topic) => (
                   <Badge
                     key={topic}
-                    variant="secondary"
-                    className="bg-white/10 hover:bg-white/20 transition-colors"
+                    className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm transition-all duration-300 border-0"
                   >
                     {topic}
                   </Badge>
@@ -171,32 +194,42 @@ export default async function CoursePage({
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-2xl">Course Overview</CardTitle>
+            {/* Course Overview */}
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-2xl flex items-center gap-3">
+                  <div className="w-2 h-8 bg-gradient-to-b from-purple-500 to-blue-500 rounded-full"></div>
+                  Course Overview
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="mb-6 leading-relaxed">{courseData.description}</p>
-                <div className="grid sm:grid-cols-2 gap-6 p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-6 w-6 text-purple-500" />
+              <CardContent className="space-y-6">
+                <div className="text-lg leading-relaxed text-gray-700 prose prose-lg max-w-none">
+                  <SafeHTML content={courseData.description} />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl border border-purple-100">
+                  <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm">
+                    <div className="p-3 bg-purple-100 rounded-lg">
+                      <Users className="h-6 w-6 text-purple-600" />
+                    </div>
                     <div>
-                      <div className="font-medium">Instructor</div>
-                      <div className="text-muted-foreground">
-                        {courseData.instructor || "To be announced"}
+                      <div className="font-semibold text-gray-900">Instructor</div>
+                      <div className="text-gray-600">
+                        {courseData.instructor || "Expert Instructor"}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-6 w-6 text-purple-500" />
+                  <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm">
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <Clock className="h-6 w-6 text-blue-600" />
+                    </div>
                     <div>
-                      <div className="font-medium">Duration</div>
-                      <div className="text-muted-foreground">
-                        {courseData.duration || "To be announced"}
+                      <div className="font-semibold text-gray-900">Duration</div>
+                      <div className="text-gray-600">
+                        {courseData.duration || "Flexible Schedule"}
                       </div>
                     </div>
                   </div>
@@ -204,23 +237,28 @@ export default async function CoursePage({
               </CardContent>
             </Card>
 
+            {/* Course Features */}
             {courseData.features && courseData.features.length > 0 && (
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Course Features</CardTitle>
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full"></div>
+                    What's Included
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 gap-4">
                     {courseData.features.map((feature, index) => {
-                      const text =
-                        typeof feature === "string" ? feature : feature.feature;
+                      const text = typeof feature === "string" ? feature : feature.feature;
                       return (
                         <div
                           key={index}
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                          className="flex items-center gap-4 p-4 rounded-xl hover:bg-green-50 transition-all duration-300 group border border-transparent hover:border-green-100"
                         >
-                          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                          <span className="leading-snug">{text}</span>
+                          <div className="p-2 bg-green-100 rounded-lg group-hover:scale-110 transition-transform">
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          </div>
+                          <span className="font-medium text-gray-800 leading-snug">{text}</span>
                         </div>
                       );
                     })}
@@ -229,27 +267,36 @@ export default async function CoursePage({
               </Card>
             )}
 
+            {/* Why Learn Section */}
             {courseData.whyLearn && courseData.whyLearn.length > 0 && (
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <CardTitle className="text-2xl">
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-orange-500 to-red-500 rounded-full"></div>
                     Why Learn {courseData.title}
                   </CardTitle>
+                  {courseData.whyLearnIntro && (
+                    <div className="text-lg text-gray-600 prose prose-lg max-w-none">
+                      <SafeHTML content={courseData.whyLearnIntro} />
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  {courseData.whyLearnIntro && (
-                    <p className="mb-6 leading-relaxed">
-                      {courseData.whyLearnIntro}
-                    </p>
-                  )}
-                  <Accordion type="single" collapsible className="w-full">
+                  <Accordion type="single" collapsible className="w-full space-y-4">
                     {courseData.whyLearn.map((item, index) => (
-                      <AccordionItem key={index} value={`item-${index}`}>
-                        <AccordionTrigger className="hover:text-purple-500 transition-colors">
-                          {item.title}
+                      <AccordionItem 
+                        key={index} 
+                        value={`item-${index}`}
+                        className="border border-gray-200 rounded-xl px-4 hover:border-orange-200 transition-colors"
+                      >
+                        <AccordionTrigger className="hover:text-orange-600 transition-colors py-4 text-lg font-semibold">
+                          <div className="flex items-center gap-3 text-left">
+                            <Target className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                            {item.title}
+                          </div>
                         </AccordionTrigger>
-                        <AccordionContent className="text-muted-foreground leading-relaxed">
-                          {item.description}
+                        <AccordionContent className="text-gray-700 leading-relaxed text-lg pb-4 prose prose-lg max-w-none">
+                          <SafeHTML content={item.description} />
                         </AccordionContent>
                       </AccordionItem>
                     ))}
@@ -258,51 +305,45 @@ export default async function CoursePage({
               </Card>
             )}
 
-            {((courseData.courseContent &&
-              courseData.courseContent.length > 0) ||
-              courseData.whatYouLearn) && (
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <CardTitle className="text-2xl">
-                    {courseData.courseContent &&
-                    courseData.courseContent.length > 0
-                      ? "Course Content"
+            {/* Course Content */}
+            {((courseData.courseContent && courseData.courseContent.length > 0) || courseData.whatYouLearn) && (
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+                    {courseData.courseContent && courseData.courseContent.length > 0
+                      ? "Course Curriculum"
                       : "What You'll Learn"}
                   </CardTitle>
-                  {courseData.courseContent &&
-                    courseData.courseContent.length > 0 && (
-                      <CardDescription>
-                        Comprehensive curriculum with{" "}
-                        {courseData.courseContent.length} detailed lectures
-                      </CardDescription>
-                    )}
+                  {courseData.courseContent && courseData.courseContent.length > 0 && (
+                    <CardDescription className="text-lg">
+                      Comprehensive curriculum with {courseData.courseContent.length} detailed modules
+                    </CardDescription>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  {courseData.courseContent &&
-                  courseData.courseContent.length > 0 ? (
-                    <div className="grid gap-3">
+                  {courseData.courseContent && courseData.courseContent.length > 0 ? (
+                    <div className="space-y-3">
                       {courseData.courseContent.map((content, index) => (
                         <div
                           key={index}
-                          className="flex items-start gap-3 p-4 hover:bg-muted rounded-lg transition-colors group"
+                          className="flex items-start gap-4 p-4 rounded-xl hover:bg-indigo-50 transition-all duration-300 group border border-transparent hover:border-indigo-100"
                         >
-                          <BookOpen className="h-5 w-5 mt-1 text-purple-500 group-hover:scale-110 transition-transform" />
-                          <span className="leading-relaxed">{content}</span>
+                          <div className="p-2 bg-indigo-100 rounded-lg group-hover:scale-110 transition-transform mt-1">
+                            <BookOpen className="h-5 w-5 text-indigo-600" />
+                          </div>
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-800 leading-relaxed">{content}</span>
+                          </div>
+                          <div className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600 font-medium">
+                            {index + 1}
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : courseData.whatYouLearn ? (
-                    <div className="prose prose-sm max-w-none">
-                      {courseData.whatYouLearn
-                        .split("\n\n")
-                        .map((paragraph, index) => (
-                          <p
-                            key={index}
-                            className="mb-4 leading-relaxed text-muted-foreground"
-                          >
-                            {paragraph}
-                          </p>
-                        ))}
+                    <div className="prose prose-lg max-w-none text-gray-700">
+                      <SafeHTML content={courseData.whatYouLearn} />
                     </div>
                   ) : null}
                 </CardContent>
@@ -310,90 +351,122 @@ export default async function CoursePage({
             )}
           </div>
 
-          {/* Sidebar */}
+          {/* Enhanced Sidebar */}
           <div className="lg:col-span-1">
-            <Card className="lg:sticky lg:top-24 hover:shadow-lg transition-shadow duration-300 border-purple-500/20">
-              <CardHeader className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-t-lg">
-                <CardTitle className="text-2xl">
-                  {courseData.enrollment?.title ||
-                    `Enroll in ${courseData.title}`}
+            <Card className="border-0 shadow-2xl hover:shadow-3xl transition-all duration-300 bg-gradient-to-b from-white to-gray-50/50 sticky top-8">
+              <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-t-2xl text-white pb-6">
+                <CardTitle className="text-2xl font-bold">
+                  {courseData.enrollment?.title || `Enroll Now`}
                 </CardTitle>
-                <CardDescription>
-                  {courseData.enrollment?.description ||
-                    `Master ${courseData.title}`}
+                <CardDescription className="text-blue-100 text-lg">
+                  {courseData.enrollment?.description || `Start your journey today`}
                 </CardDescription>
               </CardHeader>
-    <CardContent className="p-6">
-  <div className="space-y-6">
-    <div className="flex items-center justify-between">
-      <span className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-        {courseData.priceINR
-          ? `₹${parseFloat(courseData.priceINR).toLocaleString("en-IN")}`
-          : "Contact for pricing"}
-      </span>
-      <Badge
-        variant="secondary"
-        className="bg-purple-500/10 text-purple-500"
-      >
-        {courseData.enrollment?.offer?.badge ||
-          courseData.status ||
-          "Limited Seats"}
-      </Badge>
-    </div>
+              <CardContent className="p-6">
+                <div className="space-y-6">
+                  {/* Price Section */}
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-3 mb-2">
+                      <span className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                        {courseData.priceINR
+                          ? `₹${parseFloat(courseData.priceINR).toLocaleString("en-IN")}`
+                          : "Contact Us"}
+                      </span>
+                      {courseData.priceINR && (
+                        <Badge className="bg-green-100 text-green-700 border-0 text-sm py-1">
+                          Best Value
+                        </Badge>
+                      )}
+                    </div>
+                    {courseData.priceINR && (
+                      <p className="text-gray-600 text-sm">One-time payment</p>
+                    )}
+                  </div>
 
-    {courseData.enrollment?.features ? (
-      <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
-        {courseData.enrollment.features.map((feature, index) => {
-          const IconComponent = getIcon(feature.icon);
-          return (
-            <div key={index} className="flex items-center gap-3">
-              <IconComponent className="h-5 w-5 text-purple-500" />
-              <span className="text-sm">{feature.text}</span>
-            </div>
-          );
-        })}
-      </div>
-    ) : (
-      <div className="grid gap-4 p-4 bg-muted/50 rounded-lg">
-        <div className="flex items-center gap-3">
-          <Clock className="h-5 w-5 text-purple-500" />
-          <span className="text-sm">
-            {courseData.duration || "Self-paced learning"}
-          </span>
-        </div>
-        {courseData.totalSessions && (
-          <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 text-purple-500" />
-            <span className="text-sm">
-              {courseData.totalSessions} Sessions
-            </span>
-          </div>
-        )}
-        {courseData.currentEnrollments !== undefined && (
-          <div className="flex items-center gap-3">
-            <Users className="h-5 w-5 text-purple-500" />
-            <span className="text-sm">
-              {courseData.currentEnrollments} Students Enrolled
-            </span>
-          </div>
-        )}
-      </div>
-    )}
-    <BuyNowButton 
-      course={{
-        id: courseData.id,
-        title: courseData.title,
-        priceINR: courseData.priceINR || "0",
-        slug: courseData.slug
-      }}
-    />
+                  {/* Key Features */}
+                  <div className="space-y-4">
+                    {courseData.enrollment?.features ? (
+                      courseData.enrollment.features.map((feature, index) => {
+                        const IconComponent = getIcon(feature.icon);
+                        return (
+                          <div key={index} className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div className="p-2 bg-purple-100 rounded-lg">
+                              <IconComponent className="h-5 w-5 text-purple-600" />
+                            </div>
+                            <span className="font-medium text-gray-800 text-sm">{feature.text}</span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Clock className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <span className="font-medium text-gray-800 text-sm">
+                            {courseData.duration || "Lifetime Access"}
+                          </span>
+                        </div>
+                        {courseData.totalSessions && (
+                          <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div className="p-2 bg-green-100 rounded-lg">
+                              <Calendar className="h-5 w-5 text-green-600" />
+                            </div>
+                            <span className="font-medium text-gray-800 text-sm">
+                              {courseData.totalSessions} Live Sessions
+                            </span>
+                          </div>
+                        )}
+                        {courseData.currentEnrollments !== undefined && (
+                          <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div className="p-2 bg-orange-100 rounded-lg">
+                              <Users className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <span className="font-medium text-gray-800 text-sm">
+                              {courseData.currentEnrollments}+ Students Enrolled
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-    <p className="text-sm text-muted-foreground text-center italic">
-      {courseData.enrollment?.offer?.guarantee ||
-        "100% Satisfaction Guarantee"}
-    </p>
-  </div>
-</CardContent>
+                  {/* Buy Now Button */}
+                  <BuyNowButton 
+                    course={{
+                      id: courseData.id,
+                      title: courseData.title,
+                      priceINR: courseData.priceINR || "0",
+                      slug: courseData.slug
+                    }}
+                  />
+
+                  {/* Guarantee */}
+                  <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Shield className="h-5 w-5 text-green-600" />
+                      <span className="font-semibold text-green-800 text-sm">
+                        {courseData.enrollment?.offer?.guarantee || "30-Day Money-Back Guarantee"}
+                      </span>
+                    </div>
+                    <p className="text-green-600 text-xs">
+                      Risk-free enrollment
+                    </p>
+                  </div>
+
+                  {/* Quick Info */}
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="font-bold text-gray-900">{courseData.totalSessions || 10}+</div>
+                      <div className="text-xs text-gray-600">Sessions</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <div className="font-bold text-gray-900">24/7</div>
+                      <div className="text-xs text-gray-600">Support</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </div>
         </div>

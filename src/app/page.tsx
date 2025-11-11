@@ -1,4 +1,3 @@
-import { Hero } from "@/components/hero";
 import { CoursesCatalog } from "@/components/courses-catalog";
 import { FAQs } from "@/components/faqs";
 import { Blogs } from "@/components/blogs";
@@ -18,11 +17,14 @@ import {
   Award,
   CheckCircle
 } from "lucide-react";
+import { SiteFooter } from "@/components/site-footer";
+import HeroSection from "@/components/hero";
 
 export default async function Page() {
   return (
+    <>
     <div className="flex flex-col gap-20">
-      <Hero />
+      <HeroSection/>
       
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
         {/* Why Choose Us Section */}
@@ -294,5 +296,7 @@ export default async function Page() {
 </section>
       </div>
     </div>
+    <SiteFooter/>
+    </>
   );
 }
