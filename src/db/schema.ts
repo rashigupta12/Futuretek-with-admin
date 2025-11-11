@@ -655,6 +655,34 @@ export const CertificateRequestsTable = pgTable(
   ]
 );
 
+
+export const UserCourseCouponsTable = pgTable(
+  "user_course_coupons",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => UsersTable.id, { onDelete: "cascade" })
+      .notNull(),
+    courseId: uuid("course_id")
+      .references(() => CoursesTable.id, { onDelete: "cascade" })
+      .notNull(),
+    couponId: uuid("coupon_id")
+      .references(() => CouponsTable.id, { onDelete: "cascade" })
+      .notNull(),
+    assignedBy: uuid("assigned_by")
+      .references(() => UsersTable.id)
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    // Ensure one active coupon per user per course
+    uniqueIndex("user_course_coupons_user_course_unique").on(table.userId, table.courseId),
+    index("user_course_coupons_user_id_idx").on(table.userId),
+    index("user_course_coupons_course_id_idx").on(table.courseId),
+    index("user_course_coupons_coupon_id_idx").on(table.couponId),
+    index("user_course_coupons_assigned_by_idx").on(table.assignedBy),
+  ]
+);
 // =====================
 // Relations
 // =====================
@@ -784,6 +812,26 @@ export const blogsRelations = relations(BlogsTable, ({ one, many }) => ({
     references: [UsersTable.id],
   }),
   tags: many(BlogTagsTable),
+}));
+
+// Add relations
+export const userCourseCouponsRelations = relations(UserCourseCouponsTable, ({ one }) => ({
+  user: one(UsersTable, {
+    fields: [UserCourseCouponsTable.userId],
+    references: [UsersTable.id],
+  }),
+  course: one(CoursesTable, {
+    fields: [UserCourseCouponsTable.courseId],
+    references: [CoursesTable.id],
+  }),
+  coupon: one(CouponsTable, {
+    fields: [UserCourseCouponsTable.couponId],
+    references: [CouponsTable.id],
+  }),
+  assignedByUser: one(UsersTable, {
+    fields: [UserCourseCouponsTable.assignedBy],
+    references: [UsersTable.id],
+  }),
 }));
 
 // =====================

@@ -36,6 +36,13 @@
       "when": 1762751589685,
       "tag": "0004_stale_prism",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1762852179737,
+      "tag": "0005_thin_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }

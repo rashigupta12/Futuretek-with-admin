@@ -2,7 +2,7 @@
 /*eslint-disable @typescript-eslint/no-unused-vars*/
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Tag, ShoppingCart, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
@@ -45,6 +45,7 @@ declare global {
     Razorpay: new (options: RazorpayOptions) => RazorpayInstance;
   }
 }
+
 interface Course {
   id: string;
   title: string;
@@ -74,22 +75,79 @@ interface PriceSummary {
   commission: number;
 }
 
-export const CheckoutSidebar = ({ course, isOpen, onClose }: { 
-  course: Course; 
-  isOpen: boolean; 
+interface AppliedCoupon {
+  code: string;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue: string;
+}
+
+interface CheckoutSidebarProps {
+  course: Course;
+  isOpen: boolean;
   onClose: () => void;
-}) => {
-  const [step, setStep] = useState<'coupon' | 'payment' | 'processing'>('coupon');
+  assignedCoupon?: AppliedCoupon;
+  hasAssignedCoupon?: boolean;
+  finalPrice?: string;
+}
+
+export const CheckoutSidebar = ({ 
+  course, 
+  isOpen, 
+  onClose, 
+  assignedCoupon,
+  hasAssignedCoupon = false,
+  finalPrice
+}: CheckoutSidebarProps) => {
+  const { data: session } = useSession();
+  const [step, setStep] = useState<'coupon' | 'payment' | 'processing'>(
+    hasAssignedCoupon ? 'payment' : 'coupon'
+  );
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<CouponValidation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
   const coursePrice = parseFloat(course.priceINR);
+  const displayFinalPrice = hasAssignedCoupon && finalPrice ? parseFloat(finalPrice) : coursePrice;
+
+  // Initialize with assigned coupon if available
+  useEffect(() => {
+    if (hasAssignedCoupon && assignedCoupon) {
+      const discountAmount = coursePrice - displayFinalPrice;
+      
+      const assignedCouponData: CouponValidation = {
+        valid: true,
+        coupon: {
+          code: assignedCoupon.code,
+          discountType: assignedCoupon.discountType,
+          discountValue: parseFloat(assignedCoupon.discountValue),
+          jyotishiCode: '', // You might want to get this from your API
+          commissionRate: 0 // You might want to get this from your API
+        },
+        discount: discountAmount,
+        message: 'Auto-applied coupon'
+      };
+      
+      setAppliedCoupon(assignedCouponData);
+      setStep('payment');
+    }
+  }, [hasAssignedCoupon, assignedCoupon, coursePrice, displayFinalPrice]);
 
   const calculatePrices = (): PriceSummary => {
-    const discount = appliedCoupon?.discount || 0;
-    const subtotal = coursePrice - discount;
+    let discount = 0;
+    let subtotal = coursePrice;
+    
+    if (hasAssignedCoupon) {
+      // Use assigned coupon discount
+      discount = coursePrice - displayFinalPrice;
+      subtotal = displayFinalPrice;
+    } else if (appliedCoupon?.discount) {
+      // Use manually applied coupon discount
+      discount = appliedCoupon.discount;
+      subtotal = coursePrice - discount;
+    }
+    
     const gst = subtotal * 0.18;
     const total = subtotal + gst;
     const commission = appliedCoupon?.coupon 
@@ -101,201 +159,216 @@ export const CheckoutSidebar = ({ course, isOpen, onClose }: {
 
   const prices = calculatePrices();
 
-const validateCoupon = async () => {
-  if (!couponCode.trim()) {
-    setError('Please enter a coupon code');
-    return;
-  }
-
-  setIsValidating(true);
-  setError('');
-
-  try {
-    const response = await fetch('/api/coupons/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: couponCode.toUpperCase(),
-        courseId: course.id,
-        coursePrice: coursePrice
-      })
-    });
-
-    const data = await response.json();
-
-    if (data.valid) {
-      // Calculate discount amount based on coupon type
-      let discountAmount = 0;
-      
-      if (data.coupon.discountType === 'PERCENTAGE') {
-        discountAmount = (coursePrice * parseFloat(data.coupon.discountValue)) / 100;
-      } else if (data.coupon.discountType === 'FIXED_AMOUNT') {
-        discountAmount = parseFloat(data.coupon.discountValue);
-      }
-
-      // Create the appliedCoupon object with calculated discount
-      const appliedCouponData: CouponValidation = {
-        valid: true,
-        coupon: {
-          code: data.coupon.code,
-          discountType: data.coupon.discountType,
-          discountValue: parseFloat(data.coupon.discountValue),
-          jyotishiCode: data.coupon.jyotishiCode,
-          commissionRate: data.commission ? parseFloat(data.commission.commissionRate) : 0
-        },
-        discount: discountAmount,
-        message: 'Coupon applied successfully'
-      };
-
-      setAppliedCoupon(appliedCouponData);
-      setError('');
-    } else {
-      setError(data.message || 'Invalid coupon code');
-      setAppliedCoupon(null);
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setError('Please enter a coupon code');
+      return;
     }
-  } catch (err) {
-    console.log(err)
-    setError('Failed to validate coupon. Please try again.');
-    setAppliedCoupon(null);
-  } finally {
-    setIsValidating(false);
-  }
-};
+
+    setIsValidating(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCode.toUpperCase(),
+          courseId: course.id,
+          coursePrice: coursePrice
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.valid) {
+        // Calculate discount amount based on coupon type
+        let discountAmount = 0;
+        
+        if (data.coupon.discountType === 'PERCENTAGE') {
+          discountAmount = (coursePrice * parseFloat(data.coupon.discountValue)) / 100;
+        } else if (data.coupon.discountType === 'FIXED_AMOUNT') {
+          discountAmount = parseFloat(data.coupon.discountValue);
+        }
+
+        // Create the appliedCoupon object with calculated discount
+        const appliedCouponData: CouponValidation = {
+          valid: true,
+          coupon: {
+            code: data.coupon.code,
+            discountType: data.coupon.discountType,
+            discountValue: parseFloat(data.coupon.discountValue),
+            jyotishiCode: data.coupon.jyotishiCode,
+            commissionRate: data.commission ? parseFloat(data.commission.commissionRate) : 0
+          },
+          discount: discountAmount,
+          message: 'Coupon applied successfully'
+        };
+
+        setAppliedCoupon(appliedCouponData);
+        setError('');
+      } else {
+        setError(data.message || 'Invalid coupon code');
+        setAppliedCoupon(null);
+      }
+    } catch (err) {
+      console.log(err)
+      setError('Failed to validate coupon. Please try again.');
+      setAppliedCoupon(null);
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
     setError('');
   };
-const initializeRazorpay = (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    // Check if Razorpay is already loaded with type assertion
-    if ((window as any).Razorpay) {
-      resolve(true);
+
+  const handleRemoveAssignedCoupon = () => {
+    setAppliedCoupon(null);
+    setStep('coupon');
+  };
+
+  const initializeRazorpay = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      // Check if Razorpay is already loaded with type assertion
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePayment = async () => {
+    if (!session) {
+      setError('Please login to proceed with payment');
       return;
     }
 
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+    setIsProcessing(true);
+    setStep('processing');
+    setError('');
 
-const handlePayment = async () => {
-  setIsProcessing(true);
-  setStep('processing');
-  setError('');
-
-  try {
-    const res = await initializeRazorpay();
-    if (!res) {
-      throw new Error('Failed to load payment gateway');
-    }
-
-    const orderResponse = await fetch('/api/payment/create-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        courseId: course.id,
-        couponCode: appliedCoupon?.coupon?.code,
-        amount: Math.round(prices.total * 100),
-        paymentType: "DOMESTIC",
-        billingAddress: null
-      })
-    });
-
-    if (!orderResponse.ok) {
-      const errorData = await orderResponse.json();
-      throw new Error(errorData.error || 'Failed to create payment order');
-    }
-
-    const orderData = await orderResponse.json();
-
-    // Debug log to see the actual response structure
-    console.log('Order data received:', orderData);
-
-    const options: RazorpayOptions = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
-      amount: orderData.amount * 100, // Use orderData.amount directly (already in paise)
-      currency: orderData.currency,
-      name: 'Futuretek',
-      description: course.title,
-      order_id: orderData.orderId, // Use orderData.orderId directly
-      handler: async function (response: RazorpayResponse) {
-        try {
-          const verifyResponse = await fetch('/api/payment/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              paymentId: orderData.paymentId, // Use orderData.paymentId directly
-              courseId: course.id
-            })
-          });
-
-          if (!verifyResponse.ok) {
-            throw new Error('Payment verification failed');
-          }
-
-          const verifyData = await verifyResponse.json();
-
-          if (verifyData.success || verifyData.message) {
-            // Redirect to success page or dashboard
-            window.location.href = `/dashboard/courses?enrollment=${verifyData.enrollment?.id}`;
-          } else {
-            throw new Error('Payment verification failed');
-          }
-        } catch (err: any) {
-          console.error('Payment verification error:', err);
-          setError(err.message || 'Payment verification failed. Please contact support.');
-          setStep('payment');
-          setIsProcessing(false);
-        }
-      },
-      prefill: {
-        name: '',
-        email: '',
-        contact: ''
-      },
-      theme: {
-        color: '#8b5cf6'
-      },
-      modal: {
-        ondismiss: function() {
-          console.log('Payment modal dismissed');
-          setIsProcessing(false);
-          setStep('payment');
-        }
-      },
-      notes: {
-        courseId: course.id,
-        courseName: course.title,
-        invoiceNumber: orderData.invoiceNumber
+    try {
+      const res = await initializeRazorpay();
+      if (!res) {
+        throw new Error('Failed to load payment gateway');
       }
-    };
 
-    const paymentObject = new window.Razorpay(options);
-    
-    paymentObject.on('payment.failed', function (response: any) {
-      console.error('Payment failed:', response.error);
-      setError(`Payment failed: ${response.error.description || 'Please try again'}`);
+      // Determine which coupon to use
+      const activeCouponCode = hasAssignedCoupon ? assignedCoupon?.code : appliedCoupon?.coupon?.code;
+
+      const orderResponse = await fetch('/api/payment/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: course.id,
+          couponCode: activeCouponCode,
+          amount: Math.round(prices.total * 100),
+          paymentType: "DOMESTIC",
+          billingAddress: null
+        })
+      });
+
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json();
+        throw new Error(errorData.error || 'Failed to create payment order');
+      }
+
+      const orderData = await orderResponse.json();
+
+      // Debug log to see the actual response structure
+      console.log('Order data received:', orderData);
+
+      const options: RazorpayOptions = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
+        amount: orderData.amount * 100, // Use orderData.amount directly (already in paise)
+        currency: orderData.currency,
+        name: 'Futuretek',
+        description: course.title,
+        order_id: orderData.orderId, // Use orderData.orderId directly
+        handler: async function (response: RazorpayResponse) {
+          try {
+            const verifyResponse = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentId: orderData.paymentId, // Use orderData.paymentId directly
+                courseId: course.id
+              })
+            });
+
+            if (!verifyResponse.ok) {
+              throw new Error('Payment verification failed');
+            }
+
+            const verifyData = await verifyResponse.json();
+
+            if (verifyData.success || verifyData.message) {
+              // Redirect to success page or dashboard
+              window.location.href = `/dashboard/user/courses`;
+            } else {
+              throw new Error('Payment verification failed');
+            }
+          } catch (err: any) {
+            console.error('Payment verification error:', err);
+            setError(err.message || 'Payment verification failed. Please contact support.');
+            setStep('payment');
+            setIsProcessing(false);
+          }
+        },
+        prefill: {
+          name: session.user?.name || '',
+          email: session.user?.email || '',
+          contact: ''
+        },
+        theme: {
+          color: '#8b5cf6'
+        },
+        modal: {
+          ondismiss: function() {
+            console.log('Payment modal dismissed');
+            setIsProcessing(false);
+            setStep('payment');
+          }
+        },
+        notes: {
+          courseId: course.id,
+          courseName: course.title,
+          invoiceNumber: orderData.invoiceNumber
+        }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      
+      paymentObject.on('payment.failed', function (response: any) {
+        console.error('Payment failed:', response.error);
+        setError(`Payment failed: ${response.error.description || 'Please try again'}`);
+        setStep('payment');
+        setIsProcessing(false);
+      });
+
+      paymentObject.open();
+
+    } catch (err: any) {
+      console.error('Payment initialization error:', err);
+      setError(err.message || 'Payment failed. Please try again.');
       setStep('payment');
       setIsProcessing(false);
-    });
+    }
+  };
 
-    paymentObject.open();
-
-  } catch (err: any) {
-    console.error('Payment initialization error:', err);
-    setError(err.message || 'Payment failed. Please try again.');
-    setStep('payment');
-    setIsProcessing(false);
-  }
-};
   if (!isOpen) return null;
 
   return (
@@ -323,19 +396,38 @@ const handlePayment = async () => {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Course Info */}
           <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-xl p-5 border border-purple-200/50 dark:border-purple-800/50">
             <h3 className="font-semibold text-lg mb-2 line-clamp-2">{course.title}</h3>
-            <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              ₹{coursePrice.toLocaleString('en-IN')}
-            </p>
+            {hasAssignedCoupon ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    ₹{displayFinalPrice.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-xl text-gray-500 line-through">
+                    ₹{coursePrice.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium inline-block">
+                  🎉 Coupon Auto-Applied!
+                </div>
+              </div>
+            ) : (
+              <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                ₹{coursePrice.toLocaleString('en-IN')}
+              </p>
+            )}
           </div>
 
+          {/* Progress Steps */}
           <div className="flex items-center justify-center gap-2">
             <div className={`h-2 w-2 rounded-full ${step === 'coupon' ? 'bg-purple-500' : 'bg-gray-300'}`} />
             <div className={`h-2 w-2 rounded-full ${step === 'payment' ? 'bg-purple-500' : 'bg-gray-300'}`} />
             <div className={`h-2 w-2 rounded-full ${step === 'processing' ? 'bg-purple-500' : 'bg-gray-300'}`} />
           </div>
 
+          {/* Coupon Step */}
           {step === 'coupon' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -415,8 +507,38 @@ const handlePayment = async () => {
             </div>
           )}
 
+          {/* Payment Step */}
           {step === 'payment' && (
             <div className="space-y-6">
+              {/* Assigned Coupon Notice */}
+              {hasAssignedCoupon && assignedCoupon && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-green-800 text-lg mb-1">
+                          Special Discount Applied!
+                        </p>
+                        <p className="text-green-700">
+                          Coupon <code className="bg-green-100 px-2 py-1 rounded text-sm font-mono">{assignedCoupon.code}</code> has been auto-applied
+                        </p>
+                        <p className="text-green-600 text-sm mt-1">
+                          You save ₹{(coursePrice - displayFinalPrice).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleRemoveAssignedCoupon}
+                      className="text-red-500 hover:text-red-600 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Order Summary */}
               <div className="space-y-4 border-2 border-gray-200 dark:border-gray-800 rounded-xl p-5 bg-gray-50 dark:bg-gray-800/50">
                 <h3 className="font-semibold text-lg mb-3">Order Summary</h3>
                 
@@ -426,9 +548,11 @@ const handlePayment = async () => {
                     <span className="font-semibold">₹{prices.coursePrice.toLocaleString('en-IN')}</span>
                   </div>
 
-                  {appliedCoupon && prices.discount > 0 && (
+                  {(hasAssignedCoupon || appliedCoupon) && prices.discount > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-green-600 dark:text-green-400 font-medium">Coupon Discount</span>
+                      <span className="text-green-600 dark:text-green-400 font-medium">
+                        {hasAssignedCoupon ? 'Auto Discount' : 'Coupon Discount'}
+                      </span>
                       <span className="font-semibold text-green-600 dark:text-green-400">
                         -₹{prices.discount.toLocaleString('en-IN')}
                       </span>
@@ -458,7 +582,8 @@ const handlePayment = async () => {
                 </div>
               </div>
 
-              {appliedCoupon && (
+              {/* Applied Coupon Display */}
+              {appliedCoupon && !hasAssignedCoupon && (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
@@ -467,7 +592,7 @@ const handlePayment = async () => {
                         Coupon: {appliedCoupon.coupon?.code}
                       </p>
                       <p className="text-blue-600 dark:text-blue-500">
-                        🎉 You &apos;re saving ₹{prices.discount.toLocaleString('en-IN')} on this purchase!
+                        🎉 You&apos;re saving ₹{prices.discount.toLocaleString('en-IN')} on this purchase!
                       </p>
                     </div>
                   </div>
@@ -500,13 +625,15 @@ const handlePayment = async () => {
                   )}
                 </button>
 
-                <button
-                  onClick={() => setStep('coupon')}
-                  disabled={isProcessing}
-                  className="w-full py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  ← Back
-                </button>
+                {!hasAssignedCoupon && (
+                  <button
+                    onClick={() => setStep('coupon')}
+                    disabled={isProcessing}
+                    className="w-full py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    ← Back to Coupon
+                  </button>
+                )}
               </div>
 
               <div className="text-xs text-center text-gray-500 dark:text-gray-400 space-y-1">
@@ -519,6 +646,7 @@ const handlePayment = async () => {
             </div>
           )}
 
+          {/* Processing Step */}
           {step === 'processing' && (
             <div className="flex flex-col items-center justify-center py-12 space-y-6">
               <div className="relative">

@@ -1,6 +1,6 @@
 /*eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/courses/[course]/page.tsx
-'use client';
+"use client";
 
 import { BuyNowButton } from "@/components/checkout/BuyNowButton";
 import {
@@ -28,7 +28,7 @@ import {
   Star,
   Target,
   Users,
-  Zap
+  Zap,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -36,6 +36,13 @@ import { notFound } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 interface CourseData {
+  appliedCoupon?: {
+    code: string;
+    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+    discountValue: string;
+  };
+  finalPrice?: string;
+  hasAssignedCoupon?: boolean;
   id: string;
   title: string;
   description: string;
@@ -64,14 +71,13 @@ interface CourseData {
   maxStudents?: number;
   currentEnrollments?: number;
 }
-
 /* -------------------------------------------------------------
    Fetch course (server-side cache) – unchanged
    ------------------------------------------------------------- */
 async function getCourse(slug: string): Promise<CourseData | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const url = `${baseUrl}/api/admin/courses/${slug}`;
+    const url = `${baseUrl}/api/courses/${slug}`;
 
     const response = await fetch(url, {
       next: { revalidate: 60 },
@@ -85,8 +91,7 @@ async function getCourse(slug: string): Promise<CourseData | null> {
     }
 
     const data = await response.json();
-    const course = data;
-
+    const course = data.course;
     if (!course?.id) return null;
 
     // Normalise features
@@ -118,18 +123,33 @@ async function getCourse(slug: string): Promise<CourseData | null> {
 /* -------------------------------------------------------------
    Helper components
    ------------------------------------------------------------- */
-function SafeHTML({ content, className = "" }: { content: string; className?: string }) {
-  return <div className={className} dangerouslySetInnerHTML={{ __html: content }} />;
+function SafeHTML({
+  content,
+  className = "",
+}: {
+  content: string;
+  className?: string;
+}) {
+  return (
+    <div className={className} dangerouslySetInnerHTML={{ __html: content }} />
+  );
 }
 function getPlainText(html: string): string {
   if (!html) return "";
-  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /* -------------------------------------------------------------
    MAIN PAGE COMPONENT
    ------------------------------------------------------------- */
-export default function CoursePage({ params }: { params: Promise<{ course: string }> }) {
+export default function CoursePage({
+  params,
+}: {
+  params: Promise<{ course: string }>;
+}) {
   const { course: slug } = React.use(params);
   const { data: session, status: authStatus } = useSession();
   const userId = session?.user?.id as string | undefined;
@@ -230,7 +250,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
               <Star className="w-4 h-4" />
               Transform Your Astrological Knowledge
             </div>
-            <h1 className="text-5xl font-bold text-white mb-6 leading-tight">{course.title}</h1>
+            <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
+              {course.title}
+            </h1>
             <p className="text-xl text-blue-100 mb-8 leading-relaxed max-w-3xl">
               {getPlainText(course.tagline || course.description)}
             </p>
@@ -270,8 +292,12 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                       <Users className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">Instructor</div>
-                      <div className="text-gray-600">{course.instructor || "Expert Instructor"}</div>
+                      <div className="font-semibold text-gray-900">
+                        Instructor
+                      </div>
+                      <div className="text-gray-600">
+                        {course.instructor || "Expert Instructor"}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm">
@@ -279,8 +305,12 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                       <Clock className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">Duration</div>
-                      <div className="text-gray-600">{course.duration || "Flexible Schedule"}</div>
+                      <div className="font-semibold text-gray-900">
+                        Duration
+                      </div>
+                      <div className="text-gray-600">
+                        {course.duration || "Flexible Schedule"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -308,7 +338,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                           <div className="p-2 bg-green-100 rounded-lg group-hover:scale-110 transition-transform">
                             <CheckCircle2 className="h-5 w-5 text-green-600" />
                           </div>
-                          <span className="font-medium text-gray-800 leading-snug">{text}</span>
+                          <span className="font-medium text-gray-800 leading-snug">
+                            {text}
+                          </span>
                         </div>
                       );
                     })}
@@ -332,7 +364,11 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                   )}
                 </CardHeader>
                 <CardContent>
-                  <Accordion type="single" collapsible className="w-full space-y-4">
+                  <Accordion
+                    type="single"
+                    collapsible
+                    className="w-full space-y-4"
+                  >
                     {course.whyLearn.map((item, i) => (
                       <AccordionItem
                         key={i}
@@ -361,11 +397,14 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl flex items-center gap-3">
                     <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full" />
-                    {course.courseContent?.length ? "Course Curriculum" : "What You'll Learn"}
+                    {course.courseContent?.length
+                      ? "Course Curriculum"
+                      : "What You'll Learn"}
                   </CardTitle>
                   {course.courseContent?.length && (
                     <CardDescription className="text-lg">
-                      Comprehensive curriculum with {course.courseContent.length} detailed modules
+                      Comprehensive curriculum with{" "}
+                      {course.courseContent.length} detailed modules
                     </CardDescription>
                   )}
                 </CardHeader>
@@ -381,7 +420,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                             <BookOpen className="h-5 w-5 text-indigo-600" />
                           </div>
                           <div className="flex-1">
-                            <span className="font-medium text-gray-800 leading-relaxed">{c}</span>
+                            <span className="font-medium text-gray-800 leading-relaxed">
+                              {c}
+                            </span>
                           </div>
                           {/* <div className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600 font-medium">
                             {i + 1}
@@ -412,9 +453,13 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   <p className="text-gray-700">
-                    You have successfully enrolled in this course. Head over to your dashboard to start learning!
+                    You have successfully enrolled in this course. Head over to
+                    your dashboard to start learning!
                   </p>
-                  <Button asChild className="w-full bg-green-600 hover:bg-green-700">
+                  <Button
+                    asChild
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
                     <Link href="/dashboard/courses">Go to My Courses</Link>
                   </Button>
                 </CardContent>
@@ -427,7 +472,8 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                     {course.enrollment?.title || "Enroll Now"}
                   </CardTitle>
                   <CardDescription className="text-blue-100 text-lg">
-                    {course.enrollment?.description || "Start your journey today"}
+                    {course.enrollment?.description ||
+                      "Start your journey today"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -437,7 +483,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                       <div className="flex items-center justify-center gap-3 mb-2">
                         <span className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                           {course.priceINR
-                            ? `₹${parseFloat(course.priceINR).toLocaleString("en-IN")}`
+                            ? `₹${parseFloat(course.priceINR).toLocaleString(
+                                "en-IN"
+                              )}`
                             : "Contact Us"}
                         </span>
                         {course.priceINR && (
@@ -446,7 +494,11 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                           </Badge>
                         )}
                       </div>
-                      {course.priceINR && <p className="text-gray-600 text-sm">One-time payment</p>}
+                      {course.priceINR && (
+                        <p className="text-gray-600 text-sm">
+                          One-time payment
+                        </p>
+                      )}
                     </div>
 
                     {/* Features */}
@@ -462,7 +514,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                               <div className="p-2 bg-purple-100 rounded-lg">
                                 <Icon className="h-5 w-5 text-purple-600" />
                               </div>
-                              <span className="font-medium text-gray-800 text-sm">{f.text}</span>
+                              <span className="font-medium text-gray-800 text-sm">
+                                {f.text}
+                              </span>
                             </div>
                           );
                         })
@@ -501,6 +555,7 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                     </div>
 
                     {/* Buy Now */}
+
                     <BuyNowButton
                       course={{
                         id: course.id,
@@ -508,6 +563,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                         priceINR: course.priceINR || "0",
                         slug: course.slug,
                       }}
+                      assignedCoupon={course.appliedCoupon} // Now this matches the interface
+                      finalPrice={course.finalPrice}
+                      hasAssignedCoupon={course.hasAssignedCoupon}
                     />
 
                     {/* Guarantee */}
@@ -515,16 +573,21 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                       <div className="flex items-center justify-center gap-2 mb-2">
                         <Shield className="h-5 w-5 text-green-600" />
                         <span className="font-semibold text-green-800 text-sm">
-                          {course.enrollment?.offer?.guarantee || "30-Day Money-Back Guarantee"}
+                          {course.enrollment?.offer?.guarantee ||
+                            "30-Day Money-Back Guarantee"}
                         </span>
                       </div>
-                      <p className="text-green-600 text-xs">Risk-free enrollment</p>
+                      <p className="text-green-600 text-xs">
+                        Risk-free enrollment
+                      </p>
                     </div>
 
                     {/* Quick stats */}
                     <div className="grid grid-cols-2 gap-3 text-center">
                       <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="font-bold text-gray-900">{course.totalSessions || 10}+</div>
+                        <div className="font-bold text-gray-900">
+                          {course.totalSessions || 10}+
+                        </div>
                         <div className="text-xs text-gray-600">Sessions</div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-lg">

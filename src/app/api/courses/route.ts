@@ -1,4 +1,3 @@
-//src/app/courses/route.ts
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
@@ -11,7 +10,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get("status");
 
-    // Define allowed statuses
     const allowedStatuses = [
       "REGISTRATION_OPEN",
       "COMPLETED",
@@ -25,19 +23,23 @@ export async function GET(req: NextRequest) {
 
     let courses;
 
-    // Apply filter only if a valid status is provided
     if (statusParam && allowedStatuses.includes(statusParam as StatusType)) {
       courses = await db
         .select()
         .from(CoursesTable)
         .where(eq(CoursesTable.status, statusParam as StatusType));
     } else {
-      // Otherwise, fetch all courses
       courses = await db.select().from(CoursesTable);
     }
 
-    // ✅ Return a direct array (frontend expects this)
-    return NextResponse.json(courses, { status: 200 });
+    // Convert numeric strings to numbers
+    courses = courses.map((c: any) => ({
+      ...c,
+      priceINR: Number(c.priceINR),
+      priceUSD: Number(c.priceUSD),
+    }));
+
+    return NextResponse.json({ courses }, { status: 200 });
   } catch (error) {
     console.error("Error fetching courses:", error);
     return NextResponse.json(
