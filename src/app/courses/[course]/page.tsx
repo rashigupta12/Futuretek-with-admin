@@ -1,6 +1,6 @@
 /*eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/courses/[course]/page.tsx
-'use client';
+"use client";
 
 import { BuyNowButton } from "@/components/checkout/BuyNowButton";
 import {
@@ -29,7 +29,7 @@ import {
   Target,
   Users,
   Zap,
-  IndianRupee
+  IndianRupee,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -39,7 +39,7 @@ import React, { useEffect, useState } from "react";
 interface CourseData {
   appliedCoupon?: {
     code: string;
-    discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
     discountValue: string;
   };
   finalPrice?: string;
@@ -126,18 +126,33 @@ async function getCourse(slug: string): Promise<CourseData | null> {
 /* -------------------------------------------------------------
    Helper components
    ------------------------------------------------------------- */
-function SafeHTML({ content, className = "" }: { content: string; className?: string }) {
-  return <div className={className} dangerouslySetInnerHTML={{ __html: content }} />;
+function SafeHTML({
+  content,
+  className = "",
+}: {
+  content: string;
+  className?: string;
+}) {
+  return (
+    <div className={className} dangerouslySetInnerHTML={{ __html: content }} />
+  );
 }
 function getPlainText(html: string): string {
   if (!html) return "";
-  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /* -------------------------------------------------------------
    MAIN PAGE COMPONENT
    ------------------------------------------------------------- */
-export default function CoursePage({ params }: { params: Promise<{ course: string }> }) {
+export default function CoursePage({
+  params,
+}: {
+  params: Promise<{ course: string }>;
+}) {
   const { course: slug } = React.use(params);
   const { data: session, status: authStatus } = useSession();
   const userId = session?.user?.id as string | undefined;
@@ -230,72 +245,84 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero */}
-     {/* Hero */}
-<div className="relative py-12 bg-gradient-to-br from-blue-600 to-blue-800">
-  <div className="absolute inset-0 bg-black/10" />
-  <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
-    <div className="max-w-4xl">
-      {/* Compact Badge */}
-      <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium mb-4">
-        <Star className="w-3 h-3" />
-        Premium Course
-      </div>
-      
-      {/* Title and Tagline */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-white mb-4 leading-tight">{course.title}</h1>
-          <p className="text-base text-blue-100 leading-relaxed max-w-2xl line-clamp-2">
-            {getPlainText(course.tagline || course.description)}
-          </p>
-        </div>
-        
-        {/* Quick Stats */}
-        <div className="flex flex-col sm:flex-row lg:flex-col gap-4 lg:gap-2">
-          <div className="flex items-center gap-2 text-white/90">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm">{course.duration || "Self-paced"}</span>
-          </div>
-          <div className="flex items-center gap-2 text-white/90">
-            <Users className="w-4 h-4" />
-            <span className="text-sm">{course.currentEnrollments || "100+"} students</span>
-          </div>
-          {course.totalSessions && (
-            <div className="flex items-center gap-2 text-white/90">
-              <BookOpen className="w-4 h-4" />
-              <span className="text-sm">{course.totalSessions} sessions</span>
+      {/* Hero */}
+      <div className="relative py-12 bg-gradient-to-br from-blue-600 to-blue-800">
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="max-w-4xl">
+            {/* Compact Badge */}
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium mb-4">
+              <Star className="w-3 h-3" />
+              Premium Course
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Topics and CTA */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
-        <div className="flex flex-wrap gap-2">
-          {(course.relatedTopics || course.topics || []).slice(0, 3).map((t) => (
-            <Badge
-              key={t}
-              className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm transition-all duration-300 border-0 text-xs"
-            >
-              {t}
-            </Badge>
-          ))}
+            {/* Title and Tagline */}
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-white mb-4 leading-tight">
+                  {course.title}
+                </h1>
+                <p className="text-base text-blue-100 leading-relaxed max-w-2xl line-clamp-2">
+                  {getPlainText(course.tagline || course.description)}
+                </p>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="flex flex-col sm:flex-row lg:flex-col gap-4 lg:gap-2">
+                <div className="flex items-center gap-2 text-white/90">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm">
+                    {course.duration || "Self-paced"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-white/90">
+                  <Users className="w-4 h-4" />
+                  <span className="text-sm">
+                    {course.currentEnrollments || "100+"} students
+                  </span>
+                </div>
+                {course.totalSessions && (
+                  <div className="flex items-center gap-2 text-white/90">
+                    <BookOpen className="w-4 h-4" />
+                    <span className="text-sm">
+                      {course.totalSessions} sessions
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Topics and CTA */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
+              <div className="flex flex-wrap gap-2">
+                {(course.relatedTopics || course.topics || [])
+                  .slice(0, 3)
+                  .map((t) => (
+                    <Badge
+                      key={t}
+                      className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm transition-all duration-300 border-0 text-xs"
+                    >
+                      {t}
+                    </Badge>
+                  ))}
+              </div>
+
+              {/* Hero CTA Button */}
+              {!isEnrolled && (
+                <Button className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg hover:shadow-xl transition-all">
+                  <IndianRupee className="w-4 h-4 mr-1" />
+                  Enroll Now - ₹
+                  {course.hasAssignedCoupon && course.finalPrice
+                    ? parseFloat(course.finalPrice).toLocaleString("en-IN")
+                    : parseFloat(course.priceINR || "0").toLocaleString(
+                        "en-IN"
+                      )}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
-        
-        {/* Hero CTA Button */}
-        {!isEnrolled && (
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white shadow-lg hover:shadow-xl transition-all">
-            <IndianRupee className="w-4 h-4 mr-1" />
-            Enroll Now - ₹{course.hasAssignedCoupon && course.finalPrice 
-              ? parseFloat(course.finalPrice).toLocaleString("en-IN") 
-              : parseFloat(course.priceINR || "0").toLocaleString("en-IN")
-            }
-          </Button>
-        )}
       </div>
-    </div>
-  </div>
-</div> 
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -319,8 +346,12 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                       <Users className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">Instructor</div>
-                      <div className="text-gray-600">{course.instructor || "Expert Instructor"}</div>
+                      <div className="font-semibold text-gray-900">
+                        Instructor
+                      </div>
+                      <div className="text-gray-600">
+                        {course.instructor || "Expert Instructor"}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 p-4 bg-white rounded-lg border border-blue-200">
@@ -328,8 +359,12 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                       <Clock className="h-6 w-6 text-amber-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">Duration</div>
-                      <div className="text-gray-600">{course.duration || "Flexible Schedule"}</div>
+                      <div className="font-semibold text-gray-900">
+                        Duration
+                      </div>
+                      <div className="text-gray-600">
+                        {course.duration || "Flexible Schedule"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -357,7 +392,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                           <div className="p-2 bg-blue-100 rounded-lg group-hover:scale-110 transition-transform">
                             <CheckCircle2 className="h-5 w-5 text-blue-600" />
                           </div>
-                          <span className="font-medium text-gray-800 leading-snug">{text}</span>
+                          <span className="font-medium text-gray-800 leading-snug">
+                            {text}
+                          </span>
                         </div>
                       );
                     })}
@@ -381,7 +418,11 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                   )}
                 </CardHeader>
                 <CardContent>
-                  <Accordion type="single" collapsible className="w-full space-y-4">
+                  <Accordion
+                    type="single"
+                    collapsible
+                    className="w-full space-y-4"
+                  >
                     {course.whyLearn.map((item, i) => (
                       <AccordionItem
                         key={i}
@@ -410,11 +451,14 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl flex items-center gap-3 text-gray-900">
                     <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full" />
-                    {course.courseContent?.length ? "Course Curriculum" : "What You'll Learn"}
+                    {course.courseContent?.length
+                      ? "Course Curriculum"
+                      : "What You'll Learn"}
                   </CardTitle>
                   {course.courseContent?.length && (
                     <CardDescription className="text-gray-600">
-                      Comprehensive curriculum with {course.courseContent.length} detailed modules
+                      Comprehensive curriculum with{" "}
+                      {course.courseContent.length} detailed modules
                     </CardDescription>
                   )}
                 </CardHeader>
@@ -430,7 +474,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                             <BookOpen className="h-5 w-5 text-blue-600" />
                           </div>
                           <div className="flex-1">
-                            <span className="font-medium text-gray-800 leading-relaxed">{c}</span>
+                            <span className="font-medium text-gray-800 leading-relaxed">
+                              {c}
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -458,9 +504,13 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   <p className="text-gray-700 text-sm">
-                    You have successfully enrolled in this course. Head over to your dashboard to start learning!
+                    You have successfully enrolled in this course. Head over to
+                    your dashboard to start learning!
                   </p>
-                  <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white">
+                  <Button
+                    asChild
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  >
                     <Link href="/dashboard/user/courses">Go to My Courses</Link>
                   </Button>
                 </CardContent>
@@ -473,7 +523,8 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                     {course.enrollment?.title || "Enroll Now"}
                   </CardTitle>
                   <CardDescription className="text-blue-100">
-                    {course.enrollment?.description || "Start your journey today"}
+                    {course.enrollment?.description ||
+                      "Start your journey today"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -484,10 +535,16 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                         {course.hasAssignedCoupon && course.finalPrice ? (
                           <>
                             <span className="text-3xl font-bold text-gray-900">
-                              ₹{parseFloat(course.finalPrice).toLocaleString("en-IN")}
+                              ₹
+                              {parseFloat(course.finalPrice).toLocaleString(
+                                "en-IN"
+                              )}
                             </span>
                             <span className="text-xl text-gray-500 line-through">
-                              ₹{parseFloat(course.priceINR || "0").toLocaleString("en-IN")}
+                              ₹
+                              {parseFloat(
+                                course.priceINR || "0"
+                              ).toLocaleString("en-IN")}
                             </span>
                             <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">
                               Special Offer
@@ -496,12 +553,18 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                         ) : (
                           <span className="text-3xl font-bold text-gray-900">
                             {course.priceINR
-                              ? `₹${parseFloat(course.priceINR).toLocaleString("en-IN")}`
+                              ? `₹${parseFloat(course.priceINR).toLocaleString(
+                                  "en-IN"
+                                )}`
                               : "Contact Us"}
                           </span>
                         )}
                       </div>
-                      {course.priceINR && <p className="text-gray-600 text-sm">One-time payment</p>}
+                      {course.priceINR && (
+                        <p className="text-gray-600 text-sm">
+                          One-time payment
+                        </p>
+                      )}
                     </div>
 
                     {/* Features */}
@@ -517,7 +580,9 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                               <div className="p-2 bg-blue-100 rounded-lg">
                                 <Icon className="h-4 w-4 text-blue-600" />
                               </div>
-                              <span className="font-medium text-gray-800 text-sm">{f.text}</span>
+                              <span className="font-medium text-gray-800 text-sm">
+                                {f.text}
+                              </span>
                             </div>
                           );
                         })
@@ -573,20 +638,27 @@ export default function CoursePage({ params }: { params: Promise<{ course: strin
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Shield className="h-4 w-4 text-amber-600" />
                         <span className="font-semibold text-amber-800 text-sm">
-                          {course.enrollment?.offer?.guarantee || "30-Day Money-Back Guarantee"}
+                          {course.enrollment?.offer?.guarantee ||
+                            "30-Day Money-Back Guarantee"}
                         </span>
                       </div>
-                      <p className="text-amber-600 text-xs">Risk-free enrollment</p>
+                      <p className="text-amber-600 text-xs">
+                        Risk-free enrollment
+                      </p>
                     </div>
 
                     {/* Quick stats */}
                     <div className="grid grid-cols-2 gap-2 text-center">
                       <div className="p-2 bg-gray-50 rounded border border-gray-200">
-                        <div className="font-bold text-gray-900 text-sm">{course.totalSessions || 10}+</div>
+                        <div className="font-bold text-gray-900 text-sm">
+                          {course.totalSessions || 10}+
+                        </div>
                         <div className="text-xs text-gray-600">Sessions</div>
                       </div>
                       <div className="p-2 bg-gray-50 rounded border border-gray-200">
-                        <div className="font-bold text-gray-900 text-sm">24/7</div>
+                        <div className="font-bold text-gray-900 text-sm">
+                          24/7
+                        </div>
                         <div className="text-xs text-gray-600">Support</div>
                       </div>
                     </div>
