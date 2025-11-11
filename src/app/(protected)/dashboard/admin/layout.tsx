@@ -1,31 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { signOut, useSession } from "next-auth/react";
 import {
   BookOpen,
-  Home,
-  Settings,
-  Users,
-  BarChart3,
-  LogOut,
-  FileText,
-  Tag,
-  CreditCard,
-  Award,
-  Globe,
   ChevronDown,
-  Plus,
+  CreditCard,
+  FileText,
+  Home,
   List,
+  LogOut,
+  Plus,
+  Settings,
+  Tag,
+  Users
 } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import React, { useState } from "react";
 
 type SingleNavItem = {
   title: string;
@@ -37,7 +34,7 @@ type SingleNavItem = {
 type GroupNavItem = {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  key: "courses" | "blogs" | "coupons" | "certificates" | "agent";
+  key: "courses" | "blogs" | "coupons" | "certificates" | "agent"|"users";
   subItems: {
     title: string;
     href: string;
@@ -57,13 +54,14 @@ export default function AdminLayout({
   const { data: session, status } = useSession();
 
   const [expandedMenus, setExpandedMenus] = useState<
-    Record<"courses" | "blogs" | "coupons" | "certificates" | "agent", boolean>
+    Record<"courses" | "blogs" | "coupons" | "certificates" | "agent" |"users", boolean>
   >({
     courses: true,
     blogs: false,
     coupons: false,
     certificates: false,
     agent: false,
+    users:false
   });
 
   const handleLogout = async () => {
@@ -80,15 +78,15 @@ export default function AdminLayout({
   const isActive = (path: string) => pathname === path;
 
   // Get user data from session
-  const userName = session?.user?.name || session?.user?.role ;
+  const userName = session?.user?.name || session?.user?.role;
   const userImage = session?.user?.image || "/images/user_alt_icon.png";
-  
+
   // Generate avatar fallback from name
   const getAvatarFallback = () => {
     if (session?.user?.name) {
       return session.user.name
         .split(" ")
-        .map(n => n[0])
+        .map((n) => n[0])
         .join("")
         .toUpperCase()
         .slice(0, 2);
@@ -155,47 +153,53 @@ export default function AdminLayout({
         },
       ],
     },
-    {
-      title: "Users",
-      icon: Users,
-      href: "/dashboard/admin/users",
-      single: true,
-    },
-    {
-      title: "Payments",
-      icon: CreditCard,
-      href: "/dashboard/admin/payments",
-      single: true,
-    },
-    {
-      title: "Certificates",
-      icon: Award,
-      key: "certificates",
-      subItems: [
-        {
-          title: "Requests",
-          href: "/dashboard/admin/certificates/requests",
-          icon: List,
-        },
-        {
-          title: "All Certificates",
-          href: "/dashboard/admin/certificates",
-          icon: Award,
-        },
-      ],
-    },
-    {
-      title: "Website Content",
-      icon: Globe,
-      href: "/dashboard/admin/website-content",
-      single: true,
-    },
-    {
-      title: "Analytics",
-      icon: BarChart3,
-      href: "/dashboard/admin/analytics",
-      single: true,
-    },
+
+   {
+  title: "Users & Enrollments",
+  icon: Users,
+  key: "users",
+  subItems: [
+    { title: "All Users", href: "/dashboard/admin/users", icon: List },
+    { title: "Enrollments", href: "/dashboard/admin/enrollments", icon: Users },
+    { title: "Payments", href: "/dashboard/admin/payments", icon: CreditCard },
+  ],
+},
+   
+    // {
+    //   title: "Payments",
+    //   icon: CreditCard,
+    //   href: "/dashboard/admin/payments",
+    //   single: true,
+    // },
+    // {
+    //   title: "Certificates",
+    //   icon: Award,
+    //   key: "certificates",
+    //   subItems: [
+    //     {
+    //       title: "Requests",
+    //       href: "/dashboard/admin/certificates/requests",
+    //       icon: List,
+    //     },
+    //     {
+    //       title: "All Certificates",
+    //       href: "/dashboard/admin/certificates",
+    //       icon: Award,
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Website Content",
+    //   icon: Globe,
+    //   href: "/dashboard/admin/website-content",
+    //   single: true,
+    // },
+    // {
+    //   title: "Analytics",
+    //   icon: BarChart3,
+    //   href: "/dashboard/admin/analytics",
+    //   single: true,
+    // },
   ];
 
   // Show loading state while session is loading

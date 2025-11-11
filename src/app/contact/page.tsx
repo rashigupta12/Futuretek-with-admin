@@ -229,7 +229,7 @@ export default function ContactPage() {
         <div className="mt-20 max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-semibold text-slate-800 mb-4">Other Ways to Connect</h2>
-            <p className="text-slate-600">We're here to help you with your astrological journey.</p>
+            <p className="text-slate-600">We&apos;re here to help you with your astrological journey.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">

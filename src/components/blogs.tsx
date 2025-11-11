@@ -75,7 +75,7 @@ export function Blogs() {
 }
 
 // Extracted Blog Card Component
-function BlogCard({ post, index }: { post: typeof blogPosts[0]; index: number }) {
+function BlogCard({ post }: { post: typeof blogPosts[0]; index: number }) {
   return (
     <Card className="group h-full bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col">
       {/* Golden Top Accent */}

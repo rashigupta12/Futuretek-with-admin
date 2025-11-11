@@ -1,3 +1,4 @@
+//src/app/api/courses/[slug]/route.ts
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

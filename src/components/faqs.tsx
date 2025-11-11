@@ -4,8 +4,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { HelpCircle, ChevronDown, Mail, Phone, MessageSquare, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ArrowRight, ChevronDown, HelpCircle } from 'lucide-react'
 
 const faqs = [
   {
