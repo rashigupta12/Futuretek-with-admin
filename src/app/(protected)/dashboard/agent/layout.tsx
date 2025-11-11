@@ -140,11 +140,11 @@ export default function JyotishiLayout({
       ],
     },
     {
-      title: "My Students",
-      icon: Users,
-      href: "/dashboard/agent/students",
-      single: true,
-    },
+    title: "Assign Coupons",
+    icon: Users,
+    href: "/dashboard/agent/assign-coupons",
+    single: true,
+  },
     {
       title: "Analytics",
       icon: BarChart3,

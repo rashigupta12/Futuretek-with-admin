@@ -1,5 +1,15 @@
 // src/app/courses/[course]/page.tsx
-import React from "react";
+"use client";
+
+import { BuyNowButton } from "@/components/checkout/BuyNowButton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -22,13 +32,20 @@ import {
   Calendar,
   Star,
   Target,
+  Users,
   Zap,
-  Shield,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { BuyNowButton } from "@/components/checkout/BuyNowButton";
 
 interface CourseData {
+  appliedCoupon?: {
+    code: string;
+    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+    discountValue: string;
+  };
+  finalPrice?: string;
+  hasAssignedCoupon?: boolean;
   id: string;
   title: string;
   description: string;
@@ -66,11 +83,13 @@ interface CourseData {
   maxStudents?: number;
   currentEnrollments?: number;
 }
-
+/* -------------------------------------------------------------
+   Fetch course (server-side cache) – unchanged
+   ------------------------------------------------------------- */
 async function getCourse(slug: string): Promise<CourseData | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const url = `${baseUrl}/api/admin/courses/${slug}`;
+    const url = `${baseUrl}/api/courses/${slug}`;
 
     const response = await fetch(url, {
       next: { revalidate: 60 },
@@ -88,11 +107,8 @@ async function getCourse(slug: string): Promise<CourseData | null> {
     }
 
     const data = await response.json();
-    const course = data;
-
-    if (!course || !course.id) {
-      return null;
-    }
+    const course = data.course;
+    if (!course?.id) return null;
 
     if (course.features && Array.isArray(course.features)) {
       course.features = course.features.map(
@@ -121,7 +137,9 @@ async function getCourse(slug: string): Promise<CourseData | null> {
   }
 }
 
-// Helper function to safely render HTML content
+/* -------------------------------------------------------------
+   Helper components
+   ------------------------------------------------------------- */
 function SafeHTML({
   content,
   className = "",
@@ -133,29 +151,87 @@ function SafeHTML({
     <div className={className} dangerouslySetInnerHTML={{ __html: content }} />
   );
 }
-
-// Helper function to clean and extract plain text from HTML
-function getPlainText(htmlContent: string): string {
-  if (!htmlContent) return "";
-
-  // Remove HTML tags and extract text
-  const text = htmlContent
-    .replace(/<[^>]*>/g, "") // Remove HTML tags
-    .replace(/\s+/g, " ") // Replace multiple spaces with single space
+function getPlainText(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
     .trim();
-
-  return text;
 }
 
-export default async function CoursePage({
+/* -------------------------------------------------------------
+   MAIN PAGE COMPONENT
+   ------------------------------------------------------------- */
+export default function CoursePage({
   params,
 }: {
   params: Promise<{ course: string }>;
 }) {
-  const { course } = await params;
-  const courseData = await getCourse(course);
+  const { course: slug } = React.use(params);
+  const { data: session, status: authStatus } = useSession();
+  const userId = session?.user?.id as string | undefined;
 
-  if (!courseData) {
+  const [course, setCourse] = useState<CourseData | null>(null);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  /* ---------------------------------------------------------
+     1. Load course + enrollment status
+     --------------------------------------------------------- */
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. Course data (cached)
+        const c = await getCourse(slug);
+        if (!c) throw new Error("Course not found");
+        setCourse(c);
+
+        // 2. Enrollment check (only when logged-in)
+        if (userId) {
+          const res = await fetch("/api/user/enrollments");
+          if (!res.ok) throw new Error("Failed to fetch enrollments");
+          const { enrollments } = await res.json();
+
+          const enrolled = Array.isArray(enrollments)
+            ? enrollments.some(
+                (e: any) =>
+                  e.courseId === c.id &&
+                  (e.status === "ACTIVE" || e.status === "COMPLETED")
+              )
+            : false;
+
+          setIsEnrolled(enrolled);
+        }
+      } catch (err) {
+        console.error(err);
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (authStatus !== "loading") load();
+  }, [slug, userId, authStatus]);
+
+  /* ---------------------------------------------------------
+     Loading / error states
+     --------------------------------------------------------- */
+  if (loading || authStatus === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-blue-50/20">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading course details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !course) {
     notFound();
   }
 
@@ -186,7 +262,7 @@ export default async function CoursePage({
               Transform Your Astrological Knowledge
             </div>
             <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
-              {courseData.title}
+              {course.title}
             </h1>
             <p className="text-xl text-blue-100 mb-8 leading-relaxed max-w-3xl">
               {getPlainText(courseData.tagline || courseData.description)}
@@ -229,11 +305,11 @@ export default async function CoursePage({
                       <Users className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900">
+                      <div className="font-semibold text-gray-900">
                         Instructor
                       </div>
-                      <div className="text-slate-600">
-                        {courseData.instructor || "Expert Instructor"}
+                      <div className="text-gray-600">
+                        {course.instructor || "Expert Instructor"}
                       </div>
                     </div>
                   </div>
@@ -242,11 +318,11 @@ export default async function CoursePage({
                       <Clock className="h-6 w-6 text-yellow-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900">
+                      <div className="font-semibold text-gray-900">
                         Duration
                       </div>
-                      <div className="text-slate-600">
-                        {courseData.duration || "Flexible Schedule"}
+                      <div className="text-gray-600">
+                        {course.duration || "Flexible Schedule"}
                       </div>
                     </div>
                   </div>
@@ -276,7 +352,7 @@ export default async function CoursePage({
                           <div className="p-2 bg-yellow-100 rounded-lg group-hover:scale-110 transition-transform">
                             <CheckCircle2 className="h-5 w-5 text-yellow-600" />
                           </div>
-                          <span className="font-medium text-slate-800 leading-snug">
+                          <span className="font-medium text-gray-800 leading-snug">
                             {text}
                           </span>
                         </div>
@@ -307,7 +383,7 @@ export default async function CoursePage({
                     collapsible
                     className="w-full space-y-4"
                   >
-                    {courseData.whyLearn.map((item, index) => (
+                    {course.whyLearn.map((item, i) => (
                       <AccordionItem
                         key={index}
                         value={`item-${index}`}
@@ -335,20 +411,18 @@ export default async function CoursePage({
               courseData.whatYouLearn) && (
               <Card className="border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-2xl flex items-center gap-3 text-slate-800">
-                    <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
-                    {courseData.courseContent &&
-                    courseData.courseContent.length > 0
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full" />
+                    {course.courseContent?.length
                       ? "Course Curriculum"
                       : "What You'll Learn"}
                   </CardTitle>
-                  {courseData.courseContent &&
-                    courseData.courseContent.length > 0 && (
-                      <CardDescription className="text-lg text-slate-600">
-                        Comprehensive curriculum with{" "}
-                        {courseData.courseContent.length} detailed modules
-                      </CardDescription>
-                    )}
+                  {course.courseContent?.length && (
+                    <CardDescription className="text-lg">
+                      Comprehensive curriculum with{" "}
+                      {course.courseContent.length} detailed modules
+                    </CardDescription>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {courseData.courseContent &&
@@ -363,12 +437,9 @@ export default async function CoursePage({
                             <BookOpen className="h-5 w-5 text-blue-600" />
                           </div>
                           <div className="flex-1">
-                            <span className="font-medium text-slate-800 leading-relaxed">
-                              {content}
+                            <span className="font-medium text-gray-800 leading-relaxed">
+                              {c}
                             </span>
-                          </div>
-                          <div className="px-3 py-1 bg-slate-100 rounded-full text-sm text-slate-600 font-medium">
-                            {index + 1}
                           </div>
                         </div>
                       ))}
@@ -385,74 +456,87 @@ export default async function CoursePage({
 
           {/* Enhanced Sidebar with Blue & Golden Theme */}
           <div className="lg:col-span-1">
-            <Card className="border border-slate-200 shadow-2xl hover:shadow-3xl transition-all duration-300 bg-white sticky top-8">
-              {/* Golden Top Border */}
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-t-2xl"></div>
-
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl text-white pb-6 pt-8">
-                <CardTitle className="text-2xl font-bold">
-                  {courseData.enrollment?.title || `Enroll Now`}
-                </CardTitle>
-                <CardDescription className="text-blue-100 text-lg">
-                  {courseData.enrollment?.description ||
-                    `Start your journey today`}
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  {/* Price Section */}
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-3 mb-2">
-                      <span className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
-                        {courseData.priceINR
-                          ? `₹${parseFloat(courseData.priceINR).toLocaleString(
-                              "en-IN"
-                            )}`
-                          : "Contact Us"}
-                      </span>
-                      {courseData.priceINR && (
-                        <Badge className="bg-yellow-100 text-yellow-700 border-0 text-sm py-1">
-                          Best Value
-                        </Badge>
+            {isEnrolled ? (
+              /* ---------- ENROLLED CARD ---------- */
+              <Card className="border-0 shadow-2xl bg-gradient-to-b from-green-50 to-emerald-50 sticky top-8">
+                <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-t-2xl text-white pb-6">
+                  <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                    <CheckCircle2 className="h-7 w-7" />
+                    Already Enrolled
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <p className="text-gray-700">
+                    You have successfully enrolled in this course. Head over to
+                    your dashboard to start learning!
+                  </p>
+                  <Button
+                    asChild
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    <Link href="/dashboard/courses">Go to My Courses</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              /* ---------- BUY NOW CARD (original) ---------- */
+              <Card className="border-0 shadow-2xl hover:shadow-3xl transition-all duration-300 bg-gradient-to-b from-white to-gray-50/50 sticky top-8">
+                <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-t-2xl text-white pb-6">
+                  <CardTitle className="text-2xl font-bold">
+                    {course.enrollment?.title || "Enroll Now"}
+                  </CardTitle>
+                  <CardDescription className="text-blue-100 text-lg">
+                    {course.enrollment?.description ||
+                      "Start your journey today"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    {/* Price */}
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-3 mb-2">
+                        <span className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                          {course.priceINR
+                            ? `₹${parseFloat(course.priceINR).toLocaleString(
+                                "en-IN"
+                              )}`
+                            : "Contact Us"}
+                        </span>
+                        {course.priceINR && (
+                          <Badge className="bg-green-100 text-green-700 border-0 text-sm py-1">
+                            Best Value
+                          </Badge>
+                        )}
+                      </div>
+                      {course.priceINR && (
+                        <p className="text-gray-600 text-sm">
+                          One-time payment
+                        </p>
                       )}
                     </div>
-                    {courseData.priceINR && (
-                      <p className="text-slate-600 text-sm">One-time payment</p>
-                    )}
-                  </div>
 
-                  {/* Key Features */}
-                  <div className="space-y-4">
-                    {courseData.enrollment?.features ? (
-                      courseData.enrollment.features.map((feature, index) => {
-                        const IconComponent = getIcon(feature.icon);
-                        return (
-                          <div
-                            key={index}
-                            className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200"
-                          >
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <IconComponent className="h-5 w-5 text-blue-600" />
+                    {/* Features */}
+                    <div className="space-y-4">
+                      {course.enrollment?.features ? (
+                        course.enrollment.features.map((f, i) => {
+                          const Icon = getIcon(f.icon);
+                          return (
+                            <div
+                              key={i}
+                              className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100"
+                            >
+                              <div className="p-2 bg-purple-100 rounded-lg">
+                                <Icon className="h-5 w-5 text-purple-600" />
+                              </div>
+                              <span className="font-medium text-gray-800 text-sm">
+                                {f.text}
+                              </span>
                             </div>
-                            <span className="font-medium text-slate-800 text-sm">
-                              {feature.text}
-                            </span>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                          <div className="p-2 bg-yellow-100 rounded-lg">
-                            <Clock className="h-5 w-5 text-yellow-600" />
-                          </div>
-                          <span className="font-medium text-slate-800 text-sm">
-                            {courseData.duration || "Lifetime Access"}
-                          </span>
-                        </div>
-                        {courseData.totalSessions && (
-                          <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                          );
+                        })
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
                             <div className="p-2 bg-blue-100 rounded-lg">
                               <Calendar className="h-5 w-5 text-blue-600" />
                             </div>
@@ -475,35 +559,41 @@ export default async function CoursePage({
                     )}
                   </div>
 
-                  {/* Buy Now Button */}
-                  <BuyNowButton
-                    course={{
-                      id: courseData.id,
-                      title: courseData.title,
-                      priceINR: courseData.priceINR || "0",
-                      slug: courseData.slug,
-                    }}
-                  />
+                    {/* Buy Now */}
 
-                  {/* Guarantee */}
-                  <div className="text-center p-4 bg-gradient-to-r from-yellow-50 to-yellow-50/50 rounded-xl border border-yellow-200">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Shield className="h-5 w-5 text-yellow-600" />
-                      <span className="font-semibold text-yellow-800 text-sm">
-                        {courseData.enrollment?.offer?.guarantee ||
-                          "30-Day Money-Back Guarantee"}
-                      </span>
+                    <BuyNowButton
+                      course={{
+                        id: course.id,
+                        title: course.title,
+                        priceINR: course.priceINR || "0",
+                        slug: course.slug,
+                      }}
+                      assignedCoupon={course.appliedCoupon} // Now this matches the interface
+                      finalPrice={course.finalPrice}
+                      hasAssignedCoupon={course.hasAssignedCoupon}
+                    />
+
+                    {/* Guarantee */}
+                    <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Shield className="h-5 w-5 text-green-600" />
+                        <span className="font-semibold text-green-800 text-sm">
+                          {course.enrollment?.offer?.guarantee ||
+                            "30-Day Money-Back Guarantee"}
+                        </span>
+                      </div>
+                      <p className="text-green-600 text-xs">
+                        Risk-free enrollment
+                      </p>
                     </div>
-                    <p className="text-yellow-700 text-xs">
-                      Risk-free enrollment
-                    </p>
-                  </div>
 
-                  {/* Quick Info */}
-                  <div className="grid grid-cols-2 gap-3 text-center">
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="font-bold text-blue-900">
-                        {courseData.totalSessions || 10}+
+                    {/* Quick stats */}
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="font-bold text-gray-900">
+                          {course.totalSessions || 10}+
+                        </div>
+                        <div className="text-xs text-gray-600">Sessions</div>
                       </div>
                       <div className="text-xs text-blue-600">Sessions</div>
                     </div>
