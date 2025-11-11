@@ -1,5 +1,6 @@
 
 // app/api/jyotishi/earnings/route.ts
+import { auth } from "@/auth";
 import { db } from "@/db";
 import {
   CommissionsTable,
@@ -12,7 +13,11 @@ import { NextRequest, NextResponse } from "next/server";
 // GET - Get commission earnings
 export async function GET(req: NextRequest) {
   try {
-    const jyotishiId = "jyotishi-id-from-session";
+    const session = await auth()
+    const jyotishiId = session?.user.id;
+       if (!jyotishiId) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
