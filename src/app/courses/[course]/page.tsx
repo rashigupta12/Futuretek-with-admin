@@ -1,5 +1,6 @@
+/*eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/courses/[course]/page.tsx
-"use client";
+'use client';
 
 import { BuyNowButton } from "@/components/checkout/BuyNowButton";
 import {
@@ -17,31 +18,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Clock,
   BookOpen,
-  CheckCircle2,
-  Users,
   Calendar,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Shield,
   Star,
   Target,
   Users,
-  Zap,
+  Zap
 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BuyNowButton } from "@/components/checkout/BuyNowButton";
+import React, { useEffect, useState } from "react";
 
 interface CourseData {
   appliedCoupon?: {
     code: string;
-    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+    discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
     discountValue: string;
   };
   finalPrice?: string;
@@ -58,10 +55,7 @@ interface CourseData {
   priceUSD?: string;
   status?: string;
   features?: string[] | Array<{ feature: string }>;
-  whyLearn?: Array<{
-    title: string;
-    description: string;
-  }>;
+  whyLearn?: Array<{ title: string; description: string }>;
   whyLearnIntro?: string;
   whatYouLearn?: string;
   courseContent?: string[];
@@ -70,14 +64,8 @@ interface CourseData {
   enrollment?: {
     title: string;
     description: string;
-    offer: {
-      badge: string;
-      guarantee: string;
-    };
-    features: Array<{
-      icon: string;
-      text: string;
-    }>;
+    offer: { badge: string; guarantee: string };
+    features: Array<{ icon: string; text: string }>;
   };
   disclaimer?: string;
   maxStudents?: number;
@@ -93,37 +81,34 @@ async function getCourse(slug: string): Promise<CourseData | null> {
 
     const response = await fetch(url, {
       next: { revalidate: 60 },
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       cache: "no-store",
     });
 
     if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
+      if (response.status === 404) return null;
       throw new Error("Failed to fetch course");
     }
 
     const data = await response.json();
-    const course = data.course;
+    const course = data.course
+;
+
     if (!course?.id) return null;
 
+    // Normalise features
     if (course.features && Array.isArray(course.features)) {
-      course.features = course.features.map(
-        (f: string | { feature: string }) => {
-          if (typeof f === "string") {
-            try {
-              const parsed = JSON.parse(f);
-              return parsed.feature || f;
-            } catch {
-              return f;
-            }
+      course.features = course.features.map((f: any) => {
+        if (typeof f === "string") {
+          try {
+            const p = JSON.parse(f);
+            return p.feature || f;
+          } catch {
+            return f;
           }
-          return f.feature || f;
         }
-      );
+        return f.feature || f;
+      });
     }
 
     if (course.topics && !course.relatedTopics) {
@@ -131,8 +116,8 @@ async function getCourse(slug: string): Promise<CourseData | null> {
     }
 
     return course;
-  } catch (error) {
-    console.error("💥 Error fetching course:", error);
+  } catch (e) {
+    console.error("Error fetching course:", e);
     return null;
   }
 }
@@ -140,33 +125,18 @@ async function getCourse(slug: string): Promise<CourseData | null> {
 /* -------------------------------------------------------------
    Helper components
    ------------------------------------------------------------- */
-function SafeHTML({
-  content,
-  className = "",
-}: {
-  content: string;
-  className?: string;
-}) {
-  return (
-    <div className={className} dangerouslySetInnerHTML={{ __html: content }} />
-  );
+function SafeHTML({ content, className = "" }: { content: string; className?: string }) {
+  return <div className={className} dangerouslySetInnerHTML={{ __html: content }} />;
 }
 function getPlainText(html: string): string {
   if (!html) return "";
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 }
 
 /* -------------------------------------------------------------
    MAIN PAGE COMPONENT
    ------------------------------------------------------------- */
-export default function CoursePage({
-  params,
-}: {
-  params: Promise<{ course: string }>;
-}) {
+export default function CoursePage({ params }: { params: Promise<{ course: string }> }) {
   const { course: slug } = React.use(params);
   const { data: session, status: authStatus } = useSession();
   const userId = session?.user?.id as string | undefined;
@@ -235,8 +205,11 @@ export default function CoursePage({
     notFound();
   }
 
+  /* ---------------------------------------------------------
+     Icon resolver
+     --------------------------------------------------------- */
   const getIcon = (iconName: string) => {
-    const icons = {
+    const map: Record<string, any> = {
       Video: Clock,
       Award: CheckCircle2,
       Clock,
@@ -247,37 +220,36 @@ export default function CoursePage({
       Zap,
       Shield,
     };
-    return icons[iconName as keyof typeof icons] || CheckCircle2;
+    return map[iconName] ?? CheckCircle2;
   };
 
+  /* ---------------------------------------------------------
+     Render
+     --------------------------------------------------------- */
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-slate-50">
-      {/* Enhanced Hero Section with Blue & Golden Theme */}
-      <div className="relative py-16 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
-        <div className="absolute inset-0 bg-black/10"></div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50/20">
+      {/* Hero */}
+      <div className="relative py-16 bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700">
+        <div className="absolute inset-0 bg-black/10" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 bg-yellow-500/20 backdrop-blur-sm text-yellow-100 px-4 py-2 rounded-full text-sm font-medium mb-6 border border-yellow-400/30">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium mb-6">
               <Star className="w-4 h-4" />
               Transform Your Astrological Knowledge
             </div>
-            <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
-              {course.title}
-            </h1>
+            <h1 className="text-5xl font-bold text-white mb-6 leading-tight">{course.title}</h1>
             <p className="text-xl text-blue-100 mb-8 leading-relaxed max-w-3xl">
-              {getPlainText(courseData.tagline || courseData.description)}
+              {getPlainText(course.tagline || course.description)}
             </p>
             <div className="flex flex-wrap gap-3">
-              {(courseData.relatedTopics || courseData.topics || []).map(
-                (topic) => (
-                  <Badge
-                    key={topic}
-                    className="bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-100 backdrop-blur-sm transition-all duration-300 border border-yellow-400/30"
-                  >
-                    {topic}
-                  </Badge>
-                )
-              )}
+              {(course.relatedTopics || course.topics || []).map((t) => (
+                <Badge
+                  key={t}
+                  className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm transition-all duration-300 border-0"
+                >
+                  {t}
+                </Badge>
+              ))}
             </div>
           </div>
         </div>
@@ -285,117 +257,102 @@ export default function CoursePage({
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
-          {/* Main Content */}
+          {/* ---------- MAIN CONTENT ---------- */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Course Overview */}
-            <Card className="border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+            {/* Overview */}
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
               <CardHeader className="pb-4">
-                <CardTitle className="text-2xl flex items-center gap-3 text-slate-800">
-                  <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
+                <CardTitle className="text-2xl flex items-center gap-3">
+                  <div className="w-2 h-8 bg-gradient-to-b from-purple-500 to-blue-500 rounded-full" />
                   Course Overview
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="text-lg leading-relaxed text-slate-700 prose prose-lg max-w-none">
-                  <SafeHTML content={courseData.description} />
+                <div className="text-lg leading-relaxed text-gray-700 prose prose-lg max-w-none">
+                  <SafeHTML content={course.description} />
                 </div>
-                <div className="grid sm:grid-cols-2 gap-6 p-6 bg-gradient-to-r from-blue-50 to-slate-50 rounded-2xl border border-blue-100">
-                  <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-slate-100">
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <Users className="h-6 w-6 text-blue-600" />
+                <div className="grid sm:grid-cols-2 gap-6 p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl border border-purple-100">
+                  <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm">
+                    <div className="p-3 bg-purple-100 rounded-lg">
+                      <Users className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">
-                        Instructor
-                      </div>
-                      <div className="text-gray-600">
-                        {course.instructor || "Expert Instructor"}
-                      </div>
+                      <div className="font-semibold text-gray-900">Instructor</div>
+                      <div className="text-gray-600">{course.instructor || "Expert Instructor"}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-slate-100">
-                    <div className="p-3 bg-yellow-100 rounded-lg">
-                      <Clock className="h-6 w-6 text-yellow-600" />
+                  <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm">
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <Clock className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">
-                        Duration
-                      </div>
-                      <div className="text-gray-600">
-                        {course.duration || "Flexible Schedule"}
-                      </div>
+                      <div className="font-semibold text-gray-900">Duration</div>
+                      <div className="text-gray-600">{course.duration || "Flexible Schedule"}</div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Course Features */}
-            {courseData.features && courseData.features.length > 0 && (
-              <Card className="border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+            {/* Features */}
+            {course.features?.length ? (
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-2xl flex items-center gap-3 text-slate-800">
-                    <div className="w-2 h-8 bg-gradient-to-b from-yellow-500 to-yellow-600 rounded-full"></div>
-                    What&apos;s Included{" "}
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full" />
+                    What&apos;s Included
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 gap-4">
-                    {courseData.features.map((feature, index) => {
-                      const text =
-                        typeof feature === "string" ? feature : feature.feature;
+                    {course.features.map((f, i) => {
+                      const text = typeof f === "string" ? f : f.feature;
                       return (
                         <div
-                          key={index}
-                          className="flex items-center gap-4 p-4 rounded-xl hover:bg-yellow-50 transition-all duration-300 group border border-slate-100 hover:border-yellow-200"
+                          key={i}
+                          className="flex items-center gap-4 p-4 rounded-xl hover:bg-green-50 transition-all duration-300 group border border-transparent hover:border-green-100"
                         >
-                          <div className="p-2 bg-yellow-100 rounded-lg group-hover:scale-110 transition-transform">
-                            <CheckCircle2 className="h-5 w-5 text-yellow-600" />
+                          <div className="p-2 bg-green-100 rounded-lg group-hover:scale-110 transition-transform">
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
                           </div>
-                          <span className="font-medium text-gray-800 leading-snug">
-                            {text}
-                          </span>
+                          <span className="font-medium text-gray-800 leading-snug">{text}</span>
                         </div>
                       );
                     })}
                   </div>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
-            {/* Why Learn Section */}
-            {courseData.whyLearn && courseData.whyLearn.length > 0 && (
-              <Card className="border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+            {/* Why Learn */}
+            {course.whyLearn?.length ? (
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-2xl flex items-center gap-3 text-slate-800">
-                    <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
-                    Why Learn {courseData.title}
+                  <CardTitle className="text-2xl flex items-center gap-3">
+                    <div className="w-2 h-8 bg-gradient-to-b from-orange-500 to-red-500 rounded-full" />
+                    Why Learn {course.title}
                   </CardTitle>
-                  {courseData.whyLearnIntro && (
-                    <div className="text-lg text-slate-600 prose prose-lg max-w-none">
-                      <SafeHTML content={courseData.whyLearnIntro} />
+                  {course.whyLearnIntro && (
+                    <div className="text-lg text-gray-600 prose prose-lg max-w-none">
+                      <SafeHTML content={course.whyLearnIntro} />
                     </div>
                   )}
                 </CardHeader>
                 <CardContent>
-                  <Accordion
-                    type="single"
-                    collapsible
-                    className="w-full space-y-4"
-                  >
+                  <Accordion type="single" collapsible className="w-full space-y-4">
                     {course.whyLearn.map((item, i) => (
                       <AccordionItem
-                        key={index}
-                        value={`item-${index}`}
-                        className="border border-slate-200 rounded-xl px-4 hover:border-blue-200 transition-colors"
+                        key={i}
+                        value={`item-${i}`}
+                        className="border border-gray-200 rounded-xl px-4 hover:border-orange-200 transition-colors"
                       >
-                        <AccordionTrigger className="hover:text-blue-600 transition-colors py-4 text-lg font-semibold text-slate-800">
+                        <AccordionTrigger className="hover:text-orange-600 transition-colors py-4 text-lg font-semibold">
                           <div className="flex items-center gap-3 text-left">
-                            <Target className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                            <Target className="h-5 w-5 text-orange-500 flex-shrink-0" />
                             {item.title}
                           </div>
                         </AccordionTrigger>
-                        <AccordionContent className="text-slate-700 leading-relaxed text-lg pb-4 prose prose-lg max-w-none">
+                        <AccordionContent className="text-gray-700 leading-relaxed text-lg pb-4 prose prose-lg max-w-none">
                           <SafeHTML content={item.description} />
                         </AccordionContent>
                       </AccordionItem>
@@ -403,58 +360,53 @@ export default function CoursePage({
                   </Accordion>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
-            {/* Course Content */}
-            {((courseData.courseContent &&
-              courseData.courseContent.length > 0) ||
-              courseData.whatYouLearn) && (
-              <Card className="border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+            {/* Curriculum */}
+            {(course.courseContent?.length || course.whatYouLearn) && (
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl flex items-center gap-3">
                     <div className="w-2 h-8 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full" />
-                    {course.courseContent?.length
-                      ? "Course Curriculum"
-                      : "What You'll Learn"}
+                    {course.courseContent?.length ? "Course Curriculum" : "What You'll Learn"}
                   </CardTitle>
                   {course.courseContent?.length && (
                     <CardDescription className="text-lg">
-                      Comprehensive curriculum with{" "}
-                      {course.courseContent.length} detailed modules
+                      Comprehensive curriculum with {course.courseContent.length} detailed modules
                     </CardDescription>
                   )}
                 </CardHeader>
                 <CardContent>
-                  {courseData.courseContent &&
-                  courseData.courseContent.length > 0 ? (
+                  {course.courseContent?.length ? (
                     <div className="space-y-3">
-                      {courseData.courseContent.map((content, index) => (
+                      {course.courseContent.map((c, i) => (
                         <div
-                          key={index}
-                          className="flex items-start gap-4 p-4 rounded-xl hover:bg-blue-50 transition-all duration-300 group border border-slate-100 hover:border-blue-200"
+                          key={i}
+                          className="flex items-start gap-4 p-4 rounded-xl hover:bg-indigo-50 transition-all duration-300 group border border-transparent hover:border-indigo-100"
                         >
-                          <div className="p-2 bg-blue-100 rounded-lg group-hover:scale-110 transition-transform mt-1">
-                            <BookOpen className="h-5 w-5 text-blue-600" />
+                          <div className="p-2 bg-indigo-100 rounded-lg group-hover:scale-110 transition-transform mt-1">
+                            <BookOpen className="h-5 w-5 text-indigo-600" />
                           </div>
                           <div className="flex-1">
-                            <span className="font-medium text-gray-800 leading-relaxed">
-                              {c}
-                            </span>
+                            <span className="font-medium text-gray-800 leading-relaxed">{c}</span>
                           </div>
+                          {/* <div className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600 font-medium">
+                            {i + 1}
+                          </div> */}
                         </div>
                       ))}
                     </div>
-                  ) : courseData.whatYouLearn ? (
-                    <div className="prose prose-lg max-w-none text-slate-700">
-                      <SafeHTML content={courseData.whatYouLearn} />
+                  ) : (
+                    <div className="prose prose-lg max-w-none text-gray-700">
+                      <SafeHTML content={course.whatYouLearn!} />
                     </div>
-                  ) : null}
+                  )}
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Enhanced Sidebar with Blue & Golden Theme */}
+          {/* ---------- SIDEBAR ---------- */}
           <div className="lg:col-span-1">
             {isEnrolled ? (
               /* ---------- ENROLLED CARD ---------- */
@@ -467,13 +419,9 @@ export default function CoursePage({
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   <p className="text-gray-700">
-                    You have successfully enrolled in this course. Head over to
-                    your dashboard to start learning!
+                    You have successfully enrolled in this course. Head over to your dashboard to start learning!
                   </p>
-                  <Button
-                    asChild
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
+                  <Button asChild className="w-full bg-green-600 hover:bg-green-700">
                     <Link href="/dashboard/courses">Go to My Courses</Link>
                   </Button>
                 </CardContent>
@@ -486,8 +434,7 @@ export default function CoursePage({
                     {course.enrollment?.title || "Enroll Now"}
                   </CardTitle>
                   <CardDescription className="text-blue-100 text-lg">
-                    {course.enrollment?.description ||
-                      "Start your journey today"}
+                    {course.enrollment?.description || "Start your journey today"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -497,9 +444,7 @@ export default function CoursePage({
                       <div className="flex items-center justify-center gap-3 mb-2">
                         <span className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                           {course.priceINR
-                            ? `₹${parseFloat(course.priceINR).toLocaleString(
-                                "en-IN"
-                              )}`
+                            ? `₹${parseFloat(course.priceINR).toLocaleString("en-IN")}`
                             : "Contact Us"}
                         </span>
                         {course.priceINR && (
@@ -508,11 +453,7 @@ export default function CoursePage({
                           </Badge>
                         )}
                       </div>
-                      {course.priceINR && (
-                        <p className="text-gray-600 text-sm">
-                          One-time payment
-                        </p>
-                      )}
+                      {course.priceINR && <p className="text-gray-600 text-sm">One-time payment</p>}
                     </div>
 
                     {/* Features */}
@@ -528,9 +469,7 @@ export default function CoursePage({
                               <div className="p-2 bg-purple-100 rounded-lg">
                                 <Icon className="h-5 w-5 text-purple-600" />
                               </div>
-                              <span className="font-medium text-gray-800 text-sm">
-                                {f.text}
-                              </span>
+                              <span className="font-medium text-gray-800 text-sm">{f.text}</span>
                             </div>
                           );
                         })
@@ -538,73 +477,76 @@ export default function CoursePage({
                         <div className="space-y-3">
                           <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
                             <div className="p-2 bg-blue-100 rounded-lg">
-                              <Calendar className="h-5 w-5 text-blue-600" />
+                              <Clock className="h-5 w-5 text-blue-600" />
                             </div>
-                            <span className="font-medium text-slate-800 text-sm">
-                              {courseData.totalSessions} Live Sessions
+                            <span className="font-medium text-gray-800 text-sm">
+                              {course.duration || "Lifetime Access"}
                             </span>
                           </div>
-                        )}
-                        {courseData.currentEnrollments !== undefined && (
-                          <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                            <div className="p-2 bg-yellow-100 rounded-lg">
-                              <Users className="h-5 w-5 text-yellow-600" />
+                          {course.totalSessions && (
+                            <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                              <div className="p-2 bg-green-100 rounded-lg">
+                                <Calendar className="h-5 w-5 text-green-600" />
+                              </div>
+                              <span className="font-medium text-gray-800 text-sm">
+                                {course.totalSessions} Live Sessions
+                              </span>
                             </div>
-                            <span className="font-medium text-slate-800 text-sm">
-                              {courseData.currentEnrollments}+ Students Enrolled
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                          )}
+                          {course.currentEnrollments !== undefined && (
+                            <div className="flex items-center gap-4 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                              <div className="p-2 bg-orange-100 rounded-lg">
+                                <Users className="h-5 w-5 text-orange-600" />
+                              </div>
+                              <span className="font-medium text-gray-800 text-sm">
+                                {course.currentEnrollments}+ Students Enrolled
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Buy Now */}
-
-                    <BuyNowButton
-                      course={{
-                        id: course.id,
-                        title: course.title,
-                        priceINR: course.priceINR || "0",
-                        slug: course.slug,
-                      }}
-                      assignedCoupon={course.appliedCoupon} // Now this matches the interface
-                      finalPrice={course.finalPrice}
-                      hasAssignedCoupon={course.hasAssignedCoupon}
-                    />
+                  
+<BuyNowButton
+  course={{
+    id: course.id,
+    title: course.title,
+    priceINR: course.priceINR || "0",
+    slug: course.slug,
+  }}
+  assignedCoupon={course?.appliedCoupon} // Pass the assigned coupon data
+  finalPrice={course.finalPrice} // Pass the final discounted price
+  hasAssignedCoupon={course.hasAssignedCoupon} // Pass the flag
+/>
 
                     {/* Guarantee */}
                     <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
                       <div className="flex items-center justify-center gap-2 mb-2">
                         <Shield className="h-5 w-5 text-green-600" />
                         <span className="font-semibold text-green-800 text-sm">
-                          {course.enrollment?.offer?.guarantee ||
-                            "30-Day Money-Back Guarantee"}
+                          {course.enrollment?.offer?.guarantee || "30-Day Money-Back Guarantee"}
                         </span>
                       </div>
-                      <p className="text-green-600 text-xs">
-                        Risk-free enrollment
-                      </p>
+                      <p className="text-green-600 text-xs">Risk-free enrollment</p>
                     </div>
 
                     {/* Quick stats */}
                     <div className="grid grid-cols-2 gap-3 text-center">
                       <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="font-bold text-gray-900">
-                          {course.totalSessions || 10}+
-                        </div>
+                        <div className="font-bold text-gray-900">{course.totalSessions || 10}+</div>
                         <div className="text-xs text-gray-600">Sessions</div>
                       </div>
-                      <div className="text-xs text-blue-600">Sessions</div>
-                    </div>
-                    <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
-                      <div className="font-bold text-yellow-900">24/7</div>
-                      <div className="text-xs text-yellow-600">Support</div>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="font-bold text-gray-900">24/7</div>
+                        <div className="text-xs text-gray-600">Support</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
