@@ -19,10 +19,10 @@ export const BuyNowButton = ({ course }: { course: Course }) => {
 
   return (
     <>
-      <button
-        onClick={() => setIsCheckoutOpen(true)}
-        className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center gap-2"
-      >
+ <button
+  onClick={() => setIsCheckoutOpen(true)}
+  className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-lg border-2 border-yellow-400 hover:border-yellow-300 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center gap-2"
+>
         <ShoppingCart className="h-5 w-5" />
         Buy Now
       </button>

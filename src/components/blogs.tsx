@@ -33,18 +33,18 @@ const blogPosts = [
 
 export function Blogs() {
   return (
-    <section className="py-10 bg-gradient-to-b from-white to-gray-50/50">
+    <section className="py-16 bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-full px-5 py-2.5 text-xs font-semibold tracking-widest uppercase mb-5 shadow-sm">
+          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-full px-4 py-2 text-sm font-medium mb-6 border border-blue-100">
             <Calendar className="h-4 w-4" />
             <span>Latest Insights</span>
           </div>
-          <h2 className="text-4xl sm:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
+          <h2 className="text-4xl font-bold text-slate-800 mb-4">
             Latest from Our Blog
           </h2>
-          <p className="text-sm text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
             Stay updated with expert insights on astrology, Vastu, and personal growth.
           </p>
         </div>
@@ -57,15 +57,15 @@ export function Blogs() {
         </div>
 
         {/* View All CTA */}
-        <div className="text-center mt-14">
+        <div className="text-center mt-16">
           <Button
             asChild
             size="lg"
-            className="group bg-gradient-to-r from-gray-900 to-gray-800 text-white hover:from-gray-800 hover:to-gray-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 rounded-xl font-semibold px-8"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold px-8 py-3"
           >
             <Link href="/blog" className="flex items-center gap-2">
               View All Posts
-              <ArrowRight className="h-4.5 w-4.5 group-hover:translate-x-1 transition-transform duration-200" />
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
             </Link>
           </Button>
         </div>
@@ -77,22 +77,22 @@ export function Blogs() {
 // Extracted Blog Card Component
 function BlogCard({ post, index }: { post: typeof blogPosts[0]; index: number }) {
   return (
-    <Card className="group h-full bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col">
-      {/* Optional: Add image placeholder later */}
-      <div className="h-1 bg-gradient-to-r from-blue-500 to-indigo-600" />
+    <Card className="group h-full bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col">
+      {/* Golden Top Accent */}
+      <div className="h-1 bg-gradient-to-r from-yellow-500 to-yellow-600" />
 
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-          <Calendar className="h-3.5 w-3.5" />
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-2 text-sm text-slate-500 mb-3">
+          <Calendar className="h-4 w-4" />
           <span>{post.date}</span>
         </div>
-        <CardTitle className="text-xl font-bold text-gray-900 line-clamp-2 group-hover:text-blue-700 transition-colors duration-200">
+        <CardTitle className="text-xl font-bold text-slate-800 line-clamp-2 group-hover:text-blue-600 transition-colors duration-200">
           {post.title}
         </CardTitle>
       </CardHeader>
 
       <CardContent className="flex-grow">
-        <CardDescription className="text-gray-600 leading-relaxed line-clamp-3">
+        <CardDescription className="text-slate-600 leading-relaxed line-clamp-3">
           {post.description}
         </CardDescription>
       </CardContent>
@@ -101,7 +101,7 @@ function BlogCard({ post, index }: { post: typeof blogPosts[0]; index: number })
         <Button
           asChild
           variant="ghost"
-          className="w-full group/button justify-between text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-200 rounded-xl"
+          className="w-full group/button justify-between text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-200 rounded-lg"
         >
           <Link href={post.link}>
             <span>Read More</span>

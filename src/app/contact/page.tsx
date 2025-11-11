@@ -1,3 +1,4 @@
+import { SiteFooter } from '@/components/site-footer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -7,6 +8,7 @@ import { MapPin, Mail, Phone, Clock, Send, Star } from 'lucide-react'
 
 export default function ContactPage() {
   return (
+    <>
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="container mx-auto px-4">
         {/* Header Section */}
@@ -288,21 +290,29 @@ export default function ContactPage() {
         </div>
 
         {/* CTA Section */}
-        <div className="mt-16 text-center bg-gradient-to-r from-blue-700 to-blue-900 rounded-xl p-8 text-white">
-          <h2 className="text-2xl font-semibold mb-3">Ready to Start Your Astrological Journey?</h2>
-          <p className="text-blue-100 mb-6 max-w-xl mx-auto">
-            Join thousands of students who have transformed their lives through our comprehensive astrological courses.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold px-6 py-2">
-              Explore Courses
-            </Button>
-            <Button variant="outline" className="border-white hover:bg-white hover:text-blue-700 font-semibold px-6 py-2">
-              Book Consultation
-            </Button>
-          </div>
-        </div>
+       <div className="mt-16 text-center bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900 rounded-xl p-8 text-white relative overflow-hidden">
+  {/* Golden Top Border */}
+  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
+  
+  <h2 className="text-2xl font-semibold mb-3">Ready to Start Your Astrological Journey?</h2>
+  <p className="text-slate-300 mb-6 max-w-xl mx-auto">
+    Join thousands of students who have transformed their lives through our comprehensive astrological courses.
+  </p>
+  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+    <Button className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-slate-900 font-semibold px-6 py-2">
+      Explore Courses
+    </Button>
+    <Button
+      variant="outline"
+      className="border-white text-black hover:bg-transparent hover:text-white font-semibold px-6 py-2 transition-all duration-300"
+    >
+      Book Consultation
+    </Button>
+  </div>
+</div>
       </div>
     </div>
+    <SiteFooter/>
+    </>
   )
 }

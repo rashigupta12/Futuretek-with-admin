@@ -65,27 +65,27 @@ export function CoursesCatalog() {
       },
       UPCOMING: { 
         label: 'Coming Soon', 
-        color: 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm',
+        color: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm',
         icon: <Clock className="h-3 w-3" />
       },
       ONGOING: { 
         label: 'In Progress', 
-        color: 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm',
+        color: 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-sm',
         icon: <BookOpen className="h-3 w-3" />
       },
       COMPLETED: { 
         label: 'Completed', 
-        color: 'bg-gray-100 text-gray-700 border border-gray-300',
+        color: 'bg-slate-100 text-slate-700 border border-slate-300',
         icon: null
       },
       DRAFT: { 
         label: 'Draft', 
-        color: 'bg-gray-100 text-gray-700 border border-gray-300',
+        color: 'bg-slate-100 text-slate-700 border border-slate-300',
         icon: null
       },
       ARCHIVED: { 
         label: 'Archived', 
-        color: 'bg-gray-100 text-gray-700 border border-gray-300',
+        color: 'bg-slate-100 text-slate-700 border border-slate-300',
         icon: null
       }
     };
@@ -102,15 +102,15 @@ export function CoursesCatalog() {
   // Error state
   if (error) {
     return (
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center bg-white rounded-3xl border-2 border-red-100 p-12 shadow-lg">
             <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Unable to Load Courses</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">{error}</p>
-            <Button onClick={fetchCourses} className="bg-gray-900 hover:bg-gray-800 px-6 py-3 h-auto">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Unable to Load Courses</h3>
+            <p className="text-slate-600 mb-6 max-w-md mx-auto">{error}</p>
+            <Button onClick={fetchCourses} className="bg-slate-900 hover:bg-slate-800 px-6 py-3 h-auto">
               <ArrowRight className="h-4 w-4 mr-2" />
               Try Again
             </Button>
@@ -123,14 +123,14 @@ export function CoursesCatalog() {
   // Loading state
   if (loading) {
     return (
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-600" />
             </div>
-            <p className="text-gray-600 font-semibold">Loading courses...</p>
-            <p className="text-sm text-gray-500 mt-1">Please wait a moment</p>
+            <p className="text-slate-600 font-semibold">Loading courses...</p>
+            <p className="text-sm text-slate-500 mt-1">Please wait a moment</p>
           </div>
         </div>
       </section>
@@ -140,15 +140,15 @@ export function CoursesCatalog() {
   // Empty state
   if (courses.length === 0) {
     return (
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center bg-white rounded-3xl border-2 border-gray-200 p-12 shadow-lg">
-            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="h-8 w-8 text-gray-400" />
+          <div className="text-center bg-white rounded-3xl border-2 border-slate-200 p-12 shadow-lg">
+            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No Courses Available Yet</h3>
-            <p className="text-gray-600 mb-1">Check back soon for new courses!</p>
-            <p className="text-sm text-gray-500">We're preparing something amazing for you.</p>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">No Courses Available Yet</h3>
+            <p className="text-slate-600 mb-1">Check back soon for new courses!</p>
+            <p className="text-sm text-slate-500">We're preparing something amazing for you.</p>
           </div>
         </div>
       </section>
@@ -156,18 +156,18 @@ export function CoursesCatalog() {
   }
 
   return (
-    <section className="py-10 bg-gradient-to-b from-gray-50 via-white to-gray-50">
+    <section className="py-6 bg-gradient-to-b from-slate-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-full px-4 py-2 text-xs font-semibold tracking-wide uppercase mb-6 shadow-sm">
-            <Star className="h-4 w-4 fill-current" />
+          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-full px-4 py-2 text-sm font-medium mb-6 border border-blue-100">
+            <Star className="h-4 w-4" />
             <span>Our Courses</span>
           </div>
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2 tracking-tight">
+          <h2 className="text-4xl font-bold text-slate-800 mb-4">
             Featured Courses
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
             Master ancient sciences with our comprehensive curriculum designed by expert practitioners
           </p>
         </div>
@@ -177,83 +177,58 @@ export function CoursesCatalog() {
           {courses.map((course) => (
             <Card 
               key={course.id} 
-              className="flex flex-col group hover:shadow-2xl transition-all duration-300 border-2 border-gray-200 bg-white hover:border-blue-300 overflow-hidden relative hover:-translate-y-1"
+              className="flex flex-col group hover:shadow-xl transition-all duration-300 border border-slate-200 bg-white hover:border-blue-300 overflow-hidden relative hover:-translate-y-1"
             >
-              {/* Gradient Accent Line */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              {/* Golden Top Border */}
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
               
               <CardHeader className="pb-4 pt-6 relative">
-                <CardTitle className="line-clamp-2 text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight">
+                <CardTitle className="line-clamp-2 text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-tight">
                   {course.title}
                 </CardTitle>
               </CardHeader>
               
               <CardContent className="flex-1 pb-4">
-                <CardDescription className="line-clamp-3 text-gray-600 leading-relaxed text-sm mb-6">
+                <CardDescription className="line-clamp-3 text-slate-600 leading-relaxed text-sm mb-6">
                   {getPlainText(course.description)}
                 </CardDescription>
                 
                 {/* Course Stats */}
-                <div className="space-y-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div className="space-y-3 bg-slate-50 rounded-xl p-4 border border-slate-100">
                   <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-gray-700 font-medium">
-                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                    <div className="flex items-center gap-2 text-slate-700 font-medium">
+                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-200">
                         <IndianRupee className="h-4 w-4 text-blue-600" />
                       </div>
                       <span className="font-semibold">INR</span>
                     </div>
-                    <span className="font-bold text-gray-900 text-base">₹{course.priceINR?.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-slate-900 text-base">₹{course.priceINR?.toLocaleString('en-IN')}</span>
                   </div>
-                  
-                  {/* <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span>Students</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="font-semibold text-gray-900">{course.currentEnrollments || 0}</span>
-                      <span className="text-gray-500">enrolled</span>
-                    </div>
-                  </div> */}
                 </div>
               </CardContent>
               
-              <CardFooter className="flex flex-col gap-2 pt-4 border-t-2 border-gray-100">
+              <CardFooter className="flex flex-col gap-2 pt-4 border-t border-slate-100">
                 <div className='flex gap-4'>
-                <Button asChild size="sm" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-200 h-10 font-semibold">
-                  <Link href={`/courses/${course.slug}`} className="flex items-center justify-center gap-2">
-                    Learn More
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-                <Button 
-                  asChild 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 h-10 font-medium"
-                >
-                  <Link href="/auth/login">
-                    Enroll Now
-                  </Link>
-                </Button>
+                  <Button asChild size="sm" className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all duration-200 h-10 font-semibold">
+                    <Link href={`/courses/${course.slug}`} className="flex items-center justify-center gap-2">
+                      Learn More
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </Button>
+                  <Button 
+                    asChild 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 h-10 font-medium"
+                  >
+                    <Link href="/auth/login">
+                      Enroll Now
+                    </Link>
+                  </Button>
                 </div>
               </CardFooter>
             </Card>
           ))}
-        </div>
-
-        {/* View All Button */}
-        <div className="text-center">
-          <Button 
-            asChild 
-            variant="outline" 
-            className="border-2 border-gray-300 text-gray-700 hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-300 px-4 py-2 h-auto font-semibold text-base group shadow-sm hover:shadow-md"
-          >
-            <Link href="/courses" className="flex items-center gap-3">
-              Explore All Courses
-              <BookOpen className="h-5 w-5 group-hover:scale-110 transition-transform" />
-            </Link>
-          </Button>
         </div>
       </div>
     </section>

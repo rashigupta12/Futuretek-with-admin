@@ -50,7 +50,7 @@ export function SiteHeader() {
         const response = await fetch("/api/admin/courses");
         if (response.ok) {
           const data = await response.json();
-          setCourses(data.courses || data); // Adjust based on your API response structure
+          setCourses(data.courses || data);
         }
       } catch (error) {
         console.error("Failed to fetch courses:", error);
@@ -63,34 +63,26 @@ export function SiteHeader() {
   }, []);
 
   return (
-    <header className="bg-background sticky top-0 z-20 border-b">
+    <header className="bg-white sticky top-0 z-20 border-b border-slate-200 shadow-sm">
       <div className="mx-auto flex h-16 max-w-screen-xl items-center gap-4 px-4">
         <div className="mr-10 flex items-center gap-3">
           <Sidebar session={session} handleLogout={handleLogout} />
-          {/* <Link
-            href="/"
-            className="flex items-center gap-2 px-2 text-xl font-bold tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
-          >
-            <Sparkles className="h-6 w-6 text-purple-600" />
-            Futuretek
-          </Link> */}
-
-            <Link href="/">
-    <FuturetekLogo width={180} height={54} />
-  </Link>
+          <Link href="/">
+            <FuturetekLogo width={180} height={54} />
+          </Link>
         </div>
-        <nav className="text-muted-foreground hover:[&_a]:text-foreground hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
-          <Link href="/" className="hover:text-purple-600 transition-colors">
+        <nav className="text-slate-600 hover:[&_a]:text-slate-900 hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
+          <Link href="/" className="hover:text-blue-600 transition-colors">
             Home
           </Link>
           <div className="relative group">
-            <button className="flex items-center gap-1 hover:text-purple-600 transition-colors text-sm font-medium text-muted-foreground hover:text-foreground">
+            <button className="flex items-center gap-1 hover:text-blue-600 transition-colors text-sm font-medium text-slate-600 hover:text-slate-900">
               Courses
               <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
             </button>
-            <div className="absolute left-0 top-full hidden group-hover:block bg-background border rounded-lg shadow-lg p-2 w-56 mt-2 z-50">
+            <div className="absolute left-0 top-full hidden group-hover:block bg-white border border-slate-200 rounded-lg shadow-lg p-2 w-56 mt-2 z-50">
               {loading ? (
-                <div className="px-4 py-2 text-sm text-muted-foreground">
+                <div className="px-4 py-2 text-sm text-slate-500">
                   Loading...
                 </div>
               ) : (
@@ -98,7 +90,7 @@ export function SiteHeader() {
                   <Link
                     key={course.id}
                     href={`/courses/${course.slug}`}
-                    className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm text-gray-700 hover:text-purple-700"
+                    className="block px-4 py-2.5 hover:bg-blue-50 rounded-md transition-colors text-sm text-slate-700 hover:text-blue-700"
                   >
                     {course.title}
                   </Link>
@@ -108,19 +100,19 @@ export function SiteHeader() {
           </div>
           <Link
             href="/about"
-            className="hover:text-purple-600 transition-colors"
+            className="hover:text-blue-600 transition-colors"
           >
             About
           </Link>
           <Link
             href="/career"
-            className="hover:text-purple-600 transition-colors"
+            className="hover:text-blue-600 transition-colors"
           >
             Career
           </Link>
           <Link
             href="/contact"
-            className="hover:text-purple-600 transition-colors"
+            className="hover:text-blue-600 transition-colors"
           >
             Contact Us
           </Link>
@@ -128,16 +120,16 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-2">
           {session ? (
             <>
-              <span className="hidden md:inline text-sm">
+              <span className="hidden md:inline text-sm text-slate-700">
                 Welcome, {session.user.name}
               </span>
-              <Button asChild variant="ghost" className="hidden md:flex">
+              <Button asChild variant="ghost" className="hidden md:flex hover:bg-blue-50 hover:text-blue-700">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
               <Button
                 onClick={handleLogout}
                 variant="outline"
-                className="hidden md:flex"
+                className="hidden md:flex border-slate-300 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
               >
                 Logout
               </Button>
@@ -148,7 +140,7 @@ export function SiteHeader() {
                     asChild
                     variant="ghost"
                     size="icon"
-                    className="md:hidden"
+                    className="md:hidden hover:bg-blue-50 hover:text-blue-700"
                   >
                     <Link href="/dashboard">
                       <LayoutDashboard className="h-5 w-5" />
@@ -163,7 +155,7 @@ export function SiteHeader() {
                     onClick={handleLogout}
                     variant="ghost"
                     size="icon"
-                    className="md:hidden"
+                    className="md:hidden hover:bg-red-50 hover:text-red-700"
                   >
                     <LogOut className="h-5 w-5" />
                   </Button>
@@ -173,10 +165,10 @@ export function SiteHeader() {
             </>
           ) : (
             <>
-              <Button asChild variant="ghost" className="hidden md:flex">
+              <Button asChild variant="ghost" className="hidden md:flex hover:bg-blue-50 hover:text-blue-700">
                 <Link href="/auth/login">Login</Link>
               </Button>
-              <Button asChild className="hidden md:flex">
+              <Button asChild className="hidden md:flex bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
                 <Link href="/auth/register">Sign Up</Link>
               </Button>
               {/* Mobile icons */}
@@ -186,7 +178,7 @@ export function SiteHeader() {
                     asChild
                     variant="ghost"
                     size="icon"
-                    className="md:hidden"
+                    className="md:hidden hover:bg-blue-50 hover:text-blue-700"
                   >
                     <Link href="/auth/login">
                       <LogIn className="h-5 w-5" />
@@ -201,7 +193,7 @@ export function SiteHeader() {
                     asChild
                     variant="default"
                     size="icon"
-                    className="md:hidden"
+                    className="md:hidden bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                   >
                     <Link href="/auth/register">
                       <UserPlus className="h-5 w-5" />
@@ -217,6 +209,7 @@ export function SiteHeader() {
     </header>
   );
 }
+
 function Sidebar({
   session,
   handleLogout,
@@ -227,6 +220,7 @@ function Sidebar({
   const [isOpen, setIsOpen] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
     const fetchCourses = async () => {
       try {
@@ -273,7 +267,7 @@ function Sidebar({
             <Button
               variant="ghost"
               size="icon"
-              className="border-border size-9 shrink-0 border md:hidden hover:bg-purple-50"
+              className="border-slate-300 size-9 shrink-0 border md:hidden hover:bg-blue-50 hover:text-blue-700"
             >
               <Menu className="size-5" />
               <span className="sr-only">Menu</span>
@@ -283,20 +277,9 @@ function Sidebar({
         <TooltipContent align="start">Menu</TooltipContent>
         <SheetContent side="left" className="flex w-[300px] flex-col p-0 pt-10">
           <div className="px-6 py-4">
-            {/* <Link
-              href="/"
-              onClick={handleLinkClick}
-              className="flex items-center gap-2 text-xl font-bold tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
-            >
-              <Sparkles className="h-6 w-6 text-purple-600" />
-              Futuretek
-            </Link> */}
-
-           
-  <Link href="/">
-    <FuturetekLogo width={180} height={54} />
-  </Link>
-
+            <Link href="/">
+              <FuturetekLogo width={180} height={54} />
+            </Link>
           </div>
 
           <Separator />
@@ -304,9 +287,9 @@ function Sidebar({
           {/* User Section */}
           {session && (
             <>
-              <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-pink-50">
-                <p className="text-sm text-muted-foreground">Welcome back,</p>
-                <p className="font-semibold text-purple-900">
+              <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100/50">
+                <p className="text-sm text-slate-600">Welcome back,</p>
+                <p className="font-semibold text-blue-900">
                   {session.user.name}
                 </p>
               </div>
@@ -321,7 +304,7 @@ function Sidebar({
                   <Button
                     asChild
                     variant="ghost"
-                    className="w-full justify-start gap-3 h-11 hover:bg-purple-50 hover:text-purple-700"
+                    className="w-full justify-start gap-3 h-11 hover:bg-blue-50 hover:text-blue-700"
                     onClick={handleLinkClick}
                   >
                     <Link href="/dashboard">
@@ -340,7 +323,7 @@ function Sidebar({
                     key={item.href}
                     asChild
                     variant="ghost"
-                    className="w-full justify-start gap-3 h-11 hover:bg-purple-50 hover:text-purple-700"
+                    className="w-full justify-start gap-3 h-11 hover:bg-blue-50 hover:text-blue-700"
                     onClick={handleLinkClick}
                   >
                     <Link href={item.href}>
@@ -352,7 +335,7 @@ function Sidebar({
               })}
 
               <div className="pt-2">
-                <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <p className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Course Categories
                 </p>
                 {courseItems.map((item) => (
@@ -360,7 +343,7 @@ function Sidebar({
                     key={item.href}
                     asChild
                     variant="ghost"
-                    className="w-full justify-start pl-12 h-10 text-sm hover:bg-purple-50 hover:text-purple-700"
+                    className="w-full justify-start pl-12 h-10 text-sm hover:bg-blue-50 hover:text-blue-700"
                     onClick={handleLinkClick}
                   >
                     <Link href={item.href}>{item.label}</Link>
@@ -391,7 +374,7 @@ function Sidebar({
                 <Button
                   asChild
                   variant="outline"
-                  className="w-full justify-start gap-3 h-11"
+                  className="w-full justify-start gap-3 h-11 border-slate-300 hover:bg-blue-50 hover:text-blue-700"
                   onClick={handleLinkClick}
                 >
                   <Link href="/auth/login">
@@ -401,7 +384,7 @@ function Sidebar({
                 </Button>
                 <Button
                   asChild
-                  className="w-full justify-start gap-3 h-11 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  className="w-full justify-start gap-3 h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                   onClick={handleLinkClick}
                 >
                   <Link href="/auth/register">

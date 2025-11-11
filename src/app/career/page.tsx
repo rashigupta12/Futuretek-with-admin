@@ -1,7 +1,11 @@
+"use client"
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Star, Users, GraduationCap, Heart } from 'lucide-react'
+import { Star, Users, GraduationCap, Heart, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+import { motion } from 'framer-motion';
+import { SiteFooter } from '@/components/site-footer'
 
 const openings = [
   {
@@ -41,18 +45,19 @@ const benefits = [
 
 export default function CareerPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50/30 py-12">
+    <>
+    <div className="min-h-screen py-12">
       <div className="container mx-auto px-4">
         {/* Hero Section */}
         <div className="text-center mb-16 max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
+          <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full text-sm font-medium mb-6 border border-yellow-200">
             <Star className="w-4 h-4" />
             Join Our Mission to Spread Ancient Wisdom
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-800 to-purple-700 bg-clip-text text-transparent mb-6">
-            Career Opportunities at Futuretek
+          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-yellow-600 bg-clip-text text-transparent mb-6">
+            Career Opportunities
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+          <p className="text-xl text-slate-600 mb-8 leading-relaxed">
             Join our team of experts and contribute to the world of astrological sciences. 
             We offer a dynamic work environment and opportunities for growth and learning.
           </p>
@@ -61,114 +66,212 @@ export default function CareerPage() {
         {/* Current Openings */}
         <section className="mb-20">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Current Openings</h2>
+            <h2 className="text-4xl font-bold mb-4 text-slate-800">Current Openings</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto">Explore our current career opportunities and join our mission to spread astrological wisdom</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {openings.map((job, index) => (
               <Card 
                 key={index} 
-                className="group hover:shadow-xl transition-all duration-300 border-l-4 border-l-blue-400 bg-white"
+                className="group hover:shadow-xl transition-all duration-300 bg-white/80 backdrop-blur-sm border-0 relative overflow-hidden"
               >
+                {/* Top Border */}
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-blue-600"></div>
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-xl group-hover:text-blue-700 transition-colors">
+                  <CardTitle className="text-xl text-slate-800 group-hover:text-blue-700 transition-colors">
                     {job.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pb-4">
-                  <p className="text-muted-foreground mb-4 leading-relaxed">{job.description}</p>
+                  <p className="text-slate-600 mb-4 leading-relaxed text-sm">{job.description}</p>
                   <div>
-                    <h4 className="font-semibold mb-3 text-sm uppercase tracking-wide text-gray-600">
+                    <h4 className="font-semibold mb-3 text-sm uppercase tracking-wide text-slate-700">
                       Requirements:
                     </h4>
                     <ul className="space-y-2">
                       {job.requirements.map((req, i) => (
                         <li key={i} className="flex items-start gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                          <span className="text-sm">{req}</span>
+                          <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2 flex-shrink-0" />
+                          <span className="text-sm text-slate-600">{req}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 transition-all">
-                    Apply Now
-                    <svg className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </Button>
-                </CardFooter>
+               <CardFooter>
+  <Link href="/auth/login" className="w-full">
+    <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white transition-all duration-300 group">
+      Apply Now
+      <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+    </Button>
+  </Link>
+</CardFooter>
+
               </Card>
             ))}
           </div>
         </section>
 
-        {/* Why Work With Us */}
-        <section className="mb-16">
-          <Card className="bg-gradient-to-br from-blue-900 to-purple-900 text-white border-0 shadow-2xl">
-            <CardHeader className="text-center pb-8">
-              <CardTitle className="text-3xl md:text-4xl font-bold">
-                Why Work With Us?
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-3 gap-6">
-                {benefits.map((benefit, index) => (
-                  <div key={index} className="text-center group">
-                    <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-white/20 transition-all duration-300">
-                      <div className="text-blue-200">
-                        {benefit.icon}
-                      </div>
-                    </div>
-                    <h3 className="font-semibold mb-2 text-white">{benefit.title}</h3>
-                    <p className="text-blue-200 text-sm leading-relaxed">
-                      {benefit.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+      
+        {/* Why Work With Us – Enhanced */}
+<section className="mb-20">
+  <Card className="relative overflow-hidden bg-white border border-slate-200 shadow-lg">
+    {/* Simple Golden Border */}
+    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
 
-        {/* Additional Benefits */}
-        <Card className="mb-16 border-0 shadow-lg bg-white">
-          <CardHeader>
-            <CardTitle className="text-2xl">Additional Benefits</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold mb-3 text-gray-700">Work Environment</h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    Flexible work environment
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    Dynamic and supportive team culture
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-3 text-gray-700">Compensation & Growth</h4>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    Competitive salary and benefits
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    Opportunities for growth and learning
-                  </li>
-                </ul>
+    <CardHeader className="text-center pt-12 pb-8">
+      <h2 className="text-4xl md:text-5xl font-bold text-slate-800">
+        Why Work With Us?
+      </h2>
+      <p className="mt-3 text-slate-600 text-lg max-w-2xl mx-auto">
+        Be part of a visionary institute blending ancient wisdom with modern teaching
+      </p>
+    </CardHeader>
+
+    <CardContent className="pb-12">
+      <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto px-6">
+        {benefits.map((benefit, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: index * 0.2 }}
+            viewport={{ once: true }}
+            className="group text-center"
+          >
+            <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-6 group-hover:bg-blue-200 transition-colors duration-300">
+              <div className="text-blue-600">
+                {benefit.icon}
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+            <h3 className="text-xl font-bold mb-3 text-slate-800">{benefit.title}</h3>
+            <p className="text-slate-600 leading-relaxed text-sm">
+              {benefit.description}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+</section>
+{/* Additional Benefits – Enhanced */}
+<section className="mb-20">
+  <Card className="relative overflow-hidden bg-white/90 backdrop-blur-md border-0 shadow-xl">
+    {/* Golden Top Border */}
+    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
+
+    <CardHeader className="pb-8">
+      <h2 className="text-3xl md:text-4xl font-bold text-slate-800 text-center">
+        Additional Benefits
+      </h2>
+      <p className="text-center text-slate-600 mt-2 max-w-2xl mx-auto">
+        We nurture talent with a holistic approach to professional and personal growth
+      </p>
+    </CardHeader>
+
+    <CardContent>
+      <div className="grid md:grid-cols-2 gap-12 max-w-4xl mx-auto px-6">
+        {/* Work Environment */}
+        <div>
+          <h3 className="text-xl font-bold text-blue-700 mb-6 flex items-center gap-3">
+            <div className="w-3 h-3 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-md"></div>
+            Work Environment
+          </h3>
+          <ul className="space-y-4">
+            {[
+              "Flexible work environment with remote options",
+              "Dynamic and supportive team culture",
+              "Modern workspace with positive energy"
+            ].map((item, i) => (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="flex items-start gap-4 group"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.2, rotate: 360 }}
+                  transition={{ duration: 0.4 }}
+                  className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0 shadow-sm"
+                />
+                <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">
+                  {item}
+                </span>
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Compensation & Growth */}
+        <div>
+          <h3 className="text-xl font-bold text-blue-700 mb-6 flex items-center gap-3">
+            <div className="w-3 h-3 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-md"></div>
+            Compensation & Growth
+          </h3>
+          <ul className="space-y-4">
+            {[
+              "Competitive salary and performance bonuses",
+              "Opportunities for professional growth",
+              "Comprehensive health and wellness benefits"
+            ].map((item, i) => (
+              <motion.li
+                key={i}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="flex items-start gap-4 group"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.2, rotate: 360 }}
+                  transition={{ duration: 0.4 }}
+                  className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0 shadow-sm"
+                />
+                <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">
+                  {item}
+                </span>
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+</section>
+
+        {/* CTA Section */}
+       <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900 text-white text-center relative overflow-hidden">
+  {/* Golden Top Border */}
+  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
+  
+  <CardContent className="pt-12 pb-12">
+    <h2 className="text-3xl font-bold mb-4">Ready to Join Our Team?</h2>
+    <p className="text-slate-300 mb-8 max-w-2xl mx-auto text-lg">
+      Send us your resume and cover letter to start your journey with Futuretek Institute
+    </p>
+    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <Link href="/auth/login">
+        <Button className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-slate-900 font-semibold px-8 py-3">
+          Apply Now
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </Link>
+      <Button
+        variant="outline"
+        className="border-white text-black hover:text-white hover:bg-transparent  font-semibold px-8 py-3 transition-all duration-300"
+      >
+        Learn More
+      </Button>
+    </div>
+  </CardContent>
+</Card>
       </div>
     </div>
+    <SiteFooter/>
+    </>
   )
 }

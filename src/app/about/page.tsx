@@ -134,45 +134,45 @@ export default function AboutPage() {
         </div>
 
         {/* Legal Information */}
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-600 to-blue-800 text-white relative overflow-hidden">
-          {/* Golden Border */}
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
-          <CardHeader className="text-center pb-4">
-            <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-2xl flex items-center justify-center border border-yellow-400/30">
-              <span className="text-2xl">⚖️</span>
-            </div>
-            <CardTitle className="text-3xl font-bold text-white">Legal Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <div className="space-y-6">
-                <div className="bg-white/10 rounded-lg p-4 border border-white/20">
-                  <h4 className="font-semibold text-yellow-300 mb-2">Company Name</h4>
-                  <p className="text-white/90">
-                    Futuretek Institute of Astrological Sciences Pvt. Ltd.
-                  </p>
-                </div>
-                <div className="bg-white/10 rounded-lg p-4 border border-white/20">
-                  <h4 className="font-semibold text-yellow-300 mb-2">Registration Number</h4>
-                  <p className="text-white/90">U74999DL2023PTC123456</p>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div className="bg-white/10 rounded-lg p-4 border border-white/20">
-                  <h4 className="font-semibold text-yellow-300 mb-2">Registered Address</h4>
-                  <p className="text-white/90">
-                    123 Cosmic Lane, Stellar Heights<br />
-                    New Delhi - 110001, India
-                  </p>
-                </div>
-                <div className="bg-white/10 rounded-lg p-4 border border-white/20">
-                  <h4 className="font-semibold text-yellow-300 mb-2">Contact</h4>
-                  <p className="text-white/90">+91 98765 43210</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+     <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900 text-white relative overflow-hidden">
+  {/* Golden Border */}
+  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
+  <CardHeader className="text-center pb-4">
+    <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-2xl flex items-center justify-center border border-yellow-400/30">
+      <span className="text-2xl">⚖️</span>
+    </div>
+    <CardTitle className="text-3xl font-bold text-white">Legal Information</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <div className="space-y-6">
+        <div className="bg-white/10 rounded-lg p-4 border border-white/20">
+          <h4 className="font-semibold text-yellow-300 mb-2">Company Name</h4>
+          <p className="text-white/90">
+            Futuretek Institute of Astrological Sciences Pvt. Ltd.
+          </p>
+        </div>
+        <div className="bg-white/10 rounded-lg p-4 border border-white/20">
+          <h4 className="font-semibold text-yellow-300 mb-2">Registration Number</h4>
+          <p className="text-white/90">U74999DL2023PTC123456</p>
+        </div>
+      </div>
+      <div className="space-y-6">
+        <div className="bg-white/10 rounded-lg p-4 border border-white/20">
+          <h4 className="font-semibold text-yellow-300 mb-2">Registered Address</h4>
+          <p className="text-white/90">
+            123 Cosmic Lane, Stellar Heights<br />
+            New Delhi - 110001, India
+          </p>
+        </div>
+        <div className="bg-white/10 rounded-lg p-4 border border-white/20">
+          <h4 className="font-semibold text-yellow-300 mb-2">Contact</h4>
+          <p className="text-white/90">+91 98765 43210</p>
+        </div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
 
         {/* Values Section */}
         <div className="mt-16">
