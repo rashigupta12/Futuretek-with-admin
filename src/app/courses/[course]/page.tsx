@@ -212,7 +212,7 @@ export default function CoursePage({
      --------------------------------------------------------- */
   if (loading || authStatus === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Loading course details...</p>
@@ -247,96 +247,81 @@ export default function CoursePage({
      Render
      --------------------------------------------------------- */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Hero Section - Modern Gradient */}
-      <div className="relative py-16 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 overflow-hidden">
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        </div>
-        
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+    <div className="min-h-screen bg-slate-50">
+      {/* Hero Section - Compact */}
+      <div className="relative py-12 bg-gradient-to-r from-blue-600 to-blue-800">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-5xl mx-auto">
-            {/* Premium Badge with Glow Effect */}
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-white/30 shadow-lg">
-              <Star className="w-4 h-4 fill-yellow-300 text-yellow-300" />
+            {/* Premium Badge */}
+            <div className="inline-flex items-center gap-2 bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-semibold mb-4">
+              <Star className="w-3 h-3 fill-white" />
               Premium Course
-              <TrendingUp className="w-4 h-4" />
             </div>
 
             {/* Title Section */}
-            <div className="space-y-6 mb-8">
-              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
+            <div className="space-y-4 mb-6">
+              <h1 className="text-3xl lg:text-4xl font-bold text-white">
                 {course.title}
               </h1>
-              <p className="text-lg lg:text-xl text-blue-50 leading-relaxed max-w-3xl">
+              <p className="text-blue-100 leading-relaxed max-w-3xl">
                 {getPlainText(course.tagline || course.description)}
               </p>
             </div>
 
-            {/* Stats Grid - Glassmorphism Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <Clock className="w-5 h-5 text-white" />
-                  </div>
+            {/* Stats Grid - Compact */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+              <div className="bg-white/10 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-white" />
                   <div>
-                    <div className="text-white/80 text-xs font-medium">Duration</div>
-                    <div className="text-white font-semibold">{course.duration || "Self-paced"}</div>
+                    <div className="text-white/80 text-xs">Duration</div>
+                    <div className="text-white font-semibold text-sm">{course.duration || "Self-paced"}</div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <Users className="w-5 h-5 text-white" />
-                  </div>
+              <div className="bg-white/10 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-white" />
                   <div>
-                    <div className="text-white/80 text-xs font-medium">Students</div>
-                    <div className="text-white font-semibold">{course.currentEnrollments || "100+"}+</div>
+                    <div className="text-white/80 text-xs">Students</div>
+                    <div className="text-white font-semibold text-sm">{course.currentEnrollments || "100+"}+</div>
                   </div>
                 </div>
               </div>
 
               {course.totalSessions && (
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <BookOpen className="w-5 h-5 text-white" />
-                    </div>
+                <div className="bg-white/10 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-white" />
                     <div>
-                      <div className="text-white/80 text-xs font-medium">Sessions</div>
-                      <div className="text-white font-semibold">{course.totalSessions}</div>
+                      <div className="text-white/80 text-xs">Sessions</div>
+                      <div className="text-white font-semibold text-sm">{course.totalSessions}</div>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/20 transition-all duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <Award className="w-5 h-5 text-white" />
-                  </div>
+              <div className="bg-white/10 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-white" />
                   <div>
-                    <div className="text-white/80 text-xs font-medium">Certificate</div>
-                    <div className="text-white font-semibold">Included</div>
+                    <div className="text-white/80 text-xs">Certificate</div>
+                    <div className="text-white font-semibold text-sm">Included</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Topics and CTA */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex flex-wrap gap-2">
                 {(course.relatedTopics || course.topics || [])
-                  .slice(0, 4)
+                  .slice(0, 3)
                   .map((t) => (
                     <Badge
                       key={t}
-                      className="bg-white/15 hover:bg-white/25 text-white backdrop-blur-md border border-white/30 transition-all duration-300 px-4 py-1.5 text-sm font-medium"
+                      className="bg-white/20 text-white border-0 px-3 py-1 text-xs"
                     >
                       {t}
                     </Badge>
@@ -346,7 +331,7 @@ export default function CoursePage({
               {!isEnrolled && (
                 <Button 
                   onClick={() => setShowCheckout(true)}
-                  className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold shadow-2xl hover:shadow-amber-500/50 transition-all duration-300 px-8 py-6 text-lg rounded-xl border-0"
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-8 py-6 rounded-lg border-0"
                 >
                   Enroll Now - ₹
                   {course.hasAssignedCoupon && course.finalPrice
@@ -359,76 +344,62 @@ export default function CoursePage({
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {/* ---------- MAIN CONTENT ---------- */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Overview Card - Modern Design */}
-            <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
-              <CardHeader className="pb-6 border-b border-gray-100">
-                <CardTitle className="text-3xl font-bold flex items-center gap-4 text-gray-900">
-                  <div className="w-1.5 h-10 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-full" />
+          <div className="lg:col-span-2 space-y-6">
+            {/* Overview Card */}
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-2xl font-bold text-gray-900">
                   Course Overview
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-8 pt-8">
-                <div className="text-gray-700 leading-relaxed prose prose-lg max-w-none">
+              <CardContent className="space-y-6">
+                <div className="text-gray-700 leading-relaxed">
                   <SafeHTML content={course.description} />
                 </div>
                 
-                {/* Instructor & Duration Cards */}
-                <div className="grid sm:grid-cols-2 gap-6">
-                  <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 p-6 border border-blue-100 hover:border-blue-300 transition-all duration-300 hover:shadow-lg">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                    <div className="relative flex items-center gap-4">
-                      <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
-                        <Users className="h-7 w-7 text-white" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-900 text-lg mb-1">Instructor</div>
-                        <div className="text-gray-600 font-medium">{course.instructor || "Expert Instructor"}</div>
-                      </div>
+                {/* Instructor & Duration */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <div className="font-semibold text-gray-900">Instructor</div>
+                      <div className="text-gray-600 text-sm">{course.instructor || "Expert Instructor"}</div>
                     </div>
                   </div>
 
-                  <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 p-6 border border-amber-100 hover:border-amber-300 transition-all duration-300 hover:shadow-lg">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-                    <div className="relative flex items-center gap-4">
-                      <div className="p-4 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg">
-                        <Clock className="h-7 w-7 text-white" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-900 text-lg mb-1">Duration</div>
-                        <div className="text-gray-600 font-medium">{course.duration || "Flexible Schedule"}</div>
-                      </div>
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-100">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                    <div>
+                      <div className="font-semibold text-gray-900">Duration</div>
+                      <div className="text-gray-600 text-sm">{course.duration || "Flexible Schedule"}</div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Features Grid - Modern Cards */}
+            {/* Features Grid */}
             {course.features?.length ? (
-              <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
-                <CardHeader className="pb-6 border-b border-gray-100">
-                  <CardTitle className="text-3xl font-bold flex items-center gap-4 text-gray-900">
-                    <div className="w-1.5 h-10 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-full" />
+              <Card className="border border-gray-200 shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl font-bold text-gray-900">
                     What&apos;s Included
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-8">
-                  <div className="grid sm:grid-cols-2 gap-4">
+                <CardContent>
+                  <div className="grid sm:grid-cols-2 gap-3">
                     {course.features.map((f, i) => {
                       const text = typeof f === "string" ? f : f.feature;
                       return (
                         <div
                           key={i}
-                          className="group relative overflow-hidden flex items-start gap-4 p-5 rounded-xl bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-300"
+                          className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200"
                         >
-                          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
-                            <CheckCircle2 className="h-5 w-5 text-white" />
-                          </div>
-                          <span className="font-semibold text-gray-800 leading-snug pt-1">{text}</span>
+                          <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5" />
+                          <span className="text-gray-800 text-sm">{text}</span>
                         </div>
                       );
                     })}
@@ -439,35 +410,32 @@ export default function CoursePage({
 
             {/* Why Learn - Accordion */}
             {course.whyLearn?.length ? (
-              <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
-                <CardHeader className="pb-6 border-b border-gray-100">
-                  <CardTitle className="text-3xl font-bold flex items-center gap-4 text-gray-900">
-                    <div className="w-1.5 h-10 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-full" />
+              <Card className="border border-gray-200 shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl font-bold text-gray-900">
                     Why Learn {course.title}
                   </CardTitle>
                   {course.whyLearnIntro && (
-                    <div className="text-gray-600 prose prose-lg max-w-none mt-4">
+                    <div className="text-gray-600 text-sm mt-2">
                       <SafeHTML content={course.whyLearnIntro} />
                     </div>
                   )}
                 </CardHeader>
-                <CardContent className="pt-8">
-                  <Accordion type="single" collapsible className="w-full space-y-4">
+                <CardContent>
+                  <Accordion type="single" collapsible className="w-full space-y-3">
                     {course.whyLearn.map((item, i) => (
                       <AccordionItem
                         key={i}
                         value={`item-${i}`}
-                        className="border-0 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-blue-50/30 shadow-sm hover:shadow-md transition-all duration-300"
+                        className="border border-gray-200 rounded-lg"
                       >
-                        <AccordionTrigger className="hover:no-underline px-6 py-5 hover:bg-blue-50/50 transition-colors">
-                          <div className="flex items-center gap-4 text-left">
-                            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
-                              <Target className="h-5 w-5 text-white" />
-                            </div>
-                            <span className="font-bold text-gray-900">{item.title}</span>
+                        <AccordionTrigger className="hover:no-underline px-4 py-3 hover:bg-gray-50">
+                          <div className="flex items-center gap-3 text-left">
+                            <Target className="h-4 w-4 text-blue-600" />
+                            <span className="font-semibold text-gray-900">{item.title}</span>
                           </div>
                         </AccordionTrigger>
-                        <AccordionContent className="text-gray-700 leading-relaxed px-6 pb-6 prose prose-lg max-w-none">
+                        <AccordionContent className="text-gray-700 px-4 pb-4 text-sm">
                           <SafeHTML content={item.description} />
                         </AccordionContent>
                       </AccordionItem>
@@ -479,37 +447,27 @@ export default function CoursePage({
 
             {/* Curriculum */}
             {(course.courseContent?.length || course.whatYouLearn) && (
-              <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
-                <CardHeader className="pb-6 border-b border-gray-100">
-                  <CardTitle className="text-3xl font-bold flex items-center gap-4 text-gray-900">
-                    <div className="w-1.5 h-10 bg-gradient-to-b from-blue-500 via-indigo-500 to-purple-500 rounded-full" />
+              <Card className="border border-gray-200 shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl font-bold text-gray-900">
                     {course.courseContent?.length ? "Course Curriculum" : "What You'll Learn"}
                   </CardTitle>
-                  {course.courseContent?.length && (
-                    <CardDescription className="text-gray-600 text-base mt-3">
-                      Comprehensive curriculum with {course.courseContent.length} detailed modules
-                    </CardDescription>
-                  )}
                 </CardHeader>
-                <CardContent className="pt-8">
+                <CardContent>
                   {course.courseContent?.length ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {course.courseContent.map((c, i) => (
                         <div
                           key={i}
-                          className="group flex items-start gap-4 p-5 rounded-xl bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-300"
+                          className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200"
                         >
-                          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
-                            <BookOpen className="h-5 w-5 text-white" />
-                          </div>
-                          <div className="flex-1 pt-1">
-                            <span className="font-semibold text-gray-800 leading-relaxed">{c}</span>
-                          </div>
+                          <BookOpen className="h-5 w-5 text-blue-600 mt-0.5" />
+                          <span className="text-gray-800 text-sm">{c}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="prose prose-lg max-w-none text-gray-700">
+                    <div className="text-gray-700 text-sm">
                       <SafeHTML content={course.whatYouLearn!} />
                     </div>
                   )}
@@ -522,23 +480,20 @@ export default function CoursePage({
           <div className="lg:col-span-1">
             {isEnrolled ? (
               /* ---------- ENROLLED CARD ---------- */
-              <Card className="border-0 shadow-2xl bg-gradient-to-br from-green-500 to-emerald-600 sticky top-8 overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl opacity-10"></div>
-                <CardHeader className="text-white pb-6 relative">
-                  <CardTitle className="text-2xl font-bold flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-xl">
-                      <CheckCircle2 className="h-6 w-6" />
-                    </div>
+              <Card className="border border-green-200 bg-green-50 sticky top-6">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl font-bold text-green-900 flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5" />
                     Already Enrolled
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4 relative">
-                  <p className="text-green-50 text-base leading-relaxed">
+                <CardContent className="space-y-4">
+                  <p className="text-green-800 text-sm">
                     You have successfully enrolled in this course. Head over to your dashboard to start learning!
                   </p>
                   <Button
                     asChild
-                    className="w-full bg-white text-green-600 hover:bg-green-50 font-bold py-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
                   >
                     <Link href="/dashboard/user/courses">Go to My Courses</Link>
                   </Button>
@@ -546,21 +501,18 @@ export default function CoursePage({
               </Card>
             ) : (
               /* ---------- ENROLLMENT CARD ---------- */
-              <Card className="border-0 shadow-2xl bg-white sticky top-8 overflow-hidden">
-                <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl opacity-10"></div>
-                  <div className="relative">
-                    <CardTitle className="text-2xl font-bold text-white mb-2">
-                      {course.enrollment?.title || "Enroll Now"}
-                    </CardTitle>
-                    <CardDescription className="text-blue-100 text-base">
-                      {course.enrollment?.description || "Start your journey today"}
-                    </CardDescription>
-                  </div>
+              <Card className="border border-gray-200 shadow-sm sticky top-6">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
+                  <CardTitle className="text-xl font-bold text-white">
+                    {course.enrollment?.title || "Enroll Now"}
+                  </CardTitle>
+                  <CardDescription className="text-blue-100 text-sm mt-1">
+                    {course.enrollment?.description || "Start your journey today"}
+                  </CardDescription>
                 </div>
                 
-                <CardContent className="p-8">
-                  <div className="space-y-6">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
                     {/* Buy Now Component */}
                     <BuyNowButton
                       course={{
@@ -575,29 +527,27 @@ export default function CoursePage({
                     />
 
                     {/* Guarantee Badge */}
-                    <div className="relative overflow-hidden text-center p-5 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 shadow-sm">
-                      <div className="flex items-center justify-center gap-3 mb-2">
-                        <div className="p-2 bg-amber-100 rounded-lg">
-                          <Shield className="h-5 w-5 text-amber-600" />
-                        </div>
-                        <span className="font-bold text-amber-900 text-base">
+                    <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <Shield className="h-4 w-4 text-amber-600" />
+                        <span className="font-semibold text-amber-900 text-sm">
                           {course.enrollment?.offer?.guarantee || "30-Day Money-Back Guarantee"}
                         </span>
                       </div>
-                      <p className="text-amber-700 text-sm font-medium">Risk-free enrollment</p>
+                      <p className="text-amber-700 text-xs">Risk-free enrollment</p>
                     </div>
 
-                    {/* Quick Stats Grid */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
-                        <div className="font-bold text-blue-900 text-2xl mb-1">
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="font-bold text-blue-900 text-lg">
                           {course.totalSessions || 10}+
                         </div>
-                        <div className="text-sm text-blue-700 font-medium">Sessions</div>
+                        <div className="text-xs text-blue-700">Sessions</div>
                       </div>
-                      <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm">
-                        <div className="font-bold text-purple-900 text-2xl mb-1">24/7</div>
-                        <div className="text-sm text-purple-700 font-medium">Support</div>
+                      <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div className="font-bold text-blue-900 text-lg">24/7</div>
+                        <div className="text-xs text-blue-700">Support</div>
                       </div>
                     </div>
                   </div>
@@ -608,7 +558,7 @@ export default function CoursePage({
         </div>
       </div>
 
-      {/* Checkout Sidebar for Hero Button */}
+      {/* Checkout Sidebar */}
       {!isEnrolled && (
         <CheckoutSidebar
           course={{
