@@ -583,7 +583,6 @@ export function CoursesCatalog() {
                                       : `/auth/login?callbackUrl=/courses/${course.slug}?enroll=true`
                                   }
                                   className="flex items-center justify-center gap-1"
-                                  onClick={() => window.scrollTo(0, 0)}
                                 >
                                   Enroll Now
                                   <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
