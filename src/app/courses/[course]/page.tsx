@@ -2,7 +2,6 @@
 // src/app/courses/[course]/page.tsx
 "use client";
 
-import { BuyNowButton } from "@/components/checkout/BuyNowButton";
 import { CheckoutSidebar } from "@/components/checkout/CheckoutSidebar";
 import {
   Accordion,
@@ -30,13 +29,11 @@ import {
   Target,
   Users,
   Zap,
-  IndianRupee,
   Award,
-  TrendingUp,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 interface CourseData {
@@ -77,7 +74,7 @@ interface CourseData {
 }
 
 /* -------------------------------------------------------------
-   Fetch course (server-side cache) – unchanged
+   Fetch course (client-side)
    ------------------------------------------------------------- */
 async function getCourse(slug: string): Promise<CourseData | null> {
   try {
@@ -85,9 +82,7 @@ async function getCourse(slug: string): Promise<CourseData | null> {
     const url = `${baseUrl}/api/courses/${slug}`;
 
     const response = await fetch(url, {
-      next: { revalidate: 60 },
       headers: { "Content-Type": "application/json" },
-      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -140,6 +135,7 @@ function SafeHTML({
     <div className={className} dangerouslySetInnerHTML={{ __html: content }} />
   );
 }
+
 function getPlainText(html: string): string {
   if (!html) return "";
   return html
@@ -151,12 +147,9 @@ function getPlainText(html: string): string {
 /* -------------------------------------------------------------
    MAIN PAGE COMPONENT
    ------------------------------------------------------------- */
-export default function CoursePage({
-  params,
-}: {
-  params: Promise<{ course: string }>;
-}) {
-  const { course: slug } = React.use(params);
+export default function CoursePage({ params }: { params: { course: string } }) {
+  const { course: slug } = params;
+  const searchParams = useSearchParams();
   const { data: session, status: authStatus } = useSession();
   const userId = session?.user?.id as string | undefined;
 
@@ -164,7 +157,25 @@ export default function CoursePage({
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCheckout, setShowCheckout] = useState(false);
+  
+  // Auto-open checkout if enroll=true in URL
+  const autoOpenCheckout = searchParams.get('enroll') === 'true';
+  const [showCheckout, setShowCheckout] = useState(autoOpenCheckout);
+
+  /* ---------------------------------------------------------
+     Scroll to top on page load and data load
+     --------------------------------------------------------- */
+  useEffect(() => {
+    // Scroll to top when component mounts
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    // Scroll to top when course data loads
+    if (!loading && course) {
+      window.scrollTo(0, 0);
+    }
+  }, [loading, course]);
 
   /* ---------------------------------------------------------
      1. Load course + enrollment status
@@ -175,7 +186,7 @@ export default function CoursePage({
         setLoading(true);
         setError(null);
 
-        // 1. Course data (cached)
+        // 1. Course data
         const c = await getCourse(slug);
         if (!c) throw new Error("Course not found");
         setCourse(c);
@@ -260,12 +271,9 @@ export default function CoursePage({
     return map[iconName] ?? CheckCircle2;
   };
 
-  /* ---------------------------------------------------------
-     Render
-     --------------------------------------------------------- */
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Hero Section - Compact */}
+      {/* Hero Section */}
       <div className="relative py-12 bg-gradient-to-r from-blue-600 to-blue-800">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-5xl mx-auto">
@@ -285,7 +293,7 @@ export default function CoursePage({
               </p>
             </div>
 
-            {/* Stats Grid - Compact */}
+            {/* Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
               <div className="bg-white/10 rounded-lg p-3">
                 <div className="flex items-center gap-2">
@@ -360,7 +368,7 @@ export default function CoursePage({
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-          {/* ---------- MAIN CONTENT ---------- */}
+          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Overview Card */}
             <Card className="border border-gray-200 shadow-sm">
@@ -490,10 +498,9 @@ export default function CoursePage({
             )}
           </div>
 
-          {/* ---------- SIDEBAR ---------- */}
+          {/* Sidebar */}
           <div className="lg:col-span-1">
             {isEnrolled ? (
-              /* ---------- ENROLLED CARD ---------- */
               <Card className="border border-green-200 bg-green-50 sticky top-6">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl font-bold text-green-900 flex items-center gap-2">
@@ -514,7 +521,6 @@ export default function CoursePage({
                 </CardContent>
               </Card>
             ) : (
-              /* ---------- ENROLLMENT CARD ---------- */
               <Card className="border border-gray-200 shadow-sm rounded-xl sticky top-6">
                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
                   <CardTitle className="text-xl font-bold text-white">

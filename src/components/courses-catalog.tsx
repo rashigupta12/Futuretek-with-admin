@@ -336,7 +336,6 @@ export function CoursesCatalog() {
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
         <div className="text-center mb-12">
-          
           <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-amber-700 bg-clip-text text-transparent mb-4">
             Featured Courses
           </h2>
@@ -487,6 +486,7 @@ export function CoursesCatalog() {
                               <Link
                                 href={`/courses/${course.slug}`}
                                 className="flex items-center justify-center gap-1"
+                                onClick={() => window.scrollTo(0, 0)}
                               >
                                 View Details
                                 <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
@@ -520,8 +520,9 @@ export function CoursesCatalog() {
                                 className="flex-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-sm hover:shadow-md transition-all duration-300 h-9 text-xs font-semibold border-0 rounded-md"
                               >
                                 <Link 
-                                  href={`/courses/${course.slug}`}
+                                  href={`/courses/${course.slug}?enroll=true`}
                                   className="flex items-center justify-center gap-1"
+                                  onClick={() => window.scrollTo(0, 0)}
                                 >
                                   Enroll Now
                                   <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
