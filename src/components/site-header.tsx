@@ -71,11 +71,9 @@ export function SiteHeader() {
           </Link>
         </div>
         <nav className="text-slate-600 hover:[&_a]:text-slate-900 hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
-          <Link href="/" className="hover:text-blue-600 transition-colors">
-            Home
-          </Link>
+         
           <div className="relative group">
-            <button className="flex items-center gap-1 hover:text-blue-600 transition-colors text-sm font-medium text-slate-600 hover:text-slate-900">
+            <button className="flex items-center gap-1  transition-colors text-sm font-medium text-slate-600 hover:text-slate-900">
               Courses
               <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
             </button>
@@ -243,7 +241,7 @@ function Sidebar({
   };
 
   const menuItems = [
-    { href: "/", label: "Home", icon: Home },
+    // { href: "/", label: "Home", icon: Home },
     { href: "/courses", label: "Courses", icon: BookOpen },
     { href: "/about", label: "About", icon: Info },
     { href: "/career", label: "Career", icon: Briefcase },
