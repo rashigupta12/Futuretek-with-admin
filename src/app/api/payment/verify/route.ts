@@ -1,5 +1,8 @@
-import { eq } from 'drizzle-orm';
 /* eslint-disable  @typescript-eslint/no-require-imports */
+/* eslint-disable   @typescript-eslint/no-explicit-any*/
+/* eslint-disable   @typescript-eslint/no-unused-vars*/
+import { eq } from 'drizzle-orm';
+
 // app/api/payment/verify/route.ts
 import { db } from "@/db";
 import { CommissionsTable, CouponsTable, CoursesTable, EnrollmentsTable, PaymentsTable, UsersTable } from "@/db/schema";

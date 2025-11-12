@@ -670,9 +670,9 @@
 /*eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { X, Tag, ShoppingCart, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, ShoppingCart, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 
 // Razorpay type declarations
 interface RazorpayOptions {
@@ -721,18 +721,18 @@ interface Course {
   slug: string;
 }
 
-interface CouponValidation {
-  valid: boolean;
-  coupon?: {
-    code: string;
-    discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
-    discountValue: number;
-    jyotishiCode: string;
-    commissionRate: number;
-  };
-  discount?: number;
-  message?: string;
-}
+// interface CouponValidation {
+//   valid: boolean;
+//   coupon?: {
+//     code: string;
+//     discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+//     discountValue: number;
+//     jyotishiCode: string;
+//     commissionRate: number;
+//   };
+//   discount?: number;
+//   message?: string;
+// }
 
 interface PriceSummary {
   coursePrice: number;
@@ -781,20 +781,20 @@ export const CheckoutSidebar = ({
   // Initialize with assigned coupon if available
   useEffect(() => {
     if (hasAssignedCoupon && assignedCoupon) {
-      const discountAmount = coursePrice - displayFinalPrice;
+      // const discountAmount = coursePrice - displayFinalPrice;
       
-      const assignedCouponData: CouponValidation = {
-        valid: true,
-        coupon: {
-          code: assignedCoupon.code,
-          discountType: assignedCoupon.discountType,
-          discountValue: parseFloat(assignedCoupon.discountValue),
-          jyotishiCode: '', 
-          commissionRate: 0 
-        },
-        discount: discountAmount,
-        message: 'Auto-applied coupon'
-      };
+      // const assignedCouponData: CouponValidation = {
+      //   valid: true,
+      //   coupon: {
+      //     code: assignedCoupon.code,
+      //     discountType: assignedCoupon.discountType,
+      //     discountValue: parseFloat(assignedCoupon.discountValue),
+      //     jyotishiCode: '', 
+      //     commissionRate: 0 
+      //   },
+      //   discount: discountAmount,
+      //   message: 'Auto-applied coupon'
+      // };
       
       setStep('payment');
     }
