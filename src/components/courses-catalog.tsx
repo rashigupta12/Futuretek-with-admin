@@ -16,7 +16,6 @@ import {
   BookOpen,
   CheckCircle,
   Clock,
-  IndianRupee,
   Loader2,
   Star,
   TrendingUp,
