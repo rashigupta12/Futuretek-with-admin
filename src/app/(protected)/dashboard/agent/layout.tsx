@@ -4,11 +4,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
 import {
   Home,
   Settings,
-  LogOut,
   Tag,
   TrendingUp,
   Users,
@@ -20,12 +18,7 @@ import {
   DollarSign,
   Ticket,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 
 type SingleNavItem = {
   title: string;
@@ -54,23 +47,22 @@ export default function JyotishiLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
   // Get user data from session
-  const userName = session?.user?.name || "Agent";
-  const userImage = session?.user?.image || "/images/user_alt_icon.png";
+  // const userName = session?.user?.name || "Agent";
+  // const userImage = session?.user?.image || "/images/user_alt_icon.png";
 
   // Generate avatar fallback from name
-  const getAvatarFallback = () => {
-    if (session?.user?.name) {
-      return session.user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return "AG";
-  };
+  // const getAvatarFallback = () => {
+  //   if (session?.user?.name) {
+  //     return session.user.name
+  //       .split(" ")
+  //       .map((n) => n[0])
+  //       .join("")
+  //       .toUpperCase()
+  //       .slice(0, 2);
+  //   }
+  //   return "AG";
+  // };
 
   const [expandedMenus, setExpandedMenus] = useState<
     Record<"coupons" | "earnings", boolean>
@@ -79,9 +71,7 @@ export default function JyotishiLayout({
     earnings: false,
   });
 
-  const handleLogout = async () => {
-    await signOut({ redirectTo: "/auth/login" });
-  };
+ 
 
   const toggleMenu = (menu: keyof typeof expandedMenus) => {
     setExpandedMenus((prev) => ({
@@ -162,10 +152,10 @@ export default function JyotishiLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
-      <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50 ">
+      {/* <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50 ">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-pink-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">FT</span>
             </div>
             <div>
@@ -211,7 +201,7 @@ export default function JyotishiLayout({
             </PopoverContent>
           </Popover>
         </div>
-      </nav>
+      </nav> */}
 
       <div className="flex">
         {/* Sidebar */}
@@ -224,7 +214,7 @@ export default function JyotishiLayout({
                     <button
                       className={`w-full flex items-center gap-3 rounded-lg p-3 transition-colors ${
                         isActive(item.href)
-                          ? "bg-purple-50 text-purple-700 font-medium"
+                          ? "bg-blue-50 text-blue-700 font-medium"
                           : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
@@ -258,7 +248,7 @@ export default function JyotishiLayout({
                             <button
                               className={`w-full flex items-center gap-3 rounded-lg p-2 pl-3 transition-colors ${
                                 isActive(sub.href)
-                                  ? "bg-purple-50 text-purple-700 font-medium"
+                                  ? "bg-blue-50 text-blue-700 font-medium"
                                   : "text-gray-600 hover:bg-gray-50"
                               }`}
                             >
@@ -276,18 +266,18 @@ export default function JyotishiLayout({
           </nav>
 
           {/* Quick Stats in Sidebar */}
-          <div className="mt-6 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-100">
+          <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-pink-50 rounded-lg border border-blue-100">
             <h3 className="text-xs font-semibold text-gray-600 mb-3">
               Quick Stats
             </h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-600">Active Coupons</span>
-                <span className="text-sm font-bold text-purple-700">12</span>
+                <span className="text-sm font-bold text-blue-700">12</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-600">Students</span>
-                <span className="text-sm font-bold text-purple-700">45</span>
+                <span className="text-sm font-bold text-blue-700">45</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-600">Pending Earnings</span>
