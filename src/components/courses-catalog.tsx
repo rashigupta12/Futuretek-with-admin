@@ -13,15 +13,14 @@ import {
 import {
   AlertCircle,
   ArrowRight,
+  Award,
   BookOpen,
   CheckCircle,
   Clock,
   Loader2,
-  Star,
-  TrendingUp,
-  Tag,
   Sparkles,
-  Award,
+  Tag,
+  TrendingUp
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -108,7 +107,7 @@ export function CoursesCatalog() {
               .then(res => res.ok ? res.json() : null)
               .catch(() => null),
             // Fetch all course prices in parallel (limit to 10 concurrent requests)
-            ...batchFetch(rawCourses, 10)
+            ...batchFetch(rawCourses)
           ]);
 
           // Update enrollments
@@ -144,7 +143,7 @@ export function CoursesCatalog() {
     }
 
     // Helper function to batch fetch with concurrency limit
-    function batchFetch(courses: Course[], concurrency: number) {
+    function batchFetch(courses: Course[]) {
       return courses.map(course => 
         fetch(`/api/courses/${course.slug}`)
           .then(res => {

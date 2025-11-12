@@ -1,26 +1,26 @@
+/*eslint-disable  @typescript-eslint/no-explicit-any*/
 "use client";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
   Clock,
   Edit,
-  PlayCircle,
+  Eye,
+  Plus,
+  Save,
   Trash2,
   Users,
-  Save,
-  X,
-  Plus,
-  Eye
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";

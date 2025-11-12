@@ -1,10 +1,9 @@
 // components/checkout/BuyNowButton.tsx
 "use client";
 
-import { useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { useState } from 'react';
 import { CheckoutSidebar } from './CheckoutSidebar';
-import { IndianRupee } from 'lucide-react';
 
 interface Course {
   id: string;

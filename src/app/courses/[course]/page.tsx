@@ -2,7 +2,6 @@
 // src/app/courses/[course]/page.tsx
 "use client";
 
-import { BuyNowButton } from "@/components/checkout/BuyNowButton";
 import { CheckoutSidebar } from "@/components/checkout/CheckoutSidebar";
 import {
   Accordion,
@@ -20,19 +19,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Award,
   BookOpen,
-  Calendar,
   CheckCircle2,
   Clock,
   Loader2,
   Shield,
   Star,
   Target,
-  Users,
-  Zap,
-  IndianRupee,
-  Award,
-  TrendingUp,
+  Users
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -241,24 +236,6 @@ export default function CoursePage({
   if (error || !course) {
     notFound();
   }
-
-  /* ---------------------------------------------------------
-     Icon resolver
-     --------------------------------------------------------- */
-  const getIcon = (iconName: string) => {
-    const map: Record<string, any> = {
-      Video: Clock,
-      Award: CheckCircle2,
-      Clock,
-      Calendar,
-      Users,
-      Star,
-      Target,
-      Zap,
-      Shield,
-    };
-    return map[iconName] ?? CheckCircle2;
-  };
 
   /* ---------------------------------------------------------
      Render

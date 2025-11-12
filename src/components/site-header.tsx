@@ -12,7 +12,6 @@ import {
   BookOpen,
   Briefcase,
   ChevronDown,
-  Home,
   Info,
   LayoutDashboard,
   LogIn,
@@ -106,6 +105,12 @@ export function SiteHeader() {
             className="hover:text-blue-600 transition-colors"
           >
             Career
+          </Link>
+           <Link
+            href="/blogs"
+            className="hover:text-blue-600 transition-colors"
+          >
+            Blogs
           </Link>
           <Link
             href="/contact"

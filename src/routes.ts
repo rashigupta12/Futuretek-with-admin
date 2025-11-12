@@ -12,7 +12,9 @@ export const publicRoutes: (string|RegExp)[] = [
   "/about",
   "/career",
   "/contact",
-  /^\/courses(\/.*)?$/,  // Matches: /courses, /courses/, /courses/anything
+  /^\/courses(\/.*)?$/,
+  "/blogs",  // Matches: /courses, /courses/, /courses/anything
+   /^\/blogs(\/.*)?$/,
 ];
 
 // APIs which are accessible to all.
@@ -21,6 +23,8 @@ export const publicApis: string[] = [
   "/api/courses/",          // Add this too
   "/api/admin/courses",
   "/api/admin/courses/",
+  "/api/blogs",
+  "/api/blogs/"
 ];
 // Routes which are used for authentication.
 export const authRoutes: string[] = [

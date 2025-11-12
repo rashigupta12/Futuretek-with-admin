@@ -2,23 +2,13 @@
 // src/app/(protected)/dashboard/admin/blogs/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Eye,
-  Filter,
-  MoreVertical,
-  FileText,
-  Eye as EyeIcon,
-  Calendar,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -27,10 +17,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
+  Calendar,
+  Edit,
+  Eye,
+  Eye as EyeIcon,
+  FileText,
+  Filter,
+  MoreVertical,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type Blog = {
   id: string;
@@ -253,7 +252,7 @@ export default function BlogsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-blue-500 text-white border-b border-blue-600 text-white">
+              <thead className="bg-blue-500  border-b border-blue-600 text-white">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold  uppercase tracking-wider">
                     Blog Post
