@@ -12,7 +12,6 @@ import {
   BookOpen,
   Briefcase,
   ChevronDown,
-  Home,
   Info,
   LayoutDashboard,
   LogIn,

@@ -180,7 +180,7 @@ export function Blogs() {
 
 // Blog Card Component
 function BlogCard({ post }: { post: BlogPost }) {
-  const [imageLoaded, setImageLoaded] = useState(false);
+  // const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
     <Card className="group h-full bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col hover:border-blue-200">

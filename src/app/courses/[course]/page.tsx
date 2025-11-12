@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/card";
 import {
   BookOpen,
-  Calendar,
   CheckCircle2,
   Clock,
   Loader2,
@@ -28,7 +27,6 @@ import {
   Star,
   Target,
   Users,
-  Zap,
   Award,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -256,20 +254,20 @@ export default function CoursePage({ params }: { params: { course: string } }) {
   /* ---------------------------------------------------------
      Icon resolver
      --------------------------------------------------------- */
-  const getIcon = (iconName: string) => {
-    const map: Record<string, any> = {
-      Video: Clock,
-      Award: CheckCircle2,
-      Clock,
-      Calendar,
-      Users,
-      Star,
-      Target,
-      Zap,
-      Shield,
-    };
-    return map[iconName] ?? CheckCircle2;
-  };
+  // const getIcon = (iconName: string) => {
+  //   const map: Record<string, any> = {
+  //     Video: Clock,
+  //     Award: CheckCircle2,
+  //     Clock,
+  //     Calendar,
+  //     Users,
+  //     Star,
+  //     Target,
+  //     Zap,
+  //     Shield,
+  //   };
+  //   return map[iconName] ?? CheckCircle2;
+  // };
 
   return (
     <div className="min-h-screen bg-slate-50">

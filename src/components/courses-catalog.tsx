@@ -20,7 +20,6 @@ import {
   TrendingUp,
   Tag,
   Sparkles,
-  Award,
   ChevronLeft,
   ChevronRight,
   Crown,
