@@ -287,7 +287,7 @@ export default function ViewJyotishiPage() {
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       placeholder="Jyotishi Name"
-                      className="text-3xl font-bold border-blue-300 focus:border-blue-500 h-16 text-2xl"
+                      className="font-bold border-blue-300 focus:border-blue-500 h-16 text-2xl"
                     />
                     <Input
                       value={formData.email}
