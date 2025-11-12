@@ -219,7 +219,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
-      <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50">
+      {/* <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
@@ -262,7 +262,7 @@ export default function AdminLayout({
             </PopoverContent>
           </Popover>
         </div>
-      </nav>
+      </nav> */}
 
       <div className="flex">
         {/* Sidebar */}

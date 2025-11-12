@@ -116,223 +116,254 @@ export default function AddCoursePage() {
 }, [title]);
 
   return (
-    <div className="p-6  mx-auto">
-      <Link
-        href="/dashboard/admin/courses"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Courses
-      </Link>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <Link
+            href="/dashboard/admin/courses"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Courses
+          </Link>
 
-      <h1 className="text-2xl font-bold mb-2">Add New Course</h1>
-    
-
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* ── Basic Info ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Title *">
-              <TextInput
-                value={title}
-                onChange={setTitle}
-                placeholder="KP Astrology"
-                required
-              />
-            </Field>
-
-            <Field label="Slug *">
-              <TextInput
-                value={slug}
-                onChange={setSlug}
-                placeholder="kp-astrology"
-                required
-              />
-            </Field>
-
-            <Field label="Tagline *">
-              <TextInput
-                value={tagline}
-                onChange={setTagline}
-                placeholder="Learn KP in its original form..."
-                required
-              />
-            </Field>
-
-            <Field label="Instructor">
-              <TextInput
-                value={instructor}
-                onChange={setInstructor}
-                placeholder="To be announced"
-              />
-            </Field>
-
-            <Field label="Duration">
-              <TextInput
-                value={duration}
-                onChange={setDuration}
-                placeholder="25 live sessions"
-              />
-            </Field>
-
-            <Field label="Total Sessions">
-              <TextInput
-                type="number"
-                value={totalSessions}
-                onChange={setTotalSessions}
-                placeholder="25"
-              />
-            </Field>
-
-            <Field label="Price (INR) *">
-              <TextInput
-                type="number"
-                value={priceINR}
-                onChange={setPriceINR}
-                placeholder="20000"
-                required
-              />
-            </Field>
-
-            <Field label="Price (USD) *">
-              <TextInput
-                type="number"
-                value={priceUSD}
-                onChange={setPriceUSD}
-                placeholder="250"
-                required
-              />
-            </Field>
-
-            <Field label="Thumbnail URL">
-              <TextInput
-                value={thumbnailUrl}
-                onChange={setThumbnailUrl}
-                placeholder="https://..."
-              />
-            </Field>
-
-            <DateInput label="Start Date" value={startDate} onChange={setStartDate} />
-            <DateInput label="End Date" value={endDate} onChange={setEndDate} />
-            <DateInput
-              label="Registration Deadline"
-              value={registrationDeadline}
-              onChange={setRegistrationDeadline}
-            />
-
-            <div className="md:col-span-2">
-              <StatusSelect value={status} onChange={setStatus} />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Course</h1>
+              <p className="text-gray-600">
+                Create a new course with all necessary details and content.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* ── Long Texts ── */}
-       <Card>
-          <CardHeader>
-            <CardTitle>Content & SEO</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <Field label="Description *">
-              <RichTextEditor
-                value={description}
-                onChange={setDescription}
-                placeholder="Enter course description..."
-                minHeight="300px"
-              />
-            </Field>
-
-            <Field label="Why Learn Intro">
-              <RichTextEditor
-                value={whyLearnIntro}
-                onChange={setWhyLearnIntro}
-                placeholder="Enter why learn introduction..."
-                minHeight="200px"
-              />
-            </Field>
-
-            <Field label="What You Learn">
-              <RichTextEditor
-                value={whatYouLearn}
-                onChange={setWhatYouLearn}
-                placeholder="Enter what students will learn..."
-                minHeight="300px"
-              />
-            </Field>
-
-            <Field label="Disclaimer">
-              <RichTextEditor
-                value={disclaimer}
-                onChange={setDisclaimer}
-                placeholder="Enter disclaimer..."
-                minHeight="200px"
-              />
-            </Field>
-          </CardContent>
-        </Card>
-
-        {/* ── Capacity ── */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Capacity</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Max Students">
-              <TextInput
-                type="number"
-                value={maxStudents}
-                onChange={setMaxStudents}
-                placeholder="50"
-              />
-            </Field>
-
-            <Field label="Current Enrollments">
-              <TextInput
-                type="number"
-                value={currentEnrollments}
-                onChange={setCurrentEnrollments}
-                placeholder="0"
-              />
-            </Field>
-          </CardContent>
-        </Card>
-
-        {/* ── Dynamic Lists ── */}
-        <DynamicStringList
-          title="Features"
-          items={features}
-          setItems={setFeatures}
-          placeholder="25 live sessions on Zoom"
-        />
-
-        <DynamicWhyLearn items={whyLearn} setItems={setWhyLearn} />
-
-        <DynamicStringList
-          title="Course Content"
-          items={courseContent}
-          setItems={setCourseContent}
-          placeholder="The Zodiac and Its Divisions"
-        />
-
-        <DynamicStringList
-          title="Related Topics"
-          items={relatedTopics}
-          setItems={setRelatedTopics}
-          placeholder="Astrology"
-        />
-
-        {/* ── Submit ── */}
-        <div className="flex gap-3">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Creating…" : "Create Course"}
-          </Button>
-          <Button type="button" variant="outline" asChild>
-            <Link href="/dashboard/admin/courses">Cancel</Link>
-          </Button>
+          </div>
         </div>
-      </form>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* ── Basic Info ── */}
+          <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
+              <CardTitle className="text-xl text-gray-900">Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Field label="Title *">
+                <TextInput
+                  value={title}
+                  onChange={setTitle}
+                  placeholder="KP Astrology"
+                  required
+                />
+              </Field>
+
+              <Field label="Slug *">
+                <TextInput
+                  value={slug}
+                  onChange={setSlug}
+                  placeholder="kp-astrology"
+                  required
+                />
+              </Field>
+
+              <Field label="Tagline *">
+                <TextInput
+                  value={tagline}
+                  onChange={setTagline}
+                  placeholder="Learn KP in its original form..."
+                  required
+                />
+              </Field>
+
+              <Field label="Instructor">
+                <TextInput
+                  value={instructor}
+                  onChange={setInstructor}
+                  placeholder="To be announced"
+                />
+              </Field>
+
+              <Field label="Duration">
+                <TextInput
+                  value={duration}
+                  onChange={setDuration}
+                  placeholder="25 live sessions"
+                />
+              </Field>
+
+              <Field label="Total Sessions">
+                <TextInput
+                  type="number"
+                  value={totalSessions}
+                  onChange={setTotalSessions}
+                  placeholder="25"
+                />
+              </Field>
+
+              <Field label="Price (INR) *">
+                <TextInput
+                  type="number"
+                  value={priceINR}
+                  onChange={setPriceINR}
+                  placeholder="20000"
+                  required
+                />
+              </Field>
+
+              <Field label="Price (USD) *">
+                <TextInput
+                  type="number"
+                  value={priceUSD}
+                  onChange={setPriceUSD}
+                  placeholder="250"
+                  required
+                />
+              </Field>
+
+              <Field label="Thumbnail URL">
+                <TextInput
+                  value={thumbnailUrl}
+                  onChange={setThumbnailUrl}
+                  placeholder="https://..."
+                />
+              </Field>
+
+              <DateInput 
+                label="Start Date" 
+                value={startDate} 
+                onChange={setStartDate}
+              />
+              <DateInput 
+                label="End Date" 
+                value={endDate} 
+                onChange={setEndDate}
+              />
+              <DateInput
+                label="Registration Deadline"
+                value={registrationDeadline}
+                onChange={setRegistrationDeadline}
+              />
+
+              <div className="md:col-span-2">
+                <StatusSelect value={status} onChange={setStatus} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Long Texts ── */}
+          <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
+              <CardTitle className="text-xl text-gray-900">Content & SEO</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <Field label="Description *">
+                <RichTextEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Enter course description..."
+                  minHeight="300px"
+                />
+              </Field>
+
+              <Field label="Why Learn Intro">
+                <RichTextEditor
+                  value={whyLearnIntro}
+                  onChange={setWhyLearnIntro}
+                  placeholder="Enter why learn introduction..."
+                  minHeight="200px"
+                />
+              </Field>
+
+              <Field label="What You Learn">
+                <RichTextEditor
+                  value={whatYouLearn}
+                  onChange={setWhatYouLearn}
+                  placeholder="Enter what students will learn..."
+                  minHeight="300px"
+                />
+              </Field>
+
+              <Field label="Disclaimer">
+                <RichTextEditor
+                  value={disclaimer}
+                  onChange={setDisclaimer}
+                  placeholder="Enter disclaimer..."
+                  minHeight="200px"
+                />
+              </Field>
+            </CardContent>
+          </Card>
+
+          {/* ── Capacity ── */}
+          <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50 border-b">
+              <CardTitle className="text-xl text-gray-900">Capacity</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Field label="Max Students">
+                <TextInput
+                  type="number"
+                  value={maxStudents}
+                  onChange={setMaxStudents}
+                  placeholder="50"
+                />
+              </Field>
+
+              <Field label="Current Enrollments">
+                <TextInput
+                  type="number"
+                  value={currentEnrollments}
+                  onChange={setCurrentEnrollments}
+                  placeholder="0"
+                />
+              </Field>
+            </CardContent>
+          </Card>
+
+          {/* ── Dynamic Lists ── */}
+          <DynamicStringList
+            title="Features"
+            items={features}
+            setItems={setFeatures}
+            placeholder="25 live sessions on Zoom"
+          />
+
+          <DynamicWhyLearn 
+            items={whyLearn} 
+            setItems={setWhyLearn}
+          />
+
+          <DynamicStringList
+            title="Course Content"
+            items={courseContent}
+            setItems={setCourseContent}
+            placeholder="The Zodiac and Its Divisions"
+          />
+
+          <DynamicStringList
+            title="Related Topics"
+            items={relatedTopics}
+            setItems={setRelatedTopics}
+            placeholder="Astrology"
+          />
+
+          {/* ── Submit ── */}
+          <div className="flex gap-3 pt-6">
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+            >
+              {loading ? "Creating…" : "Create Course"}
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              asChild
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              <Link href="/dashboard/admin/courses">Cancel</Link>
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

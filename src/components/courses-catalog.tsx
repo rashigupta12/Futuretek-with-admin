@@ -17,15 +17,18 @@ import {
   CheckCircle,
   Clock,
   Loader2,
-  Star,
   TrendingUp,
   Tag,
   Sparkles,
   Award,
+  ChevronLeft,
+  ChevronRight,
+  Crown,
+  Users,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface Course {
   id: string;
@@ -56,9 +59,20 @@ interface CoursePriceData {
   hasAssignedCoupon: boolean;
 }
 
+interface CourseCategory {
+  type: 'UPCOMING' | 'REGISTRATION_OPEN' | 'ONGOING';
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  gradient: string;
+  badgeColor: string;
+  courses: Course[];
+}
+
 export function CoursesCatalog() {
   const { data: session, status } = useSession();
   const userId = session?.user?.id as string | undefined;
+  const userRole = session?.user?.role as string | undefined;
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
@@ -66,13 +80,18 @@ export function CoursesCatalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const scrollRefs = {
+    UPCOMING: useRef<HTMLDivElement>(null),
+    REGISTRATION_OPEN: useRef<HTMLDivElement>(null),
+    ONGOING: useRef<HTMLDivElement>(null),
+  };
+
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch courses first and show them immediately
         const coursesRes = await fetch("/api/courses");
         if (!coursesRes.ok) {
           throw new Error(`Failed to fetch courses: ${coursesRes.status}`);
@@ -86,10 +105,13 @@ export function CoursesCatalog() {
         const data = await coursesRes.json();
         const rawCourses = data.courses || [];
         
-        // Set courses immediately with base prices
-        setCourses(rawCourses);
+        const filteredCourses = rawCourses.filter((course: Course) => 
+          ['UPCOMING', 'REGISTRATION_OPEN', 'ONGOING'].includes(course.status)
+        );
+        
+        setCourses(filteredCourses);
         const basePrices: Record<string, CoursePriceData> = {};
-        rawCourses.forEach((course: Course) => {
+        filteredCourses.forEach((course: Course) => {
           basePrices[course.id] = {
             originalPrice: course.priceINR.toString(),
             finalPrice: course.priceINR.toString(),
@@ -98,20 +120,16 @@ export function CoursesCatalog() {
           };
         });
         setCoursePrices(basePrices);
-        setLoading(false); // Show UI immediately
+        setLoading(false);
 
-        // If user is logged in, fetch enrollments and prices in parallel (non-blocking)
-        if (userId && rawCourses.length > 0) {
-          // Fetch enrollments and prices in parallel
+        if (userId && filteredCourses.length > 0) {
           const [enrollData, ...priceResults] = await Promise.all([
             fetch(`/api/user/enrollments`)
               .then(res => res.ok ? res.json() : null)
               .catch(() => null),
-            // Fetch all course prices in parallel (limit to 10 concurrent requests)
-            ...batchFetch(rawCourses, 10)
+            ...batchFetch(filteredCourses, 10)
           ]);
 
-          // Update enrollments
           if (enrollData?.enrollments && Array.isArray(enrollData.enrollments)) {
             const enrolledIds = new Set<string>(
               enrollData.enrollments
@@ -121,7 +139,6 @@ export function CoursesCatalog() {
             setEnrolledCourseIds(enrolledIds);
           }
 
-          // Update prices
           const pricesMap: Record<string, CoursePriceData> = { ...basePrices };
           priceResults.forEach(result => {
             if (result && result.priceData) {
@@ -143,7 +160,6 @@ export function CoursesCatalog() {
       }
     }
 
-    // Helper function to batch fetch with concurrency limit
     function batchFetch(courses: Course[], concurrency: number) {
       return courses.map(course => 
         fetch(`/api/courses/${course.slug}`)
@@ -168,6 +184,39 @@ export function CoursesCatalog() {
     }
   }, [userId, status]);
 
+  // Check if user is admin or agent
+  const isAdminOrAgent = userRole === 'ADMIN' || userRole === 'AGENT';
+
+  const courseCategories: CourseCategory[] = [
+    {
+      type: 'REGISTRATION_OPEN',
+      title: 'Enrolling Now',
+      description: 'Courses currently open for registration',
+      icon: <TrendingUp className="h-4 w-4" />,
+      gradient: 'from-blue-600 to-blue-800',
+      badgeColor: 'bg-gradient-to-r from-blue-500 to-blue-600',
+      courses: courses.filter(course => course.status === 'REGISTRATION_OPEN')
+    },
+    {
+      type: 'UPCOMING',
+      title: 'Coming Soon',
+      description: 'Courses starting soon',
+      icon: <Clock className="h-4 w-4" />,
+      gradient: 'from-amber-600 to-amber-800',
+      badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600',
+      courses: courses.filter(course => course.status === 'UPCOMING')
+    },
+    {
+      type: 'ONGOING',
+      title: 'In Progress',
+      description: 'Courses currently running',
+      icon: <BookOpen className="h-4 w-4" />,
+      gradient: 'from-blue-700 to-indigo-800',
+      badgeColor: 'bg-gradient-to-r from-blue-600 to-indigo-600',
+      courses: courses.filter(course => course.status === 'ONGOING')
+    }
+  ];
+
   const getPlainText = (html: string) => {
     if (!html) return "";
     const div = document.createElement("div");
@@ -175,49 +224,15 @@ export function CoursesCatalog() {
     return div.textContent || div.innerText || "";
   };
 
-  const getStatusBadge = (status: Course["status"]) => {
-    const cfg: Record<
-      Course["status"],
-      { label: string; color: string; icon?: React.ReactNode }
-    > = {
-      REGISTRATION_OPEN: {
-        label: "Enrolling Now",
-        color: "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md border-0",
-        icon: <TrendingUp className="h-3.5 w-3.5" />,
-      },
-      UPCOMING: {
-        label: "Coming Soon",
-        color: "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md border-0",
-        icon: <Clock className="h-3.5 w-3.5" />,
-      },
-      ONGOING: {
-        label: "In Progress",
-        color: "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md border-0",
-        icon: <BookOpen className="h-3.5 w-3.5" />,
-      },
-      COMPLETED: {
-        label: "Completed",
-        color: "bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-sm border-0",
-        icon: <CheckCircle className="h-3.5 w-3.5" />,
-      },
-      DRAFT: {
-        label: "Draft",
-        color: "bg-gray-100 text-gray-600 border border-gray-300",
-      },
-      ARCHIVED: {
-        label: "Archived",
-        color: "bg-gray-100 text-gray-600 border border-gray-300",
-      },
-    };
-    const { label, color, icon } = cfg[status] ?? cfg.DRAFT;
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${color}`}
-      >
-        {icon}
-        {label}
-      </span>
-    );
+  const scroll = (direction: 'left' | 'right', category: keyof typeof scrollRefs) => {
+    const container = scrollRefs[category].current;
+    if (container) {
+      const scrollAmount = 320;
+      container.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
   };
 
   const getDisplayPrice = (course: Course) => {
@@ -248,13 +263,13 @@ export function CoursesCatalog() {
 
   if (status === "loading" || loading) {
     return (
-      <section className="py-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <section className="py-16 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center bg-white/60 backdrop-blur-sm rounded-3xl p-12 shadow-xl border border-white/20">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-blue-100">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-amber-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-md">
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
             </div>
-            <p className="text-gray-900 font-bold text-xl mb-2">Loading courses...</p>
+            <p className="text-gray-900 font-semibold text-lg mb-2">Loading Courses</p>
             <p className="text-sm text-gray-600">Discovering amazing learning opportunities</p>
           </div>
         </div>
@@ -264,21 +279,21 @@ export function CoursesCatalog() {
 
   if (error) {
     return (
-      <section className="py-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <section className="py-16 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center bg-white rounded-3xl border-0 p-12 shadow-2xl">
-            <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <AlertCircle className="h-10 w-10 text-white" />
+          <div className="text-center bg-white rounded-2xl border border-blue-100 p-8 shadow-lg">
+            <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-md">
+              <AlertCircle className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
               Unable to Load Courses
             </h3>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto text-lg">{error}</p>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">{error}</p>
             <Button
               onClick={() => window.location.reload()}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 h-auto text-base font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+              className="bg-gradient-to-r from-blue-600 to-amber-600 hover:from-blue-700 hover:to-amber-700 text-white px-6 py-3 h-auto font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
             >
-              <ArrowRight className="h-5 w-5 mr-2" />
+              <ArrowRight className="h-4 w-4 mr-2" />
               Try Again
             </Button>
           </div>
@@ -287,18 +302,20 @@ export function CoursesCatalog() {
     );
   }
 
-  if (courses.length === 0) {
+  const totalCourses = courseCategories.reduce((sum, category) => sum + category.courses.length, 0);
+  
+  if (totalCourses === 0) {
     return (
-      <section className="py-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <section className="py-16 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30">
         <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center bg-white rounded-3xl border-0 p-12 shadow-2xl max-w-2xl mx-auto">
-            <div className="w-20 h-20 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <BookOpen className="h-10 w-10 text-white" />
+          <div className="text-center bg-white rounded-2xl border border-blue-100 p-8 shadow-lg max-w-2xl mx-auto">
+            <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-md">
+              <BookOpen className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
               No Courses Available Yet
             </h3>
-            <p className="text-gray-600 mb-2 text-lg">
+            <p className="text-gray-600 mb-2">
               Check back soon for new courses!
             </p>
             <p className="text-sm text-gray-500">
@@ -311,136 +328,216 @@ export function CoursesCatalog() {
   }
 
   return (
-    <section className="py-16 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200 rounded-full blur-3xl opacity-20 animate-pulse"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-200 rounded-full blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
+    <section className="py-12 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute top-0 left-0 w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-20 animate-pulse"></div>
+      <div className="absolute bottom-0 right-0 w-72 h-72 bg-amber-200 rounded-full blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
 
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full px-5 py-2.5 text-sm font-bold mb-6 border-0 shadow-lg">
-            <Sparkles className="h-4 w-4 fill-yellow-300 text-yellow-300" />
-            <span>Our Premium Courses</span>
-            <Award className="h-4 w-4" />
-          </div>
-          <h2 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-5">
+        {/* Header */}
+        <div className="text-center mb-12">
+          
+          <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-amber-700 bg-clip-text text-transparent mb-4">
             Featured Courses
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Master ancient sciences with our comprehensive curriculum designed
-            by expert practitioners
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Master ancient sciences with our comprehensive curriculum designed by expert practitioners
           </p>
         </div>
 
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-12">
-          {courses.map((course) => {
-            const isEnrolled = userId ? enrolledCourseIds.has(course.id) : false;
-            const priceInfo = getDisplayPrice(course);
+        {/* Course Categories */}
+        {courseCategories.map((category) => {
+          if (category.courses.length === 0) return null;
 
-            return (
-              <Card
-                key={course.id}
-                className="flex flex-col group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm overflow-hidden relative hover:-translate-y-2 shadow-lg"
-              >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 group-hover:h-1.5 transition-all duration-300"></div>
+          const showScrollControls = category.courses.length > 4;
+          const scrollRef = scrollRefs[category.type];
 
-                <CardHeader className="pb-6 pt-6 relative">
-                  {getStatusBadge(course.status)}
-                  <CardTitle className="line-clamp-2 text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight mt-10 pt-5">
-                    {course.title}
-                  </CardTitle>
-                </CardHeader>
+          return (
+            <div key={category.type} className="mb-12 last:mb-0">
+              {/* Category Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl bg-gradient-to-r ${category.gradient} text-white shadow-md`}>
+                    {category.icon}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">{category.title}</h3>
+                    <p className="text-gray-600 text-sm">{category.description}</p>
+                  </div>
+                </div>
 
-                <CardContent className="flex-1 pb-4">
-                  <CardDescription className="line-clamp-3 text-gray-600 leading-relaxed mb-6">
-                    {getPlainText(course.description)}
-                  </CardDescription>
+                {showScrollControls && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => scroll('left', category.type)}
+                      className="h-8 w-8 border-blue-200 hover:bg-blue-50 text-blue-600"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => scroll('right', category.type)}
+                      className="h-8 w-8 border-blue-200 hover:bg-blue-50 text-blue-600"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
 
-                  <div className="space-y-3 bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-xl p-4 border border-gray-200 shadow-sm">
-                    {userId && priceInfo.hasDiscount && priceInfo.appliedCoupon && (
-                      <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg px-3 py-2.5 shadow-md">
-                        <div className="p-1 bg-white/20 rounded">
-                          <Tag className="h-3.5 w-3.5 text-white" />
+              {/* Courses Container */}
+              <div className="relative">
+                <div
+                  ref={scrollRef}
+                  className={`gap-4 ${
+                    showScrollControls 
+                      ? 'flex overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory' 
+                      : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  }`}
+                  style={
+                    showScrollControls 
+                      ? { 
+                          display: 'flex',
+                          scrollbarWidth: 'none',
+                          msOverflowStyle: 'none'
+                        } 
+                      : {}
+                  }
+                >
+                  {category.courses.map((course) => {
+                    const isEnrolled = userId ? enrolledCourseIds.has(course.id) : false;
+                    const priceInfo = getDisplayPrice(course);
+
+                    return (
+                      <Card
+                        key={course.id}
+                        className={`flex flex-col group hover:shadow-lg transition-all duration-300 border border-blue-100 bg-white overflow-hidden relative hover:-translate-y-1 shadow-sm ${
+                          showScrollControls ? 'min-w-[280px] snap-start flex-shrink-0' : ''
+                        }`}
+                      >
+                        {/* Status Badge */}
+                        <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold text-white shadow-sm ${category.badgeColor}`}>
+                          {category.type === 'REGISTRATION_OPEN' ? 'Enrolling' : 
+                           category.type === 'UPCOMING' ? 'Coming Soon' : 'In Progress'}
                         </div>
-                        <span className="text-xs font-bold text-white">
-                          {priceInfo.appliedCoupon.code} Applied!
-                        </span>
-                      </div>
-                    )}
 
-                    <div className="flex items-center justify-between">
-                      <div className="text-right flex-1">
-                        {priceInfo.hasDiscount ? (
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-end gap-2">
-                              <span className="font-bold text-gray-900 text-xl">
-                                ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
-                              </span>
-                              <span className="text-sm text-gray-500 line-through">
-                                ₹{priceInfo.originalPrice.toLocaleString("en-IN")}
-                              </span>
-                            </div>
-                            <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">
-                              <Sparkles className="h-3 w-3" />
-                              Save ₹{priceInfo.discountAmount.toLocaleString("en-IN")}
+                        <CardHeader className="pb-4 pt-12">
+                          <CardTitle className="line-clamp-2 text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight">
+                            {course.title}
+                          </CardTitle>
+                        </CardHeader>
+
+                        <CardContent className="flex-1 pb-3">
+                          <CardDescription className="line-clamp-2 text-sm text-gray-600 leading-relaxed mb-4">
+                            {getPlainText(course.description)}
+                          </CardDescription>
+
+                          {/* Price Section */}
+                          <div className="space-y-2 bg-gradient-to-br from-blue-50/50 to-amber-50/30 rounded-lg p-3 border border-blue-100">
+                            {userId && priceInfo.hasDiscount && priceInfo.appliedCoupon && (
+                              <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded px-2 py-1.5 shadow-sm">
+                                <Tag className="h-3 w-3 text-white" />
+                                <span className="text-xs font-semibold text-white">
+                                  {priceInfo.appliedCoupon.code} Applied!
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <Users className="h-3 w-3" />
+                                <span>{course.currentEnrollments} enrolled</span>
+                              </div>
+                              <div className="text-right">
+                                {priceInfo.hasDiscount ? (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-end gap-1">
+                                      <span className="font-bold text-gray-900 text-base">
+                                        ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
+                                      </span>
+                                      <span className="text-xs text-gray-500 line-through">
+                                        ₹{priceInfo.originalPrice.toLocaleString("en-IN")}
+                                      </span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs font-semibold">
+                                      <Sparkles className="h-2.5 w-2.5" />
+                                      Save ₹{priceInfo.discountAmount.toLocaleString("en-IN")}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="font-bold text-gray-900 text-base">
+                                    ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        ) : (
-                          <span className="font-bold text-gray-900 text-xl">
-                            ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
+                        </CardContent>
 
-                <CardFooter className="flex flex-col gap-3 pt-4 border-t border-gray-100 bg-gradient-to-br from-gray-50/50 to-transparent">
-                  <div className="flex gap-3 w-full">
-                    <Button
-                      asChild
-                      size="sm"
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-xl transition-all duration-300 h-11 font-bold border-0 rounded-lg"
-                    >
-                      <Link
-                        href={`/courses/${course.slug}`}
-                        className="flex items-center justify-center gap-2"
-                      >
-                        Learn More
-                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Link>
-                    </Button>
+                        <CardFooter className="pt-3 border-t border-blue-50 bg-gradient-to-br from-gray-50/30 to-transparent">
+                          <div className="flex gap-2 w-full">
+                            <Button
+                              asChild
+                              size="sm"
+                              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm hover:shadow-md transition-all duration-300 h-9 text-xs font-semibold border-0 rounded-md"
+                            >
+                              <Link
+                                href={`/courses/${course.slug}`}
+                                className="flex items-center justify-center gap-1"
+                              >
+                                View Details
+                                <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                              </Link>
+                            </Button>
 
-                    {isEnrolled ? (
-                      <Button
-                        disabled
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 border-0 bg-gradient-to-r from-green-500 to-emerald-600 text-white cursor-not-allowed h-11 font-bold rounded-lg shadow-md"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Enrolled
-                      </Button>
-                    ) : (
-                      <Button
-                        asChild
-                        size="sm"
-                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md hover:shadow-xl transition-all duration-300 h-11 font-bold border-0 rounded-lg"
-                      >
-                        <Link 
-                          href={`/courses/${course.slug}`}
-                          className="flex items-center justify-center gap-2"
-                        >
-                          Buy Now
-                          <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
+                            {isEnrolled ? (
+                              <Button
+                                disabled
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 border-green-200 bg-green-50 text-green-700 cursor-not-allowed h-9 text-xs font-semibold rounded-md"
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Enrolled
+                              </Button>
+                            ) : isAdminOrAgent ? (
+                              <Button
+                                disabled
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 border-amber-200 bg-amber-50 text-amber-700 cursor-not-allowed h-9 text-xs font-semibold rounded-md"
+                              >
+                                <Crown className="h-3 w-3 mr-1" />
+                                Staff
+                              </Button>
+                            ) : (
+                              <Button
+                                asChild
+                                size="sm"
+                                className="flex-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-sm hover:shadow-md transition-all duration-300 h-9 text-xs font-semibold border-0 rounded-md"
+                              >
+                                <Link 
+                                  href={`/courses/${course.slug}`}
+                                  className="flex items-center justify-center gap-1"
+                                >
+                                  Enroll Now
+                                  <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
