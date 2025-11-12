@@ -249,24 +249,24 @@ export default function CoursesPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gradient-to-r from-blue-50 to-amber-50 border-b border-blue-100">
+<thead className="bg-blue-500 text-white border-b border-blue-600">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Course Details
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Pricing
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold  uppercase tracking-wider">
                     Enrollments
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold  uppercase tracking-wider">
                     Created Date
                   </th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-right text-sm font-semibold uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>

@@ -9,6 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -18,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Banknote,
@@ -27,10 +30,14 @@ import {
   Edit,
   Mail,
   Phone,
+  Save,
   User,
   UserCheck,
   UserX,
-  Wallet
+  Wallet,
+  X,
+  Eye,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -48,6 +55,7 @@ type Jyotishi = {
   panNumber?: string | null;
   isActive: boolean;
   createdAt: string;
+  bio?: string | null;
 };
 
 type CommissionStats = {
@@ -72,10 +80,23 @@ export default function ViewJyotishiPage() {
   const router = useRouter();
   const [jyotishi, setJyotishi] = useState<Jyotishi | null>(null);
   const [stats, setStats] = useState<CommissionStats | null>(null);
-  const [recentCommissions, setRecentCommissions] = useState<
-    RecentCommission[]
-  >([]);
+  const [recentCommissions, setRecentCommissions] = useState<RecentCommission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Form states
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    commissionRate: "",
+    bankAccountNumber: "",
+    bankIfscCode: "",
+    bankAccountHolderName: "",
+    panNumber: "",
+    bio: "",
+  });
 
   useEffect(() => {
     if (params.id) fetchJyotishi();
@@ -90,10 +111,84 @@ export default function ViewJyotishiPage() {
       setJyotishi(data.jyotishi);
       setStats(data.stats);
       setRecentCommissions(data.recentCommissions || []);
+
+      // Initialize form data
+      if (data.jyotishi) {
+        setFormData({
+          name: data.jyotishi.name || "",
+          email: data.jyotishi.email || "",
+          mobile: data.jyotishi.mobile || "",
+          commissionRate: data.jyotishi.commissionRate?.toString() || "",
+          bankAccountNumber: data.jyotishi.bankAccountNumber || "",
+          bankIfscCode: data.jyotishi.bankIfscCode || "",
+          bankAccountHolderName: data.jyotishi.bankAccountHolderName || "",
+          panNumber: data.jyotishi.panNumber || "",
+          bio: data.jyotishi.bio || "",
+        });
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Reset form data when canceling edit
+      if (jyotishi) {
+        setFormData({
+          name: jyotishi.name || "",
+          email: jyotishi.email || "",
+          mobile: jyotishi.mobile || "",
+          commissionRate: jyotishi.commissionRate?.toString() || "",
+          bankAccountNumber: jyotishi.bankAccountNumber || "",
+          bankIfscCode: jyotishi.bankIfscCode || "",
+          bankAccountHolderName: jyotishi.bankAccountHolderName || "",
+          panNumber: jyotishi.panNumber || "",
+          bio: jyotishi.bio || "",
+        });
+      }
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSave = async () => {
+    if (!jyotishi) return;
+
+    setSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        commissionRate: Number(formData.commissionRate),
+        mobile: formData.mobile || null,
+        bankAccountNumber: formData.bankAccountNumber || null,
+        bankIfscCode: formData.bankIfscCode || null,
+        bankAccountHolderName: formData.bankAccountHolderName || null,
+        panNumber: formData.panNumber || null,
+        bio: formData.bio || null,
+      };
+
+      const res = await fetch(`/api/admin/jyotishi/${jyotishi.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updatedData = await res.json();
+        setJyotishi(updatedData.jyotishi);
+        setIsEditing(false);
+        alert("Jyotishi updated successfully!");
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to update jyotishi");
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("Unexpected error occurred");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -105,7 +200,7 @@ export default function ViewJyotishiPage() {
       });
       if (res.ok) {
         alert("Jyotishi deactivated successfully");
-        router.push("/dashboard/admin/agent");
+        router.push("/dashboard/admin/jyotishis");
       } else {
         alert("Failed to deactivate");
       }
@@ -114,10 +209,17 @@ export default function ViewJyotishiPage() {
     }
   };
 
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -125,11 +227,11 @@ export default function ViewJyotishiPage() {
   if (!jyotishi) {
     return (
       <div className="container mx-auto p-8 text-center">
-        <h2 className="text-2xl font-bold text-destructive mb-4">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">
           Jyotishi Not Found
         </h2>
-        <Button asChild>
-          <Link href="/dashboard/admin/agent">
+        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <Link href="/dashboard/admin/jyotishis">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Jyotishi List
           </Link>
         </Button>
@@ -152,46 +254,69 @@ export default function ViewJyotishiPage() {
     }).format(amount);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/50">
-      {/* Hero Section */}
-      <div className="relative py-12 mb-8 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Header */}
+      <div className="relative py-8 mb-8 bg-gradient-to-r from-blue-50 to-amber-50 border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl">
-            <div className="flex items-center gap-4 mb-4">
-              <Link
-                href="/dashboard/admin/agent"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Jyotishi
-              </Link>
-              <Badge variant="outline" className="text-xs">
-                ADMIN VIEW
-              </Badge>
+          <div className="max-w-6xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/dashboard/admin/jyotishis"
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Jyotishis
+                </Link>
+                <Badge variant="outline" className="text-xs bg-white">
+                  ADMIN VIEW
+                </Badge>
+              </div>
+
+             
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-600 to-amber-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
                 {jyotishi.name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-500 to-indigo-500 bg-clip-text text-transparent">
-                  {jyotishi.name}
-                </h1>
-                <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                  <Mail className="h-4 w-4" />
-                  {jyotishi.email}
-                </p>
+              <div className="flex-1">
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="Jyotishi Name"
+                      className="text-3xl font-bold border-blue-300 focus:border-blue-500 h-16 text-2xl"
+                    />
+                    <Input
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      placeholder="Email Address"
+                      className="text-lg border-blue-300 focus:border-blue-500"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                      {jyotishi.name}
+                    </h1>
+                    <p className="text-lg text-gray-600 flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      {jyotishi.email}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 mt-4">
+            <div className="flex flex-wrap gap-2 mt-4">
               <Badge
                 variant={jyotishi.isActive ? "default" : "secondary"}
                 className={
                   jyotishi.isActive
-                    ? "bg-green-500 text-white"
-                    : "bg-gray-500 text-white"
+                    ? "bg-green-100 text-green-800 border-green-200"
+                    : "bg-gray-100 text-gray-800 border-gray-200"
                 }
               >
                 {jyotishi.isActive ? (
@@ -206,7 +331,7 @@ export default function ViewJyotishiPage() {
                   </>
                 )}
               </Badge>
-              <Badge variant="secondary">
+              <Badge className="bg-amber-100 text-amber-800 border-amber-200">
                 Commission: {jyotishi.commissionRate}%
               </Badge>
             </div>
@@ -219,91 +344,195 @@ export default function ViewJyotishiPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Personal Information */}
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-2xl">Personal Information</CardTitle>
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">
+                <CardTitle>Personal Information</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <div className="grid sm:grid-cols-2 gap-6">
-                  <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Full Name</p>
-                      <p className="font-medium">{jyotishi.name}</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-sm text-gray-700">Full Name</Label>
+                    {isEditing ? (
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        className="border-gray-300 focus:border-blue-500"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3 p-2">
+                        <User className="h-4 w-4 text-blue-500" />
+                        <p className="font-medium">{jyotishi.name}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="mobile" className="text-sm text-gray-700">Mobile</Label>
+                    {isEditing ? (
+                      <Input
+                        id="mobile"
+                        value={formData.mobile}
+                        onChange={(e) => handleInputChange('mobile', e.target.value)}
+                        className="border-gray-300 focus:border-blue-500"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3 p-2">
+                        <Phone className="h-4 w-4 text-blue-500" />
+                        <p className="font-medium">{jyotishi.mobile || "Not provided"}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm text-gray-700">Email</Label>
+                    {isEditing ? (
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="border-gray-300 focus:border-blue-500"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3 p-2">
+                        <Mail className="h-4 w-4 text-blue-500" />
+                        <p className="font-medium">{jyotishi.email}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-700">Joined On</Label>
+                    <div className="flex items-center gap-3 p-2">
+                      <Calendar className="h-4 w-4 text-blue-500" />
+                      <p className="font-medium">{formatDate(jyotishi.createdAt)}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Mobile</p>
-                      <p className="font-medium">{jyotishi.mobile}</p>
-                    </div>
+
+                  <div className="sm:col-span-2 space-y-2">
+                    <Label htmlFor="commissionRate" className="text-sm text-gray-700">Commission Rate (%)</Label>
+                    {isEditing ? (
+                      <Input
+                        id="commissionRate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={formData.commissionRate}
+                        onChange={(e) => handleInputChange('commissionRate', e.target.value)}
+                        className="border-gray-300 focus:border-blue-500"
+                      />
+                    ) : (
+                      <p className="font-medium text-lg text-amber-600">{jyotishi.commissionRate}%</p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">{jyotishi.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Joined On</p>
-                      <p className="font-medium">
-                        {formatDate(jyotishi.createdAt)}
-                      </p>
-                    </div>
+
+                  <div className="sm:col-span-2 space-y-2">
+                    <Label htmlFor="bio" className="text-sm text-gray-700">Bio / Introduction</Label>
+                    {isEditing ? (
+                      <Textarea
+                        id="bio"
+                        rows={4}
+                        value={formData.bio}
+                        onChange={(e) => handleInputChange('bio', e.target.value)}
+                        className="border-gray-300 focus:border-blue-500"
+                        placeholder="Brief introduction about the jyotishi, expertise, and experience..."
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-700">{jyotishi.bio || "No bio provided"}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Bank Details */}
-            {(jyotishi.bankAccountNumber || jyotishi.panNumber) && (
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <Wallet className="h-6 w-6" />
+            {(jyotishi.bankAccountNumber || jyotishi.panNumber || isEditing) && (
+              <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+                <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50">
+                  <CardTitle className="flex items-center gap-2">
+                    <Wallet className="h-5 w-5" />
                     Bank & Tax Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 text-sm">
-                    {jyotishi.bankAccountHolderName && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Account Holder
-                        </span>
-                        <span className="font-medium">
-                          {jyotishi.bankAccountHolderName}
-                        </span>
+                <CardContent className="p-6">
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {(isEditing || jyotishi.bankAccountHolderName) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="bankAccountHolderName" className="text-sm text-gray-700">Account Holder Name</Label>
+                        {isEditing ? (
+                          <Input
+                            id="bankAccountHolderName"
+                            value={formData.bankAccountHolderName}
+                            onChange={(e) => handleInputChange('bankAccountHolderName', e.target.value)}
+                            className="border-gray-300 focus:border-amber-500"
+                          />
+                        ) : (
+                          <p className="font-medium">{jyotishi.bankAccountHolderName}</p>
+                        )}
                       </div>
                     )}
-                    {jyotishi.bankAccountNumber && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Account Number
-                        </span>
-                        <code className="bg-muted px-2 py-1 rounded text-xs font-mono">
-                          {jyotishi.bankAccountNumber}
-                        </code>
+
+                    {(isEditing || jyotishi.bankAccountNumber) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="bankAccountNumber" className="text-sm text-gray-700">Bank Account Number</Label>
+                        {isEditing ? (
+                          <Input
+                            id="bankAccountNumber"
+                            value={formData.bankAccountNumber}
+                            onChange={(e) => handleInputChange('bankAccountNumber', e.target.value)}
+                            className="border-gray-300 focus:border-amber-500 font-mono"
+                          />
+                        ) : (
+                          <code className="bg-amber-50 px-3 py-2 rounded border font-mono text-sm block">
+                            {jyotishi.bankAccountNumber}
+                          </code>
+                        )}
                       </div>
                     )}
-                    {jyotishi.bankIfscCode && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">IFSC Code</span>
-                        <code className="bg-muted px-2 py-1 rounded text-xs font-mono">
-                          {jyotishi.bankIfscCode}
-                        </code>
+
+                    {(isEditing || jyotishi.bankIfscCode) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="bankIfscCode" className="text-sm text-gray-700">IFSC Code</Label>
+                        {isEditing ? (
+                          <Input
+                            id="bankIfscCode"
+                            value={formData.bankIfscCode}
+                            onChange={(e) => handleInputChange('bankIfscCode', e.target.value.toUpperCase())}
+                            className="border-gray-300 focus:border-amber-500 font-mono uppercase"
+                          />
+                        ) : (
+                          <code className="bg-amber-50 px-3 py-2 rounded border font-mono text-sm block">
+                            {jyotishi.bankIfscCode}
+                          </code>
+                        )}
                       </div>
                     )}
-                    {jyotishi.panNumber && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">PAN</span>
-                        <code className="bg-muted px-2 py-1 rounded text-xs font-mono">
-                          {jyotishi.panNumber}
-                        </code>
+
+                    {(isEditing || jyotishi.panNumber) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="panNumber" className="text-sm text-gray-700">PAN Number</Label>
+                        {isEditing ? (
+                          <Input
+                            id="panNumber"
+                            value={formData.panNumber}
+                            onChange={(e) => handleInputChange('panNumber', e.target.value.toUpperCase())}
+                            className="border-gray-300 focus:border-amber-500 font-mono uppercase"
+                          />
+                        ) : (
+                          <code className="bg-amber-50 px-3 py-2 rounded border font-mono text-sm block">
+                            {jyotishi.panNumber}
+                          </code>
+                        )}
+                      </div>
+                    )}
+
+                    {isEditing && !jyotishi.bankAccountNumber && !jyotishi.panNumber && (
+                      <div className="sm:col-span-2 text-center py-4">
+                        <p className="text-sm text-amber-600">
+                          No banking details added yet. Fill in the information above.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -313,29 +542,29 @@ export default function ViewJyotishiPage() {
 
             {/* Recent Commissions */}
             {recentCommissions.length > 0 && (
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Recent Commissions</CardTitle>
+              <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">
+                  <CardTitle>Recent Commissions</CardTitle>
                   <CardDescription>
                     Last {recentCommissions.length} transactions
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                   <div className="rounded-lg border overflow-hidden">
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Course</TableHead>
-                          <TableHead>Student</TableHead>
-                          <TableHead>Sale</TableHead>
-                          <TableHead>Commission</TableHead>
-                          <TableHead>Status</TableHead>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="text-gray-700">Date</TableHead>
+                          <TableHead className="text-gray-700">Course</TableHead>
+                          <TableHead className="text-gray-700">Student</TableHead>
+                          <TableHead className="text-gray-700">Sale</TableHead>
+                          <TableHead className="text-gray-700">Commission</TableHead>
+                          <TableHead className="text-gray-700">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {recentCommissions.map((comm) => (
-                          <TableRow key={comm.id}>
+                          <TableRow key={comm.id} className="hover:bg-gray-50">
                             <TableCell className="text-xs">
                               {formatDate(comm.createdAt)}
                             </TableCell>
@@ -360,8 +589,8 @@ export default function ViewJyotishiPage() {
                                 }
                                 className={
                                   comm.status === "PAID"
-                                    ? "bg-green-500 text-white"
-                                    : "bg-yellow-500 text-white"
+                                    ? "bg-green-100 text-green-800 border-green-200"
+                                    : "bg-amber-100 text-amber-800 border-amber-200"
                                 }
                               >
                                 {comm.status === "PAID" ? (
@@ -385,32 +614,30 @@ export default function ViewJyotishiPage() {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Commission Summary */}
-            <Card className="lg:sticky lg:top-24 hover:shadow-lg transition-shadow border-purple-500/20">
-              <CardHeader className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 rounded-t-lg">
-                <CardTitle className="text-2xl">Commission Summary</CardTitle>
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 rounded-t-lg">
+                <CardTitle className="text-xl">Commission Summary</CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-5">
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      Total Earned
-                    </p>
-                    <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-indigo-500 bg-clip-text text-transparent">
+                    <p className="text-sm text-gray-600">Total Earned</p>
+                    <p className="text-3xl font-bold text-blue-600">
                       {formatCurrency(stats?.totalCommission || 0)}
                     </p>
                   </div>
                   <Separator />
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-muted-foreground flex items-center gap-1">
+                      <p className="text-gray-600 flex items-center gap-1">
                         <Clock className="h-4 w-4" /> Pending
                       </p>
-                      <p className="font-semibold text-yellow-600">
+                      <p className="font-semibold text-amber-600">
                         {formatCurrency(stats?.pendingCommission || 0)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground flex items-center gap-1">
+                      <p className="text-gray-600 flex items-center gap-1">
                         <CheckCircle2 className="h-4 w-4" /> Paid
                       </p>
                       <p className="font-semibold text-green-600">
@@ -420,8 +647,8 @@ export default function ViewJyotishiPage() {
                   </div>
                   <Separator />
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Sales</span>
-                    <span className="font-medium">
+                    <span className="text-gray-600">Total Sales</span>
+                    <span className="font-medium text-gray-900">
                       {stats?.totalSales || 0}
                     </span>
                   </div>
@@ -429,56 +656,105 @@ export default function ViewJyotishiPage() {
 
                 <Separator />
 
-                {/* Admin Actions */}
-                <div className="space-y-2">
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full justify-start"
-                  >
+                {/* Quick Stats */}
+                <div className="space-y-4">
+                  <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <Banknote className="h-8 w-8 text-amber-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-amber-600">
+                      {jyotishi.commissionRate}%
+                    </p>
+                    <p className="text-sm text-amber-700">Commission Rate</p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                 <div className="space-y-2">
+              
+              
+
+                {/* Actions */}
+                
+                  <Button asChild variant="outline" className="w-full justify-start">
                     <Link href={`/jyotishi/${jyotishi.id}`} target="_blank">
-                      <User className="h-4 w-4 mr-2" />
-                      View Public Profile
+                      <Eye className="h-2 w-2 mr-2" />
+                      View Profile
                     </Link>
                   </Button>
-                  <Button asChild className="w-full justify-start">
-                    <Link href={`/dashboard/admin/agent/edit/${jyotishi.id}`}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Jyotishi
-                    </Link>
-                  </Button>
+                  </div>
+                  <div className="space-y-2">
+                  
+                      {isEditing ? (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="bg-green-600 hover:bg-green-700 w-full"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {saving ? "Saving..." : "Save Changes"}
+                    </Button>
+                    <Button
+                      onClick={handleEditToggle}
+                      variant="outline"
+                      disabled={saving}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
                   <Button
+                    onClick={handleEditToggle}
+                    className="bg-blue-600 hover:bg-blue-700 w-full justify-start"
+                  >
+                    <Edit className="h-2 w-2 mr-1" />
+                    Edit Jyotishi
+                  </Button>
+                )}
+                    
+                </div>
+                <Button
                     variant="destructive"
                     className="w-full justify-start"
                     onClick={handleDeactivate}
                     disabled={!jyotishi.isActive}
                   >
-                    <UserX className="h-4 w-4 mr-2" />
+                <Trash2 className="h-4 w-4 mr-2" />
                     Deactivate Account
                   </Button>
-                </div>
 
-                <p className="text-xs text-muted-foreground text-center italic">
+                <p className="text-xs text-gray-500 text-center italic">
                   Last updated: {formatDate(jyotishi.createdAt)}
                 </p>
               </CardContent>
             </Card>
 
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Banknote className="h-5 w-5" />
-                  Commission Rate
-                </CardTitle>
+            {/* Technical Info */}
+            <Card className="border border-gray-200">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-50">
+                <CardTitle className="text-lg">Technical Details</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-purple-600">
-                  {jyotishi.commissionRate}%
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  of every successful course sale
-                </p>
+              <CardContent className="p-6 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">ID</span>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[120px]">
+                    {jyotishi.id}
+                  </code>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Status</span>
+                  <Badge
+                    variant={jyotishi.isActive ? "default" : "secondary"}
+                    className={
+                      jyotishi.isActive
+                        ? "bg-green-100 text-green-800 border-green-200"
+                        : "bg-gray-100 text-gray-800 border-gray-200"
+                    }
+                  >
+                    {jyotishi.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
           </div>

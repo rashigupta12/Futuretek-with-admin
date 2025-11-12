@@ -19,7 +19,8 @@ import {
   Users,
   Save,
   X,
-  Plus
+  Plus,
+  Eye
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -171,7 +172,7 @@ export default function ViewCoursePage() {
       const res = await fetch(`/api/admin/courses/${params.id}`, { method: "DELETE" });
       if (res.ok) {
         alert("Course deleted successfully");
-        router.push("/dashboard/courses");
+        router.push("/dashboard/admin/courses");
       } else {
         alert("Delete failed");
       }
@@ -216,14 +217,14 @@ export default function ViewCoursePage() {
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500"></div>
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
     </div>
   );
 
   if (!course || !editData) return (
     <div className="container mx-auto p-8 text-center">
-      <h2 className="text-2xl font-bold text-destructive mb-4">Course Not Found</h2>
-      <Button asChild>
+      <h2 className="text-2xl font-bold text-red-600 mb-4">Course Not Found</h2>
+      <Button asChild className="bg-blue-600 hover:bg-blue-700">
         <Link href="/dashboard/admin/courses">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Courses
         </Link>
@@ -248,63 +249,69 @@ export default function ViewCoursePage() {
   const displayData = isEditing ? editData : course;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/50">
-      {/* Hero Section */}
-      <div className="relative py-12 mb-8 bg-gradient-to-r from-purple-500/10 to-blue-500/10">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Header */}
+      <div className="relative py-8 mb-8 bg-gradient-to-r from-blue-50 to-amber-50 border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-4 mb-4">
-              <Link
-                href="/dashboard/admin/courses"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Courses
-              </Link>
-              <Badge variant="outline" className="text-xs">
-                ADMIN VIEW
-              </Badge>
+          <div className="max-w-6xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/dashboard/admin/courses"
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Courses
+                </Link>
+                <Badge variant="outline" className="text-xs bg-white">
+                  ADMIN VIEW
+                </Badge>
+              </div>
+
+
             </div>
 
             {isEditing ? (
               <div className="space-y-4">
                 <div>
-                  <Label>Title</Label>
+                  <Label className="text-sm text-gray-700">Title</Label>
                   <Input
                     value={editData.title}
                     onChange={(e) => updateEditField('title', e.target.value)}
-                    className="text-2xl font-bold"
+                    className="text-2xl font-bold border-blue-300 focus:border-blue-500 h-16"
                   />
                 </div>
                 <div>
-                  <Label>Tagline</Label>
+                  <Label className="text-sm text-gray-700">Tagline</Label>
                   <Input
                     value={editData.tagline || ''}
                     onChange={(e) => updateEditField('tagline', e.target.value)}
+                    className="border-blue-300 focus:border-blue-500"
                   />
                 </div>
               </div>
             ) : (
-              <>
-                <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">
                   {displayData.title}
                 </h1>
                 {displayData.tagline && (
-                  <p className="text-xl text-muted-foreground mb-6">{displayData.tagline}</p>
+                  <p className="text-lg text-gray-600 mb-6">{displayData.tagline}</p>
                 )}
-              </>
+              </div>
             )}
 
             <div className="flex flex-wrap gap-2 mt-4">
               {isEditing ? (
                 <div className="w-full space-y-2">
-                  <Label>Topics</Label>
+                  <Label className="text-sm text-gray-700">Topics</Label>
                   {(editData.topics || []).map((t, i) => (
                     <div key={i} className="flex gap-2 items-center">
                       <Input
                         value={typeof t === 'string' ? t : t.topic}
                         onChange={(e) => updateArrayItem('topics', i, { topic: e.target.value })}
                         placeholder="Topic"
+                        className="border-blue-300 focus:border-blue-500"
                       />
                       <Button
                         type="button"
@@ -321,6 +328,7 @@ export default function ViewCoursePage() {
                     variant="outline"
                     size="sm"
                     onClick={() => addArrayItem('topics')}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
                   >
                     <Plus className="h-4 w-4 mr-2" /> Add Topic
                   </Button>
@@ -329,8 +337,7 @@ export default function ViewCoursePage() {
                 displayData.topics?.map((t) => (
                   <Badge
                     key={typeof t === 'string' ? t : t.topic}
-                    variant="secondary"
-                    className="bg-white/10 hover:bg-white/20 transition-colors"
+                    className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
                   >
                     {typeof t === 'string' ? t : t.topic}
                   </Badge>
@@ -346,85 +353,92 @@ export default function ViewCoursePage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Course Overview */}
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-2xl">Course Overview</CardTitle>
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">
+                <CardTitle>Course Overview</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {isEditing ? (
-                  <Textarea
-                    value={editData.description}
-                    onChange={(e) => updateEditField('description', e.target.value)}
-                    rows={6}
-                    className="mb-6"
-                  />
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-700">Description</Label>
+                    <Textarea
+                      value={editData.description}
+                      onChange={(e) => updateEditField('description', e.target.value)}
+                      rows={6}
+                      className="border-blue-300 focus:border-blue-500"
+                    />
+                  </div>
                 ) : (
-                  <p className="mb-6 leading-relaxed whitespace-pre-wrap">
+                  <p className="mb-6 leading-relaxed whitespace-pre-wrap text-gray-700">
                     {displayData.description || "No description provided."}
                   </p>
                 )}
-                <div className="grid sm:grid-cols-2 gap-6 p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-6 w-6 text-purple-500" />
-                    <div className="flex-1">
-                      <div className="font-medium">Instructor</div>
-                      {isEditing ? (
-                        <Input
-                          value={editData.instructor || ''}
-                          onChange={(e) => updateEditField('instructor', e.target.value)}
-                          className="mt-1"
-                        />
-                      ) : (
-                        <div className="text-muted-foreground">
-                          {displayData.instructor || "To be announced"}
-                        </div>
-                      )}
-                    </div>
+                <div className="grid sm:grid-cols-2 gap-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-700 flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      Instructor
+                    </Label>
+                    {isEditing ? (
+                      <Input
+                        value={editData.instructor || ''}
+                        onChange={(e) => updateEditField('instructor', e.target.value)}
+                        className="border-blue-300 focus:border-blue-500"
+                      />
+                    ) : (
+                      <p className="text-gray-700">
+                        {displayData.instructor || "To be announced"}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-6 w-6 text-purple-500" />
-                    <div className="flex-1">
-                      <div className="font-medium">Duration</div>
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <Input
-                            value={editData.duration || ''}
-                            onChange={(e) => updateEditField('duration', e.target.value)}
-                            placeholder="25 live sessions"
-                          />
-                          <Input
-                            type="number"
-                            value={editData.totalSessions || ''}
-                            onChange={(e) => updateEditField('totalSessions', e.target.value)}
-                            placeholder="Sessions count"
-                          />
-                        </div>
-                      ) : (
-                        <div className="text-muted-foreground">
-                          {displayData.duration || "Not specified"}
-                          {displayData.totalSessions && ` • ${displayData.totalSessions} sessions`}
-                        </div>
-                      )}
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-700 flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      Duration
+                    </Label>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={editData.duration || ''}
+                          onChange={(e) => updateEditField('duration', e.target.value)}
+                          placeholder="25 live sessions"
+                          className="border-blue-300 focus:border-blue-500"
+                        />
+                        <Input
+                          type="number"
+                          value={editData.totalSessions || ''}
+                          onChange={(e) => updateEditField('totalSessions', e.target.value)}
+                          placeholder="Sessions count"
+                          className="border-blue-300 focus:border-blue-500"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-gray-700">
+                        {displayData.duration || "Not specified"}
+                        {displayData.totalSessions && ` • ${displayData.totalSessions} sessions`}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Features */}
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-2xl">Course Features</CardTitle>
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">
+                <CardTitle>Course Features</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {isEditing ? (
                   <div className="space-y-2">
+                    <Label className="text-sm text-gray-700">Features</Label>
                     {(editData.features || []).map((f, i) => (
                       <div key={i} className="flex gap-2">
                         <Input
                           value={typeof f === 'string' ? f : f.feature}
                           onChange={(e) => updateArrayItem('features', i, { feature: e.target.value })}
                           placeholder="Feature"
+                          className="border-blue-300 focus:border-blue-500"
                         />
                         <Button
                           type="button"
@@ -441,6 +455,7 @@ export default function ViewCoursePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => addArrayItem('features')}
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Feature
                     </Button>
@@ -450,10 +465,12 @@ export default function ViewCoursePage() {
                     {displayData.features?.map((f, i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 transition-colors border border-blue-100"
                       >
                         <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                        <span className="leading-snug">{typeof f === 'string' ? f : f.feature}</span>
+                        <span className="leading-snug text-gray-700">
+                          {typeof f === 'string' ? f : f.feature}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -462,27 +479,28 @@ export default function ViewCoursePage() {
             </Card>
 
             {/* Why Learn */}
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-2xl">
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50">
+                <CardTitle>
                   Why Learn {displayData.title}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {isEditing ? (
                   <div className="space-y-4">
-                    <div>
-                      <Label>Introduction</Label>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-gray-700">Introduction</Label>
                       <Textarea
                         value={editData.whyLearnIntro || ''}
                         onChange={(e) => updateEditField('whyLearnIntro', e.target.value)}
                         rows={3}
+                        className="border-amber-300 focus:border-amber-500"
                       />
                     </div>
                     {(editData.whyLearn || []).map((item, i) => (
-                      <div key={i} className="space-y-2 p-4 border rounded">
-                        <div className="flex justify-between">
-                          <Label>Item {i + 1}</Label>
+                      <div key={i} className="space-y-2 p-4 border border-amber-200 rounded bg-amber-50">
+                        <div className="flex justify-between items-center">
+                          <Label className="text-sm text-gray-700">Item {i + 1}</Label>
                           <Button
                             type="button"
                             variant="ghost"
@@ -496,12 +514,14 @@ export default function ViewCoursePage() {
                           value={item.title}
                           onChange={(e) => updateArrayItem('whyLearn', i, { ...item, title: e.target.value })}
                           placeholder="Title"
+                          className="border-amber-300 focus:border-amber-500"
                         />
                         <Textarea
                           value={item.description}
                           onChange={(e) => updateArrayItem('whyLearn', i, { ...item, description: e.target.value })}
                           placeholder="Description"
                           rows={3}
+                          className="border-amber-300 focus:border-amber-500"
                         />
                       </div>
                     ))}
@@ -510,6 +530,7 @@ export default function ViewCoursePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => addArrayItem('whyLearn')}
+                      className="border-amber-300 text-amber-700 hover:bg-amber-50"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Item
                     </Button>
@@ -517,15 +538,15 @@ export default function ViewCoursePage() {
                 ) : (
                   <>
                     {displayData.whyLearnIntro && (
-                      <p className="mb-6 leading-relaxed">{displayData.whyLearnIntro}</p>
+                      <p className="mb-6 leading-relaxed text-gray-700">{displayData.whyLearnIntro}</p>
                     )}
                     <Accordion type="single" collapsible className="w-full">
                       {displayData.whyLearn?.map((item, index) => (
                         <AccordionItem key={index} value={`item-${index}`}>
-                          <AccordionTrigger className="hover:text-purple-500 transition-colors">
+                          <AccordionTrigger className="hover:text-amber-600 transition-colors text-gray-900">
                             {item.title}
                           </AccordionTrigger>
-                          <AccordionContent className="text-muted-foreground leading-relaxed">
+                          <AccordionContent className="text-gray-700 leading-relaxed">
                             {item.description}
                           </AccordionContent>
                         </AccordionItem>
@@ -537,22 +558,24 @@ export default function ViewCoursePage() {
             </Card>
 
             {/* Course Content */}
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-2xl">Course Content</CardTitle>
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">
+                <CardTitle>Course Content</CardTitle>
                 <CardDescription>
                   {displayData.content?.length || 0} detailed lectures
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 {isEditing ? (
                   <div className="space-y-2">
+                    <Label className="text-sm text-gray-700">Content Items</Label>
                     {editData.content?.map((c, i) => (
                       <div key={i} className="flex gap-2">
                         <Input
                           value={typeof c === 'string' ? c : c.content}
                           onChange={(e) => updateArrayItem('content', i, { content: e.target.value })}
                           placeholder="Content item"
+                          className="border-blue-300 focus:border-blue-500"
                         />
                         <Button
                           type="button"
@@ -569,6 +592,7 @@ export default function ViewCoursePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => addArrayItem('content')}
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Content
                     </Button>
@@ -578,10 +602,12 @@ export default function ViewCoursePage() {
                     {displayData.content?.map((c, index) => (
                       <div
                         key={index}
-                        className="flex items-start gap-3 p-4 hover:bg-muted rounded-lg transition-colors group"
+                        className="flex items-start gap-3 p-4 hover:bg-blue-50 rounded-lg transition-colors group border border-blue-100"
                       >
-                        <BookOpen className="h-5 w-5 mt-1 text-purple-500 group-hover:scale-110 transition-transform" />
-                        <span className="leading-relaxed">{typeof c === 'string' ? c : c.content}</span>
+                        <BookOpen className="h-5 w-5 mt-1 text-blue-600 group-hover:scale-110 transition-transform" />
+                        <span className="leading-relaxed text-gray-700">
+                          {typeof c === 'string' ? c : c.content}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -593,9 +619,9 @@ export default function ViewCoursePage() {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Pricing & Enrollment */}
-            <Card className="lg:sticky lg:top-24 hover:shadow-lg transition-shadow duration-300 border-purple-500/20">
-              <CardHeader className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-t-lg">
-                <CardTitle className="text-2xl">Course Enrollment</CardTitle>
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 rounded-t-lg">
+                <CardTitle className="text-xl">Course Enrollment</CardTitle>
                 <CardDescription>
                   {displayData.status === "REGISTRATION_OPEN"
                     ? "Registration is open"
@@ -608,28 +634,30 @@ export default function ViewCoursePage() {
                 <div className="space-y-6">
                   {isEditing ? (
                     <div className="space-y-4">
-                      <div>
-                        <Label>Price USD</Label>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-700">Price USD</Label>
                         <Input
                           type="number"
                           value={editData.priceUSD}
                           onChange={(e) => updateEditField('priceUSD', e.target.value)}
+                          className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
-                      <div>
-                        <Label>Price INR</Label>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-700">Price INR</Label>
                         <Input
                           type="number"
                           value={editData.priceINR}
                           onChange={(e) => updateEditField('priceINR', e.target.value)}
+                          className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
-                      <div>
-                        <Label>Status</Label>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-700">Status</Label>
                         <select
                           value={editData.status}
                           onChange={(e) => updateEditField('status', e.target.value)}
-                          className="w-full p-2 border rounded"
+                          className="w-full p-2 border border-blue-300 rounded focus:border-blue-500"
                         >
                           <option value="DRAFT">DRAFT</option>
                           <option value="REGISTRATION_OPEN">REGISTRATION OPEN</option>
@@ -642,17 +670,16 @@ export default function ViewCoursePage() {
                   ) : (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
+                        <span className="text-3xl font-bold text-blue-600">
                           ${Number(displayData.priceUSD).toLocaleString()}
                         </span>
                         <Badge
-                          variant="secondary"
                           className={`text-white ${getStatusColor(displayData.status)}`}
                         >
                           {displayData.status.replace(/_/g, " ")}
                         </Badge>
                       </div>
-                      <p className="text-lg font-medium text-muted-foreground">
+                      <p className="text-lg font-medium text-amber-600">
                         ₹{Number(displayData.priceINR).toLocaleString("en-IN")}
                       </p>
                     </>
@@ -662,53 +689,57 @@ export default function ViewCoursePage() {
 
                   {isEditing ? (
                     <div className="space-y-3">
-                      <div>
-                        <Label>Start Date</Label>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-700">Start Date</Label>
                         <Input
                           type="date"
                           value={formatDateForInput(editData.startDate ||"")}
                           onChange={(e) => updateEditField('startDate', e.target.value)}
+                          className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
-                      <div>
-                        <Label>End Date</Label>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-700">End Date</Label>
                         <Input
                           type="date"
                           value={formatDateForInput(editData.endDate ||"")}
                           onChange={(e) => updateEditField('endDate', e.target.value)}
+                          className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
-                      <div>
-                        <Label>Max Students</Label>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-700">Max Students</Label>
                         <Input
                           type="number"
                           value={editData.maxStudents || ''}
                           onChange={(e) => updateEditField('maxStudents', e.target.value)}
+                          className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
-                      <div>
-                        <Label>Current Enrollments</Label>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-700">Current Enrollments</Label>
                         <Input
                           type="number"
                           value={editData.currentEnrollments}
                           onChange={(e) => updateEditField('currentEnrollments', e.target.value)}
+                          className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Start Date</span>
-                        <span className="font-medium">{formatDate(displayData.startDate||"")}</span>
+                        <span className="text-gray-600">Start Date</span>
+                        <span className="font-medium text-gray-900">{formatDate(displayData.startDate||"")}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">End Date</span>
-                        <span className="font-medium">{formatDate(displayData.endDate||"")}</span>
+                        <span className="text-gray-600">End Date</span>
+                        <span className="font-medium text-gray-900">{formatDate(displayData.endDate||"")}</span>
                       </div>
                       {displayData.maxStudents && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Seats</span>
-                          <span className="font-medium">
+                          <span className="text-gray-600">Seats</span>
+                          <span className="font-medium text-gray-900">
                             {displayData.currentEnrollments}/{displayData.maxStudents}
                           </span>
                         </div>
@@ -722,13 +753,16 @@ export default function ViewCoursePage() {
                   <div className="space-y-2">
                     {!isEditing ? (
                       <>
-                        <Button asChild variant="outline" className="w-full justify-start">
+                        <Button asChild variant="outline" className="w-full justify-start border-blue-300 text-blue-700 hover:bg-blue-50">
                           <Link href={`/courses/${displayData.slug}`} target="_blank">
-                            <PlayCircle className="h-4 w-4 mr-2" />
+                            <Eye className="h-4 w-4 mr-2" />
                             View Live Page
                           </Link>
                         </Button>
-                        <Button className="w-full justify-start" onClick={handleEdit}>
+                        <Button 
+                          className="w-full justify-start bg-blue-600 hover:bg-blue-700"
+                          onClick={handleEdit}
+                        >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Course
                         </Button>
@@ -744,7 +778,7 @@ export default function ViewCoursePage() {
                     ) : (
                       <>
                         <Button
-                          className="w-full justify-start"
+                          className="w-full justify-start bg-green-600 hover:bg-green-700"
                           onClick={handleSave}
                           disabled={saving}
                         >
@@ -753,7 +787,7 @@ export default function ViewCoursePage() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full justify-start"
+                          className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-50"
                           onClick={handleCancel}
                           disabled={saving}
                         >
@@ -764,7 +798,7 @@ export default function ViewCoursePage() {
                     )}
                   </div>
 
-                  <p className="text-xs text-muted-foreground text-center italic">
+                  <p className="text-xs text-gray-500 text-center italic">
                     Last updated: {new Date(displayData.updatedAt).toLocaleDateString("en-IN")}
                   </p>
                 </div>
@@ -772,26 +806,26 @@ export default function ViewCoursePage() {
             </Card>
 
             {/* Technical Info */}
-            <Card>
-              <CardHeader>
+            <Card className="border border-gray-200">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-50">
                 <CardTitle className="text-lg">Technical Details</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="p-6 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Slug</span>
+                  <span className="text-gray-600">Slug</span>
                   {isEditing ? (
                     <Input
                       value={editData.slug}
                       onChange={(e) => updateEditField('slug', e.target.value)}
-                      className="w-40"
+                      className="w-40 border-blue-300 focus:border-blue-500"
                     />
                   ) : (
-                    <code className="bg-muted px-2 py-1 rounded text-xs">{displayData.slug}</code>
+                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">{displayData.slug}</code>
                   )}
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Created</span>
-                  <span>{new Date(displayData.createdAt).toLocaleDateString("en-IN")}</span>
+                  <span className="text-gray-600">Created</span>
+                  <span className="text-gray-900">{new Date(displayData.createdAt).toLocaleDateString("en-IN")}</span>
                 </div>
               </CardContent>
             </Card>
