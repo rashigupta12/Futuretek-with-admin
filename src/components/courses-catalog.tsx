@@ -484,7 +484,7 @@ export function CoursesCatalog() {
                                 <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded px-2 py-1.5 shadow-sm">
                                   <Tag className="h-3 w-3 text-white" />
                                   <span className="text-xs font-semibold text-white">
-                                    {priceInfo.appliedCoupon.code} Applied!
+                                    Discount Applied!
                                   </span>
                                 </div>
                               )}
