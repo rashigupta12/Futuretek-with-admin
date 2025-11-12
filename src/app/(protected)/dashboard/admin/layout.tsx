@@ -1,11 +1,4 @@
 "use client";
-
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   BookOpen,
   ChevronDown,
@@ -13,13 +6,10 @@ import {
   FileText,
   Home,
   List,
-  LogOut,
   Plus,
-  Settings,
   Tag,
   Users
 } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState } from "react";
@@ -51,7 +41,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  // const { data: session, status } = useSession();
 
   const [expandedMenus, setExpandedMenus] = useState<
     Record<"courses" | "blogs" | "coupons" | "certificates" | "agent" |"users", boolean>
@@ -64,9 +54,9 @@ export default function AdminLayout({
     users:false
   });
 
-  const handleLogout = async () => {
-    await signOut({ redirectTo: "/auth/login" });
-  };
+  // const handleLogout = async () => {
+  //   await signOut({ redirectTo: "/auth/login" });
+  // };
 
   const toggleMenu = (menu: keyof typeof expandedMenus) => {
     setExpandedMenus((prev) => ({
@@ -78,21 +68,21 @@ export default function AdminLayout({
   const isActive = (path: string) => pathname === path;
 
   // Get user data from session
-  const userName = session?.user?.name || session?.user?.role;
-  const userImage = session?.user?.image || "/images/user_alt_icon.png";
+  // const userName = session?.user?.name || session?.user?.role;
+  // const userImage = session?.user?.image || "/images/user_alt_icon.png";
 
   // Generate avatar fallback from name
-  const getAvatarFallback = () => {
-    if (session?.user?.name) {
-      return session.user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return "AD";
-  };
+  // const getAvatarFallback = () => {
+  //   if (session?.user?.name) {
+  //     return session.user.name
+  //       .split(" ")
+  //       .map((n) => n[0])
+  //       .join("")
+  //       .toUpperCase()
+  //       .slice(0, 2);
+  //   }
+  //   return "AD";
+  // };
 
   const navigationItems: NavItem[] = [
     {

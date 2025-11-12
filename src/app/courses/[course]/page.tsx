@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { notFound, useSearchParams } from "next/navigation";
+import { notFound, useSearchParams, useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 interface CourseData {
@@ -145,8 +145,11 @@ function getPlainText(html: string): string {
 /* -------------------------------------------------------------
    MAIN PAGE COMPONENT
    ------------------------------------------------------------- */
-export default function CoursePage({ params }: { params: { course: string } }) {
-  const { course: slug } = params;
+export default function CoursePage() {
+  // Use useParams hook instead of params prop
+  const params = useParams();
+  const slug = params?.course as string;
+  
   const searchParams = useSearchParams();
   const { data: session, status: authStatus } = useSession();
   const userId = session?.user?.id as string | undefined;
@@ -164,12 +167,10 @@ export default function CoursePage({ params }: { params: { course: string } }) {
      Scroll to top on page load and data load
      --------------------------------------------------------- */
   useEffect(() => {
-    // Scroll to top when component mounts
     window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
-    // Scroll to top when course data loads
     if (!loading && course) {
       window.scrollTo(0, 0);
     }
@@ -180,29 +181,30 @@ export default function CoursePage({ params }: { params: { course: string } }) {
      --------------------------------------------------------- */
   useEffect(() => {
     async function load() {
+      if (!slug) return;
+      
       try {
         setLoading(true);
         setError(null);
 
-        // 1. Course data
-        const c = await getCourse(slug);
+        // Parallel fetch: course data + enrollment check
+        const coursePromise = getCourse(slug);
+        const enrollmentPromise = userId 
+          ? fetch("/api/user/enrollments").then(res => res.ok ? res.json() : null).catch(() => null)
+          : Promise.resolve(null);
+
+        const [c, enrollData] = await Promise.all([coursePromise, enrollmentPromise]);
+
         if (!c) throw new Error("Course not found");
         setCourse(c);
 
-        // 2. Enrollment check (only when logged-in)
-        if (userId) {
-          const res = await fetch("/api/user/enrollments");
-          if (!res.ok) throw new Error("Failed to fetch enrollments");
-          const { enrollments } = await res.json();
-
-          const enrolled = Array.isArray(enrollments)
-            ? enrollments.some(
-                (e: any) =>
-                  e.courseId === c.id &&
-                  (e.status === "ACTIVE" || e.status === "COMPLETED")
-              )
-            : false;
-
+        // Check enrollment
+        if (enrollData?.enrollments && Array.isArray(enrollData.enrollments)) {
+          const enrolled = enrollData.enrollments.some(
+            (e: any) =>
+              e.courseId === c.id &&
+              (e.status === "ACTIVE" || e.status === "COMPLETED")
+          );
           setIsEnrolled(enrolled);
         }
       } catch (err) {
