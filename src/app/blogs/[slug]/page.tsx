@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
+import React from 'react';
 
 interface Blog {
   id: string;
@@ -18,7 +19,10 @@ interface Blog {
   tags: string[];
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
+export default function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  // Unwrap the params using React.use()
+  const { slug } = React.use(params);
+  
   const [blog, setBlog] = useState<Blog | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,7 +31,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
     const fetchBlog = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/blogs/${params.slug}`);
+        const res = await fetch(`/api/blogs/${slug}`);
 
         if (!res.ok) {
           if (res.status === 404) notFound();
@@ -45,7 +49,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
     };
 
     fetchBlog();
-  }, [params.slug]);
+  }, [slug]); // Use slug instead of params.slug
 
   const readingTime = blog
     ? Math.max(1, Math.ceil(blog.content.split(/\s+/).length / 200))

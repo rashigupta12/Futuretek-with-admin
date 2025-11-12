@@ -3,22 +3,22 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Calendar,
   Edit,
   Eye,
+  Plus,
+  Save,
   Trash2,
   User,
-  Save,
-  X,
-  Plus
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -233,7 +233,7 @@ export default function BlogDetailPage() {
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Blog Title"
-                  className="text-3xl font-bold border-blue-300 focus:border-blue-500 h-16 text-2xl"
+                  className="text-3xl font-bold border-blue-300 focus:border-blue-500 h-16 "
                 />
                 <Textarea
                   value={formData.excerpt}

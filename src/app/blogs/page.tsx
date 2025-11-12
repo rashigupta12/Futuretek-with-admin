@@ -1,8 +1,8 @@
 // app/blog/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface Blog {
   id: string;
@@ -116,7 +116,7 @@ export default function BlogPage() {
           </h1>
           <p className="text-xl text-blue-200 max-w-3xl mx-auto leading-relaxed">
             Discover cosmic insights, planetary influences, and astrological wisdom
-            to illuminate your path forward with FutureTek's expert guidance.
+            to illuminate your path forward with FutureTek&apos;s expert guidance.
           </p>
         </div>
       </header>

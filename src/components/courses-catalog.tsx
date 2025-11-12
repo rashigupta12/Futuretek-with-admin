@@ -13,10 +13,12 @@ import {
 import {
   AlertCircle,
   ArrowRight,
+  Award,
   BookOpen,
   CheckCircle,
   Clock,
   Loader2,
+<<<<<<< HEAD
   TrendingUp,
   Tag,
   Sparkles,
@@ -24,6 +26,11 @@ import {
   ChevronRight,
   Crown,
   Users,
+=======
+  Sparkles,
+  Tag,
+  TrendingUp
+>>>>>>> Rashi
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -126,7 +133,12 @@ export function CoursesCatalog() {
             fetch(`/api/user/enrollments`)
               .then(res => res.ok ? res.json() : null)
               .catch(() => null),
+<<<<<<< HEAD
             ...batchFetch(filteredCourses, 10)
+=======
+            // Fetch all course prices in parallel (limit to 10 concurrent requests)
+            ...batchFetch(rawCourses)
+>>>>>>> Rashi
           ]);
 
           if (enrollData?.enrollments && Array.isArray(enrollData.enrollments)) {
@@ -159,7 +171,8 @@ export function CoursesCatalog() {
       }
     }
 
-    function batchFetch(courses: Course[], concurrency: number) {
+    // Helper function to batch fetch with concurrency limit
+    function batchFetch(courses: Course[]) {
       return courses.map(course => 
         fetch(`/api/courses/${course.slug}`)
           .then(res => {

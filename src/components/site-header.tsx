@@ -106,6 +106,12 @@ export function SiteHeader() {
           >
             Career
           </Link>
+           <Link
+            href="/blogs"
+            className="hover:text-blue-600 transition-colors"
+          >
+            Blogs
+          </Link>
           <Link
             href="/contact"
             className="hover:text-blue-600 transition-colors"

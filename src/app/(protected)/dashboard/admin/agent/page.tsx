@@ -1,18 +1,17 @@
 /*eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { Plus, Search, Edit, Eye, Filter, MoreVertical, ToggleLeft, ToggleRight, Users, DollarSign, TrendingUp, Calendar } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Popover,
-  PopoverTrigger,
   PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, DollarSign, Edit, Eye, Filter, MoreVertical, Plus, Search, ToggleLeft, ToggleRight, TrendingUp, Users } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type Jyotishi = {
   id: string;

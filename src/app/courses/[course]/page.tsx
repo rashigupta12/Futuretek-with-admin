@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Award,
   BookOpen,
   CheckCircle2,
   Clock,
@@ -26,8 +27,7 @@ import {
   Shield,
   Star,
   Target,
-  Users,
-  Award,
+  Users
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -252,23 +252,8 @@ export default function CoursePage({ params }: { params: { course: string } }) {
   }
 
   /* ---------------------------------------------------------
-     Icon resolver
+     Render
      --------------------------------------------------------- */
-  // const getIcon = (iconName: string) => {
-  //   const map: Record<string, any> = {
-  //     Video: Clock,
-  //     Award: CheckCircle2,
-  //     Clock,
-  //     Calendar,
-  //     Users,
-  //     Star,
-  //     Target,
-  //     Zap,
-  //     Shield,
-  //   };
-  //   return map[iconName] ?? CheckCircle2;
-  // };
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Hero Section */}
