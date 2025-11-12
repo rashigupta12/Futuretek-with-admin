@@ -1,4 +1,4 @@
-/*eslint-disable @typescript-eslint/no-explicit-any*/
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,12 @@ import {
   Crown,
   Loader2,
   Sparkles,
-  Tag,
   TrendingUp,
-  Users,
+  Users
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Course {
   id: string;
@@ -46,15 +45,22 @@ interface Course {
   currentEnrollments: number;
 }
 
+interface AppliedCoupon {
+  id: string;
+  code: string;
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue: string;
+  discountAmount: number;
+  creatorType: "ADMIN" | "JYOTISHI";
+  creatorName?: string;
+  isPersonal: boolean;
+}
+
 interface CoursePriceData {
   originalPrice: string;
   finalPrice: string;
   discountAmount: string;
-  appliedCoupon?: {
-    code: string;
-    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
-    discountValue: string;
-  };
+  appliedCoupons?: AppliedCoupon[];
   hasAssignedCoupon: boolean;
 }
 
@@ -156,7 +162,7 @@ export function CoursesCatalog() {
                 finalPrice:
                   result.priceData.finalPrice || result.priceData.priceINR,
                 discountAmount: result.priceData.discountAmount || "0",
-                appliedCoupon: result.priceData.appliedCoupon,
+                appliedCoupons: result.priceData.appliedCoupons || undefined,
                 hasAssignedCoupon: result.priceData.hasAssignedCoupon || false,
               };
             }
@@ -208,7 +214,6 @@ export function CoursesCatalog() {
         (course) => course.status === "REGISTRATION_OPEN"
       ),
     },
-
     {
       type: "ONGOING",
       title: "In Progress",
@@ -242,7 +247,7 @@ export function CoursesCatalog() {
   ) => {
     const container = scrollRefs[category].current;
     if (container) {
-      const cardWidth = 320; // Width of card + gap
+      const cardWidth = 320;
       const scrollAmount = cardWidth;
       container.scrollBy({
         left: direction === "left" ? -scrollAmount : scrollAmount,
@@ -254,7 +259,11 @@ export function CoursesCatalog() {
   const getDisplayPrice = (course: Course) => {
     const priceData = coursePrices[course.id];
 
-    if (priceData && priceData.hasAssignedCoupon) {
+    if (
+      priceData &&
+      priceData.appliedCoupons &&
+      priceData.appliedCoupons.length > 0
+    ) {
       const originalPrice = parseFloat(priceData.originalPrice);
       const finalPrice = parseFloat(priceData.finalPrice);
       const discountAmount = parseFloat(priceData.discountAmount);
@@ -264,7 +273,8 @@ export function CoursesCatalog() {
         originalPrice: originalPrice,
         hasDiscount: finalPrice < originalPrice,
         discountAmount: discountAmount,
-        appliedCoupon: priceData.appliedCoupon,
+        appliedCoupons: priceData.appliedCoupons,
+        hasAssignedCoupon: priceData.hasAssignedCoupon,
       };
     }
 
@@ -273,9 +283,24 @@ export function CoursesCatalog() {
       originalPrice: course.priceINR,
       hasDiscount: false,
       discountAmount: 0,
-      appliedCoupon: undefined,
+      appliedCoupons: undefined,
+      hasAssignedCoupon: false,
     };
   };
+
+  // const getCouponBadgeColor = (creatorType: "ADMIN" | "JYOTISHI") => {
+  //   return creatorType === "ADMIN"
+  //     ? "from-purple-500 to-purple-600"
+  //     : "from-green-500 to-green-600";
+  // };
+
+  // const getCouponIcon = (creatorType: "ADMIN" | "JYOTISHI") => {
+  //   return creatorType === "ADMIN" ? (
+  //     <Crown className="h-3 w-3" />
+  //   ) : (
+  //     <Users className="h-3 w-3" />
+  //   );
+  // };
 
   if (status === "loading" || loading) {
     return (
@@ -459,12 +484,6 @@ export function CoursesCatalog() {
                             : ""
                         }`}
                       >
-                        {/* Status Badge */}
-                        {/* <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold text-white shadow-sm ${category.badgeColor} z-10`}>
-                          {category.type === 'REGISTRATION_OPEN' ? 'Enrolling' : 
-                           category.type === 'UPCOMING' ? 'Coming Soon' : 'In Progress'}
-                        </div> */}
-
                         <CardHeader className="pb-2 pt-4">
                           <CardTitle className="line-clamp-2 text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight">
                             {course.title}
@@ -478,16 +497,42 @@ export function CoursesCatalog() {
 
                           {/* Price Section */}
                           <div className="space-y-2 bg-gradient-to-br from-blue-50/50 to-amber-50/30 rounded-lg p-3 border border-blue-100">
-                            {userId &&
-                              priceInfo.hasDiscount &&
-                              priceInfo.appliedCoupon && (
-                                <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded px-2 py-1.5 shadow-sm">
-                                  <Tag className="h-3 w-3 text-white" />
-                                  <span className="text-xs font-semibold text-white">
-                                    Discount Applied!
-                                  </span>
-                                </div>
-                              )}
+                            {userId && priceInfo.hasDiscount && priceInfo.appliedCoupons && (
+  <div className="space-y-2">
+    {(() => {
+      // Remove duplicates
+      const uniqueCoupons = priceInfo.appliedCoupons.filter(
+        (coupon, index, self) =>
+          index ===
+          self.findIndex(
+            (c) => c.id === coupon.id && c.creatorType === coupon.creatorType
+          )
+      );
+
+      // Calculate total discount value (if you want to combine them)
+      const totalDiscountValue = uniqueCoupons.reduce((acc, coupon) => {
+        return acc + Number(coupon.discountValue || 0);
+      }, 0);
+
+      // Assuming all are same type (₹ or %), or you can handle mixed logic if needed
+      const discountType =
+        uniqueCoupons[0]?.discountType === "PERCENTAGE" ? "%" : "₹";
+
+      return (
+        <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded px-2 py-1.5 shadow-sm">
+          <span className="text-xs font-semibold text-white">
+            Discount Applied
+          </span>
+          <span className="text-xs text-white/90 ml-auto">
+            {totalDiscountValue}
+            {discountType}
+          </span>
+        </div>
+      );
+    })()}
+  </div>
+)}
+
 
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -519,6 +564,13 @@ export function CoursesCatalog() {
                                       {priceInfo.discountAmount.toLocaleString(
                                         "en-IN"
                                       )}
+                                      {priceInfo.appliedCoupons &&
+                                        priceInfo.appliedCoupons.length > 1 && (
+                                          <span className="text-xs ml-1">
+                                            ({priceInfo.appliedCoupons.length}{" "}
+                                            discounts)
+                                          </span>
+                                        )}
                                     </div>
                                   </div>
                                 ) : (

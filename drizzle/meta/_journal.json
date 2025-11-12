@@ -43,6 +43,13 @@
       "when": 1762852179737,
       "tag": "0005_thin_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762946580650,
+      "tag": "0006_worried_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

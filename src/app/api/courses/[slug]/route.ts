@@ -1,26 +1,30 @@
+/*eslint-disable @typescript-eslint/no-explicit-any*/
 // src/app/api/courses/[slug]/route.ts
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { 
-  CourseContentTable, 
-  CourseFeaturesTable, 
-  CoursesTable, 
-  CourseTopicsTable, 
+import {
+  CourseContentTable,
+  CourseFeaturesTable,
+  CoursesTable,
+  CourseTopicsTable,
   CourseWhyLearnTable,
   UserCourseCouponsTable,
   CouponsTable,
   CouponTypesTable,
-  DiscountType
+  CouponCoursesTable,
+  UsersTable,
 } from "@/db/schema";
-import { eq, and, gt, lt } from "drizzle-orm";
+import { eq, and, gt, lt, or, isNull, notExists } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ slug: string }> } 
+  context: { params: Promise<{ slug: string }> }
 ) {
-  const params = await context.params;  
+  const params = await context.params;
+
   try {
+    // Fetch base course
     const [course] = await db
       .select()
       .from(CoursesTable)
@@ -31,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    // Fetch related data
+    // Fetch related course data
     const features = await db
       .select()
       .from(CourseFeaturesTable)
@@ -52,21 +56,24 @@ export async function GET(
       .from(CourseTopicsTable)
       .where(eq(CourseTopicsTable.courseId, course.id));
 
-    // Get user session to check for assigned coupons
+    // Handle coupon logic
     const session = await auth();
     let finalPrice = parseFloat(course.priceINR);
-    let discountAmount = 0;
-    let appliedCoupon = null;
+    let totalDiscountAmount = 0;
+    const appliedCoupons: any[] = [];
     let hasAssignedCoupon = false;
 
-    // Check if user has an assigned coupon for this course
     if (session?.user?.id) {
       const userId = session.user.id;
-      
-      const userCouponAssignment = await db
+      let currentPrice = finalPrice;
+
+      // 1️⃣ Personal coupons (assigned to this user for this course)
+      const personalCoupons = await db
         .select({
           coupon: CouponsTable,
-          couponType: CouponTypesTable, // Join with coupon types to get maxDiscountLimit
+          couponType: CouponTypesTable,
+          creator: UsersTable,
+          assignment: UserCourseCouponsTable,
         })
         .from(UserCourseCouponsTable)
         .innerJoin(
@@ -77,39 +84,168 @@ export async function GET(
           CouponTypesTable,
           eq(CouponsTable.couponTypeId, CouponTypesTable.id)
         )
+        .leftJoin(
+          UsersTable,
+          eq(CouponsTable.createdByJyotishiId, UsersTable.id)
+        )
         .where(
           and(
             eq(UserCourseCouponsTable.userId, userId),
             eq(UserCourseCouponsTable.courseId, course.id),
             eq(CouponsTable.isActive, true),
             lt(CouponsTable.validFrom, new Date()),
-            gt(CouponsTable.validUntil, new Date())
+            gt(CouponsTable.validUntil, new Date()),
+            or(
+              isNull(CouponsTable.maxUsageCount),
+              lt(CouponsTable.currentUsageCount, CouponsTable.maxUsageCount)
+            )
+          )
+        );
+
+      console.log(
+        "Personal coupons for user",
+        userId,
+        "course",
+        course.id,
+        ":",
+        personalCoupons.length
+      );
+
+      // 2️⃣ General coupons (available to everyone, not personally assigned)
+      const generalCoupons = await db
+        .select({
+          coupon: CouponsTable,
+          couponType: CouponTypesTable,
+          creator: UsersTable,
+        })
+        .from(CouponsTable)
+        .innerJoin(
+          CouponTypesTable,
+          eq(CouponsTable.couponTypeId, CouponTypesTable.id)
+        )
+        .leftJoin(
+          UsersTable,
+          eq(CouponsTable.createdByJyotishiId, UsersTable.id)
+        )
+        .leftJoin(
+          CouponCoursesTable,
+          eq(CouponCoursesTable.couponId, CouponsTable.id)
+        )
+        .where(
+          and(
+            eq(CouponsTable.isActive, true),
+            lt(CouponsTable.validFrom, new Date()),
+            gt(CouponsTable.validUntil, new Date()),
+            or(
+              isNull(CouponsTable.maxUsageCount),
+              lt(CouponsTable.currentUsageCount, CouponsTable.maxUsageCount)
+            ),
+            notExists(
+              db
+                .select()
+                .from(UserCourseCouponsTable)
+                .where(eq(UserCourseCouponsTable.couponId, CouponsTable.id))
+            ),
+            or(
+              isNull(CouponCoursesTable.id),
+              eq(CouponCoursesTable.courseId, course.id)
+            )
           )
         )
-        .limit(1);
+        .groupBy(CouponsTable.id, CouponTypesTable.id, UsersTable.id);
 
-      if (userCouponAssignment.length > 0) {
-        const { coupon } = userCouponAssignment[0];
-        appliedCoupon = coupon;
-        hasAssignedCoupon = true;
+      console.log(
+        "General coupons for course",
+        course.id,
+        ":",
+        generalCoupons.length
+      );
 
-        // Calculate discount
-        if (coupon.discountType === DiscountType.enumValues[0]) { // PERCENTAGE
-          discountAmount = (finalPrice * parseFloat(coupon.discountValue)) / 100;
-          console.log(discountAmount)
-         
-          
-        } else { // FIXED_AMOUNT
-          discountAmount = parseFloat(coupon.discountValue);
-         
+      // ✅ Fix type issue here by normalizing structures
+      type CouponData = {
+        coupon: typeof CouponsTable.$inferSelect;
+        couponType: typeof CouponTypesTable.$inferSelect;
+        creator: typeof UsersTable.$inferSelect | null;
+        assignment?: typeof UserCourseCouponsTable.$inferSelect | null;
+      };
+
+      const allApplicableCoupons: CouponData[] = [
+        ...personalCoupons,
+        ...generalCoupons.map((gc) => ({ ...gc, assignment: null })),
+      ];
+
+      // Remove duplicates (same coupon from multiple sources)
+      const uniqueCoupons = allApplicableCoupons.filter(
+        (coupon, index, self) =>
+          index === self.findIndex((c) => c.coupon.id === coupon.coupon.id)
+      );
+
+      console.log("Total unique applicable coupons:", uniqueCoupons.length);
+
+      // Separate by discount type
+      const fixedAmountCoupons = uniqueCoupons.filter(
+        (c) => c.coupon.discountType === "FIXED_AMOUNT"
+      );
+      const percentageCoupons = uniqueCoupons.filter(
+        (c) => c.coupon.discountType === "PERCENTAGE"
+      );
+
+      // Apply fixed-amount coupons first
+      for (const couponData of fixedAmountCoupons) {
+        const { coupon, creator, assignment } = couponData;
+        const discountAmount = Math.min(
+          parseFloat(coupon.discountValue),
+          currentPrice
+        );
+
+        if (discountAmount > 0) {
+          currentPrice -= discountAmount;
+          totalDiscountAmount += discountAmount;
+
+          appliedCoupons.push({
+            id: coupon.id,
+            code: coupon.code,
+            discountType: coupon.discountType,
+            discountValue: coupon.discountValue,
+            discountAmount,
+            creatorType: creator?.role === "ADMIN" ? "ADMIN" : "JYOTISHI",
+            creatorName: creator?.name,
+            isPersonal: !!assignment,
+          });
+
+          if (assignment) hasAssignedCoupon = true;
         }
-
-        finalPrice = finalPrice - discountAmount
       }
 
-      console.log(finalPrice)
+      // Apply percentage coupons
+      for (const couponData of percentageCoupons) {
+        const { coupon, creator, assignment } = couponData;
+        const discountAmount =
+          (currentPrice * parseFloat(coupon.discountValue)) / 100;
+
+        if (discountAmount > 0) {
+          currentPrice -= discountAmount;
+          totalDiscountAmount += discountAmount;
+
+          appliedCoupons.push({
+            id: coupon.id,
+            code: coupon.code,
+            discountType: coupon.discountType,
+            discountValue: coupon.discountValue,
+            discountAmount,
+            creatorType: creator?.role === "ADMIN" ? "ADMIN" : "JYOTISHI",
+            creatorName: creator?.name,
+            isPersonal: !!assignment,
+          });
+
+          if (assignment) hasAssignedCoupon = true;
+        }
+      }
+
+      finalPrice = Math.max(0, currentPrice);
     }
 
+    // ✅ Return response
     return NextResponse.json(
       {
         course: {
@@ -121,15 +257,10 @@ export async function GET(
           })),
           content: content.map((c) => c.content),
           topics: topics.map((t) => t.topic),
-          // Add pricing information with discount
           originalPrice: course.priceINR,
           finalPrice: finalPrice.toFixed(2),
-          discountAmount: discountAmount.toFixed(2),
-          appliedCoupon: appliedCoupon ? {
-            code: appliedCoupon.code,
-            discountType: appliedCoupon.discountType,
-            discountValue: appliedCoupon.discountValue,
-          } : null,
+          discountAmount: totalDiscountAmount.toFixed(2),
+          appliedCoupons: appliedCoupons.length > 0 ? appliedCoupons : null,
           hasAssignedCoupon,
         },
       },

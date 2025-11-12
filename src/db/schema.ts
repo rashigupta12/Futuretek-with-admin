@@ -262,7 +262,36 @@ export const CourseTopicsTable = pgTable(
     index("course_topics_topic_idx").on(table.topic),
   ]
 );
-
+// Add this to your schema
+export const CourseSessionsTable = pgTable(
+  "course_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey().notNull(),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => CoursesTable.id, { onDelete: "cascade" }),
+    sessionNumber: integer("session_number").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    sessionDate: timestamp("session_date", { mode: "date" }).notNull(),
+    sessionTime: text("session_time").notNull(), // "14:00" format
+    duration: integer("duration").default(60).notNull(), // in minutes
+    meetingLink: text("meeting_link"),
+    meetingPasscode: text("meeting_passcode"),
+    recordingUrl: text("recording_url"), // For later access
+    isCompleted: boolean("is_completed").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("course_sessions_course_id_idx").on(table.courseId),
+    index("course_sessions_date_idx").on(table.sessionDate),
+    uniqueIndex("course_sessions_course_session_unique").on(table.courseId, table.sessionNumber),
+  ]
+);
 // =====================
 // COUPON TYPE SYSTEM (NEW)
 // =====================
@@ -304,20 +333,20 @@ export const CouponTypesTable = pgTable(
  * Code format: COUP[JyotishiCode][TypeCode][DiscountValue]
  * Example: COUPJD00110500 = Jyotishi JD001, Type 10, ₹500 discount
  */
+// Update CouponsTable to support both Admin and Jyotishi creators
 export const CouponsTable = pgTable(
   "coupons",
   {
     id: uuid("id").defaultRandom().primaryKey().notNull(),
-    code: text("code").notNull(), // Auto-generated: COUPJD00110500
+    code: text("code").notNull(),
     couponTypeId: uuid("coupon_type_id")
       .notNull()
       .references(() => CouponTypesTable.id, { onDelete: "cascade" }),
-    createdByJyotishiId: uuid("created_by_jyotishi_id")
-      .notNull()
-      .references(() => UsersTable.id, { onDelete: "cascade" }),
-    discountType: DiscountType("discount_type").notNull(), // Inherited from type
-    discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(), // Set by Jyotishi
-    maxUsageCount: integer("max_usage_count"), // Optional usage limit
+    // CHANGE: Make this optional and allow admin users
+    createdByJyotishiId: uuid("created_by_jyotishi_id").references(() => UsersTable.id, { onDelete: "cascade" }),
+    discountType: DiscountType("discount_type").notNull(),
+    discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+    maxUsageCount: integer("max_usage_count"),
     currentUsageCount: integer("current_usage_count").default(0).notNull(),
     validFrom: timestamp("valid_from", { mode: "date" }).notNull(),
     validUntil: timestamp("valid_until", { mode: "date" }).notNull(),
@@ -722,6 +751,7 @@ export const couponsRelations = relations(CouponsTable, ({ one, many }) => ({
   commissions: many(CommissionsTable),
 }));
 
+// Update courses relations
 export const coursesRelations = relations(CoursesTable, ({ many }) => ({
   features: many(CourseFeaturesTable),
   whyLearnPoints: many(CourseWhyLearnTable),
@@ -730,6 +760,15 @@ export const coursesRelations = relations(CoursesTable, ({ many }) => ({
   enrollments: many(EnrollmentsTable),
   couponCourses: many(CouponCoursesTable),
   commissions: many(CommissionsTable),
+  sessions: many(CourseSessionsTable), // Add this
+}));
+
+// Add sessions relations
+export const courseSessionsRelations = relations(CourseSessionsTable, ({ one }) => ({
+  course: one(CoursesTable, {
+    fields: [CourseSessionsTable.courseId],
+    references: [CoursesTable.id],
+  }),
 }));
 
 export const enrollmentsRelations = relations(

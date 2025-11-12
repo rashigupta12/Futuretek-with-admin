@@ -137,8 +137,14 @@ export default function AdminLayout({
           icon: List,
         },
         {
-          title: "Add Coupon",
+          title: "Add Coupon Type",
           href: "/dashboard/admin/coupons-types/add",
+          icon: Plus,
+        },
+
+         {
+          title: "Add Coupon",
+          href: "/dashboard/admin/coupons/add",
           icon: Plus,
         },
       ],
