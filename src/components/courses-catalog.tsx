@@ -126,7 +126,6 @@ export function CoursesCatalog() {
             fetch(`/api/user/enrollments`)
               .then(res => res.ok ? res.json() : null)
               .catch(() => null),
-            // Fetch all course prices in parallel (limit to 10 concurrent requests)
             ...batchFetch(rawCourses)
           ]);
 
@@ -160,7 +159,6 @@ export function CoursesCatalog() {
       }
     }
 
-    // Helper function to batch fetch with concurrency limit
     function batchFetch(courses: Course[]) {
       return courses.map(course => 
         fetch(`/api/courses/${course.slug}`)
@@ -185,7 +183,6 @@ export function CoursesCatalog() {
     }
   }, [userId, status]);
 
-  // Check if user is admin or agent
   const isAdminOrAgent = userRole === 'ADMIN' || userRole === 'AGENT';
 
   const courseCategories: CourseCategory[] = [
@@ -228,7 +225,8 @@ export function CoursesCatalog() {
   const scroll = (direction: 'left' | 'right', category: keyof typeof scrollRefs) => {
     const container = scrollRefs[category].current;
     if (container) {
-      const scrollAmount = 320;
+      const cardWidth = 320; // Width of card + gap
+      const scrollAmount = cardWidth;
       container.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
@@ -349,7 +347,7 @@ export function CoursesCatalog() {
         {courseCategories.map((category) => {
           if (category.courses.length === 0) return null;
 
-          const showScrollControls = category.courses.length > 4;
+          const showScrollControls = category.courses.length > 3;
           const scrollRef = scrollRefs[category.type];
 
           return (
@@ -367,46 +365,51 @@ export function CoursesCatalog() {
                 </div>
 
                 {showScrollControls && (
-                  <div className="flex gap-2">
+                  <div className="hidden md:flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => scroll('left', category.type)}
-                      className="h-8 w-8 border-blue-200 hover:bg-blue-50 text-blue-600"
+                      className="h-9 w-9 p-0 border-blue-200 hover:bg-blue-50 text-blue-600"
                     >
-                      <ChevronLeft className="h-3 w-3" />
+                      <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => scroll('right', category.type)}
-                      className="h-8 w-8 border-blue-200 hover:bg-blue-50 text-blue-600"
+                      className="h-9 w-9 p-0 border-blue-200 hover:bg-blue-50 text-blue-600"
                     >
-                      <ChevronRight className="h-3 w-3" />
+                      <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
               </div>
 
               {/* Courses Container */}
-              <div className="relative">
+              <div className="relative -mx-4 px-4 md:mx-0 md:px-0">
                 <div
                   ref={scrollRef}
-                  className={`gap-4 ${
+                  className={
                     showScrollControls 
-                      ? 'flex overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory' 
-                      : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                  }`}
+                      ? 'flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scroll-smooth hide-scrollbar' 
+                      : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+                  }
                   style={
                     showScrollControls 
                       ? { 
-                          display: 'flex',
                           scrollbarWidth: 'none',
-                          msOverflowStyle: 'none'
+                          msOverflowStyle: 'none',
+                          WebkitOverflowScrolling: 'touch'
                         } 
                       : {}
                   }
                 >
+                  <style jsx>{`
+                    .hide-scrollbar::-webkit-scrollbar {
+                      display: none;
+                    }
+                  `}</style>
                   {category.courses.map((course) => {
                     const isEnrolled = userId ? enrolledCourseIds.has(course.id) : false;
                     const priceInfo = getDisplayPrice(course);
@@ -415,23 +418,23 @@ export function CoursesCatalog() {
                       <Card
                         key={course.id}
                         className={`flex flex-col group hover:shadow-lg transition-all duration-300 border border-blue-100 bg-white overflow-hidden relative hover:-translate-y-1 shadow-sm ${
-                          showScrollControls ? 'min-w-[280px] snap-start flex-shrink-0' : ''
+                          showScrollControls ? 'w-[300px] flex-shrink-0 snap-start' : ''
                         }`}
                       >
                         {/* Status Badge */}
-                        <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold text-white shadow-sm ${category.badgeColor}`}>
+                        <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold text-white shadow-sm ${category.badgeColor} z-10`}>
                           {category.type === 'REGISTRATION_OPEN' ? 'Enrolling' : 
                            category.type === 'UPCOMING' ? 'Coming Soon' : 'In Progress'}
                         </div>
 
                         <CardHeader className="pb-4 pt-12">
-                          <CardTitle className="line-clamp-2 text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight">
+                          <CardTitle className="line-clamp-2 text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight min-h-[48px]">
                             {course.title}
                           </CardTitle>
                         </CardHeader>
 
                         <CardContent className="flex-1 pb-3">
-                          <CardDescription className="line-clamp-2 text-sm text-gray-600 leading-relaxed mb-4">
+                          <CardDescription className="line-clamp-3 text-sm text-gray-600 leading-relaxed mb-4 min-h-[60px]">
                             {getPlainText(course.description)}
                           </CardDescription>
 
@@ -448,7 +451,7 @@ export function CoursesCatalog() {
 
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <Users className="h-3 w-3" />
+                                <Users className="h-3 w-3 flex-shrink-0" />
                                 <span>{course.currentEnrollments} enrolled</span>
                               </div>
                               <div className="text-right">
