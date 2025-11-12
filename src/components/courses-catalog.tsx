@@ -195,15 +195,7 @@ export function CoursesCatalog() {
       badgeColor: 'bg-gradient-to-r from-blue-500 to-blue-600',
       courses: courses.filter(course => course.status === 'REGISTRATION_OPEN')
     },
-    {
-      type: 'UPCOMING',
-      title: 'Coming Soon',
-      description: 'Courses starting soon',
-      icon: <Clock className="h-4 w-4" />,
-      gradient: 'from-amber-600 to-amber-800',
-      badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600',
-      courses: courses.filter(course => course.status === 'UPCOMING')
-    },
+   
     {
       type: 'ONGOING',
       title: 'In Progress',
@@ -212,7 +204,16 @@ export function CoursesCatalog() {
       gradient: 'from-blue-700 to-indigo-800',
       badgeColor: 'bg-gradient-to-r from-blue-600 to-indigo-600',
       courses: courses.filter(course => course.status === 'ONGOING')
-    }
+    },
+     {
+      type: 'UPCOMING',
+      title: 'Coming Soon',
+      description: 'Courses starting soon',
+      icon: <Clock className="h-4 w-4" />,
+      gradient: 'from-amber-600 to-amber-800',
+      badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600',
+      courses: courses.filter(course => course.status === 'UPCOMING')
+    },
   ];
 
   const getPlainText = (html: string) => {
@@ -422,13 +423,13 @@ export function CoursesCatalog() {
                         }`}
                       >
                         {/* Status Badge */}
-                        <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold text-white shadow-sm ${category.badgeColor} z-10`}>
+                        {/* <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold text-white shadow-sm ${category.badgeColor} z-10`}>
                           {category.type === 'REGISTRATION_OPEN' ? 'Enrolling' : 
                            category.type === 'UPCOMING' ? 'Coming Soon' : 'In Progress'}
-                        </div>
+                        </div> */}
 
-                        <CardHeader className="pb-4 pt-12">
-                          <CardTitle className="line-clamp-2 text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight min-h-[48px]">
+                        <CardHeader className="pb-2 pt-4">
+                          <CardTitle className="line-clamp-2 text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight">
                             {course.title}
                           </CardTitle>
                         </CardHeader>
