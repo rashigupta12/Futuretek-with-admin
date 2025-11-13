@@ -16,8 +16,8 @@ import { useCurrentUser } from "@/hooks/auth";
 export default function AddBlogPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const user = useCurrentUser()
-  console.log(user)
+  const user = useCurrentUser();
+  console.log(user);
 
   // Core fields
   const [slug, setSlug] = useState("");
@@ -25,10 +25,10 @@ export default function AddBlogPage() {
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
- 
+
   const [isPublished, setIsPublished] = useState(false);
   const [tags, setTags] = useState<string[]>([""]);
-  const authorId = user?.id
+  const authorId = user?.id;
 
   const handleAddTag = () => {
     setTags([...tags, ""]);
@@ -46,6 +46,7 @@ export default function AddBlogPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     setLoading(true);
 
     const payload = {
@@ -96,7 +97,9 @@ export default function AddBlogPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Blog</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Add New Blog
+              </h1>
               <p className="text-gray-600">
                 Create a new blog post and publish it to your audience.
               </p>
@@ -108,16 +111,25 @@ export default function AddBlogPage() {
           {/* Basic Info */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
-              <CardTitle className="text-xl text-gray-900">Basic Information</CardTitle>
+              <CardTitle className="text-xl text-gray-900">
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm text-gray-700">Title *</Label>
+                  <Label htmlFor="title" className="text-sm text-gray-700">
+                    Title *
+                  </Label>
                   <Input
                     id="title"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const capitalized =
+                        value.charAt(0).toUpperCase() + value.slice(1);
+                      setTitle(capitalized);
+                    }}
                     placeholder="Understanding Vedic Astrology"
                     required
                     className="border-gray-300 focus:border-blue-500"
@@ -125,7 +137,9 @@ export default function AddBlogPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="slug" className="text-sm text-gray-700">Slug *</Label>
+                  <Label htmlFor="slug" className="text-sm text-gray-700">
+                    Slug *
+                  </Label>
                   <Input
                     id="slug"
                     value={slug}
@@ -138,7 +152,9 @@ export default function AddBlogPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="excerpt" className="text-sm text-gray-700">Excerpt</Label>
+                <Label htmlFor="excerpt" className="text-sm text-gray-700">
+                  Excerpt
+                </Label>
                 <Textarea
                   id="excerpt"
                   rows={3}
@@ -153,7 +169,9 @@ export default function AddBlogPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="thumbnailUrl" className="text-sm text-gray-700">Thumbnail URL</Label>
+                <Label htmlFor="thumbnailUrl" className="text-sm text-gray-700">
+                  Thumbnail URL
+                </Label>
                 <Input
                   id="thumbnailUrl"
                   value={thumbnailUrl}
@@ -180,7 +198,8 @@ export default function AddBlogPage() {
                 className="font-mono text-sm border-gray-300 focus:border-blue-500"
               />
               <p className="text-xs text-gray-500 mt-2">
-                HTML content is supported. Use proper formatting for better readability.
+                HTML content is supported. Use proper formatting for better
+                readability.
               </p>
             </CardContent>
           </Card>
@@ -227,12 +246,16 @@ export default function AddBlogPage() {
           {/* Publishing Options */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
-              <CardTitle className="text-xl text-gray-900">Publishing</CardTitle>
+              <CardTitle className="text-xl text-gray-900">
+                Publishing
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="space-y-0.5">
-                  <Label htmlFor="isPublished" className="text-gray-700">Publish immediately</Label>
+                  <Label htmlFor="isPublished" className="text-gray-700">
+                    Publish immediately
+                  </Label>
                   <p className="text-sm text-gray-500">
                     Make this blog post visible to the public
                   </p>
@@ -248,16 +271,16 @@ export default function AddBlogPage() {
 
           {/* Submit */}
           <div className="flex gap-3 pt-6">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8"
             >
               {loading ? "Creating…" : "Create Blog"}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               asChild
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >

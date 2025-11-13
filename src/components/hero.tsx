@@ -111,7 +111,7 @@ const HeroSection = () => {
               </motion.button>
             </Link>
 
-            <Link href="/login">
+            <Link href="/auth/login">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -152,7 +152,7 @@ const HeroSection = () => {
       </div>
 
       {/* Scroll Indicator */}
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1, delay: 1 }}
@@ -172,7 +172,7 @@ const HeroSection = () => {
             />
           </div>
         </motion.div>
-      </motion.div>
+      </motion.div> */}
     </section>
   );
 };

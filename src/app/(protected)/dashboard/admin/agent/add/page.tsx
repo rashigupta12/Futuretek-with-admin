@@ -25,9 +25,41 @@ export default function AddJyotishiPage() {
   const [bankAccountHolderName, setBankAccountHolderName] = useState("");
   const [panNumber, setPanNumber] = useState("");
   const [bio, setBio] = useState("");
+  const [mobileError, setMobileError] = useState("");
+
+  const validateMobile = (phone: string) => {
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
+
+    if (!phone) {
+      return ""; // Optional field
+    }
+
+    // Indian mobile number patterns - ensure exactly 10 digits after optional prefix
+    const indianPattern = /^(\+91|0)?[6-9]\d{9}$/;
+
+    // Check if the cleaned number has exactly 10 digits (excluding optional prefix)
+    const digitsOnly = cleanPhone.replace(/^(\+91|0)/, "");
+
+    if (digitsOnly.length !== 10) {
+      return "Mobile number must be exactly 10 digits";
+    }
+
+    if (!indianPattern.test(cleanPhone)) {
+      return "Please enter a valid 10 digit mobile number starting with 6-9";
+    }
+
+    return "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const mobileValidationError = validateMobile(mobile);
+    if (mobileValidationError) {
+      setMobileError(mobileValidationError);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
     // Validation
@@ -88,9 +120,12 @@ export default function AddJyotishiPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Jyotishi</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Add New Jyotishi
+              </h1>
               <p className="text-gray-600">
-                Create a new astrologer account with commission and banking details.
+                Create a new astrologer account with commission and banking
+                details.
               </p>
             </div>
           </div>
@@ -100,16 +135,25 @@ export default function AddJyotishiPage() {
           {/* ── Personal Info ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
-              <CardTitle className="text-xl text-gray-900">Personal Information</CardTitle>
+              <CardTitle className="text-xl text-gray-900">
+                Personal Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm text-gray-700">Full Name *</Label>
+                <Label htmlFor="name" className="text-sm text-gray-700">
+                  Full Name *
+                </Label>
                 <Input
                   id="name"
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const capitalized =
+                      value.charAt(0).toUpperCase() + value.slice(1);
+                    setName(capitalized);
+                  }}
                   placeholder="Pandit Rajesh Sharma"
                   required
                   className="border-gray-300 focus:border-blue-500"
@@ -117,7 +161,9 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm text-gray-700">Email Address *</Label>
+                <Label htmlFor="email" className="text-sm text-gray-700">
+                  Email Address *
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -130,7 +176,9 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm text-gray-700">Password *</Label>
+                <Label htmlFor="password" className="text-sm text-gray-700">
+                  Password *
+                </Label>
                 <Input
                   id="password"
                   type="password"
@@ -144,19 +192,41 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="mobile" className="text-sm text-gray-700">Mobile Number</Label>
+                <Label htmlFor="mobile" className="text-sm text-gray-700">
+                  Mobile Number
+                </Label>
                 <Input
                   id="mobile"
                   type="tel"
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 10);
+                    setMobile(value);
+                    const error = validateMobile(value);
+                    setMobileError(error);
+                  }}
+                  onBlur={(e) => {
+                    const error = validateMobile(e.target.value);
+                    setMobileError(error);
+                  }}
                   placeholder="+91 98765 43210"
-                  className="border-gray-300 focus:border-blue-500"
+                  maxLength={15} // Add this line
+                  className={`border-gray-300 focus:border-blue-500 ${
+                    mobileError ? "border-red-500 focus:border-red-500" : ""
+                  }`}
                 />
+                {mobileError && (
+                  <p className="text-red-500 text-sm mt-1">{mobileError}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="commissionRate" className="text-sm text-gray-700">Commission Rate (%) *</Label>
+                <Label
+                  htmlFor="commissionRate"
+                  className="text-sm text-gray-700"
+                >
+                  Commission Rate (%) *
+                </Label>
                 <Input
                   id="commissionRate"
                   type="number"
@@ -172,7 +242,9 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="bio" className="text-sm text-gray-700">Bio / Introduction</Label>
+                <Label htmlFor="bio" className="text-sm text-gray-700">
+                  Bio / Introduction
+                </Label>
                 <Textarea
                   id="bio"
                   rows={3}
@@ -188,11 +260,18 @@ export default function AddJyotishiPage() {
           {/* ── Banking Details ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50 border-b">
-              <CardTitle className="text-xl text-gray-900">Banking & Tax Details</CardTitle>
+              <CardTitle className="text-xl text-gray-900">
+                Banking & Tax Details
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="bankAccountNumber" className="text-sm text-gray-700">Bank Account Number</Label>
+                <Label
+                  htmlFor="bankAccountNumber"
+                  className="text-sm text-gray-700"
+                >
+                  Bank Account Number
+                </Label>
                 <Input
                   id="bankAccountNumber"
                   type="text"
@@ -204,7 +283,9 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bankIfscCode" className="text-sm text-gray-700">IFSC Code</Label>
+                <Label htmlFor="bankIfscCode" className="text-sm text-gray-700">
+                  IFSC Code
+                </Label>
                 <Input
                   id="bankIfscCode"
                   type="text"
@@ -216,7 +297,12 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bankAccountHolderName" className="text-sm text-gray-700">Account Holder Name</Label>
+                <Label
+                  htmlFor="bankAccountHolderName"
+                  className="text-sm text-gray-700"
+                >
+                  Account Holder Name
+                </Label>
                 <Input
                   id="bankAccountHolderName"
                   type="text"
@@ -228,7 +314,9 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="panNumber" className="text-sm text-gray-700">PAN Number</Label>
+                <Label htmlFor="panNumber" className="text-sm text-gray-700">
+                  PAN Number
+                </Label>
                 <Input
                   id="panNumber"
                   type="text"
@@ -243,16 +331,16 @@ export default function AddJyotishiPage() {
 
           {/* ── Submit Buttons ── */}
           <div className="flex gap-3 pt-6">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8"
             >
               {loading ? "Creating…" : "Create Jyotishi"}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               asChild
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >

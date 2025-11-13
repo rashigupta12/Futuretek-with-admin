@@ -5,9 +5,8 @@ import {
   CoursesTable, 
   PaymentsTable, 
   UsersTable,
-  UserCourseCouponsTable 
 } from "@/db/schema";
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq} from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { auth } from '@/auth';

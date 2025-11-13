@@ -29,19 +29,26 @@ export const TextInput = ({
   placeholder,
   required,
   type = "text",
+  onCapitalize = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   required?: boolean;
   type?: string;
+    onCapitalize?: boolean; 
 }) => (
   <Input
     type={type}
     required={required}
     value={value}
-    onChange={(e) => onChange(e.target.value)}
-    placeholder={placeholder}
+ onChange={(e) => {
+      let newValue = e.target.value;
+      if (onCapitalize && newValue.length > 0) {
+        newValue = newValue.charAt(0).toUpperCase() + newValue.slice(1);
+      }
+      onChange(newValue);
+    }}    placeholder={placeholder}
   />
 );
 
@@ -49,13 +56,16 @@ export const DateInput = ({
   value,
   onChange,
   label,
+  error,
 }: {
   value: string;
   onChange: (v: string) => void;
   label: string;
+  error?:string;
 }) => (
   <Field label={label}>
-    <Input type="date" value={value} onChange={(e) => onChange(e.target.value)} />
+    <Input type="date" value={value} onChange={(e) => onChange(e.target.value)}
+    className={error ? "border-red-500" : ""}  />
   </Field>
 );
 
