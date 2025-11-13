@@ -60,6 +60,9 @@ export async function GET(
     const session = await auth();
     let finalPrice = parseFloat(course.priceINR);
     let totalDiscountAmount = 0;
+    let adminDiscountAmount = 0;
+    let jyotishiDiscountAmount = 0;
+    let priceAfterAdminDiscount = finalPrice;
     const appliedCoupons: any[] = [];
     let hasAssignedCoupon = false;
 
@@ -182,25 +185,35 @@ export async function GET(
 
       console.log("Total unique applicable coupons:", uniqueCoupons.length);
 
-      // Separate by discount type
-      const fixedAmountCoupons = uniqueCoupons.filter(
-        (c) => c.coupon.discountType === "FIXED_AMOUNT"
+      // Separate coupons by creator type
+      const adminCoupons = uniqueCoupons.filter(
+        (c) => c.creator?.role === "ADMIN" || c.coupon.createdByJyotishiId === null
       );
-      const percentageCoupons = uniqueCoupons.filter(
-        (c) => c.coupon.discountType === "PERCENTAGE"
+      const jyotishiCoupons = uniqueCoupons.filter(
+        (c) => c.creator?.role === "JYOTISHI" && c.coupon.createdByJyotishiId !== null
       );
 
-      // Apply fixed-amount coupons first
-      for (const couponData of fixedAmountCoupons) {
+      console.log("Admin coupons:", adminCoupons.length);
+      console.log("Jyotishi coupons:", jyotishiCoupons.length);
+
+      // Apply admin coupons first
+      for (const couponData of adminCoupons) {
         const { coupon, creator, assignment } = couponData;
-        const discountAmount = Math.min(
-          parseFloat(coupon.discountValue),
-          currentPrice
-        );
+        let discountAmount = 0;
+
+        if (coupon.discountType === "FIXED_AMOUNT") {
+          discountAmount = Math.min(
+            parseFloat(coupon.discountValue),
+            currentPrice
+          );
+        } else {
+          discountAmount = (currentPrice * parseFloat(coupon.discountValue)) / 100;
+        }
 
         if (discountAmount > 0) {
           currentPrice -= discountAmount;
           totalDiscountAmount += discountAmount;
+          adminDiscountAmount += discountAmount;
 
           appliedCoupons.push({
             id: coupon.id,
@@ -208,7 +221,7 @@ export async function GET(
             discountType: coupon.discountType,
             discountValue: coupon.discountValue,
             discountAmount,
-            creatorType: creator?.role === "ADMIN" ? "ADMIN" : "JYOTISHI",
+            creatorType: "ADMIN" as const,
             creatorName: creator?.name,
             isPersonal: !!assignment,
           });
@@ -217,15 +230,27 @@ export async function GET(
         }
       }
 
-      // Apply percentage coupons
-      for (const couponData of percentageCoupons) {
+      // Update price after admin discounts for commission calculation
+      priceAfterAdminDiscount = currentPrice;
+
+      // Apply jyotishi coupons second
+      for (const couponData of jyotishiCoupons) {
         const { coupon, creator, assignment } = couponData;
-        const discountAmount =
-          (currentPrice * parseFloat(coupon.discountValue)) / 100;
+        let discountAmount = 0;
+
+        if (coupon.discountType === "FIXED_AMOUNT") {
+          discountAmount = Math.min(
+            parseFloat(coupon.discountValue),
+            currentPrice
+          );
+        } else {
+          discountAmount = (currentPrice * parseFloat(coupon.discountValue)) / 100;
+        }
 
         if (discountAmount > 0) {
           currentPrice -= discountAmount;
           totalDiscountAmount += discountAmount;
+          jyotishiDiscountAmount += discountAmount;
 
           appliedCoupons.push({
             id: coupon.id,
@@ -233,7 +258,7 @@ export async function GET(
             discountType: coupon.discountType,
             discountValue: coupon.discountValue,
             discountAmount,
-            creatorType: creator?.role === "ADMIN" ? "ADMIN" : "JYOTISHI",
+            creatorType: "JYOTISHI" as const,
             creatorName: creator?.name,
             isPersonal: !!assignment,
           });
@@ -260,6 +285,9 @@ export async function GET(
           originalPrice: course.priceINR,
           finalPrice: finalPrice.toFixed(2),
           discountAmount: totalDiscountAmount.toFixed(2),
+          adminDiscountAmount: adminDiscountAmount.toFixed(2),
+          jyotishiDiscountAmount: jyotishiDiscountAmount.toFixed(2),
+          priceAfterAdminDiscount: priceAfterAdminDiscount.toFixed(2),
           appliedCoupons: appliedCoupons.length > 0 ? appliedCoupons : null,
           hasAssignedCoupon,
         },

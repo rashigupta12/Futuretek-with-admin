@@ -1,3 +1,4 @@
+/*eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/api/payment/create-order/route.ts
 import { db } from "@/db";
 import { 
@@ -5,9 +6,8 @@ import {
   CoursesTable, 
   PaymentsTable, 
   UsersTable,
-  // UserCourseCouponsTable 
 } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { auth } from '@/auth';
@@ -62,66 +62,142 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let finalAmount = baseAmount;
+    // Initialize pricing variables
+    const originalPrice = baseAmount;
+    let subtotal = baseAmount;
     let gstAmount = 0;
-    let discountAmount = 0;
-    let couponId = null;
-    let jyotishiId = null;
+    let finalAmount = baseAmount;
+    let totalDiscountAmount = 0;
+    let adminDiscountAmount = 0;
+    let jyotishiDiscountAmount = 0;
+    let priceAfterAdminDiscount = baseAmount;
     let commissionAmount = 0;
-    let appliedCoupon = null;
+    const appliedCoupons: any[] = [];
+    const couponIds: string[] = [];
+    let jyotishiId: string | null = null;
 
-    // Apply GST for domestic payments
-    if (paymentType === "DOMESTIC") {
-      gstAmount = baseAmount * 0.18;
-      finalAmount = baseAmount + gstAmount;
-    }
+    // ✅ HANDLE MULTIPLE COUPONS (comma-separated)
+    if (couponCode && couponCode.trim()) {
+      // Split by comma and trim whitespace
+      const couponCodes = couponCode.split(',').map((code: string) => code.trim().toUpperCase());
+      
+      console.log('Processing coupon codes:', couponCodes);
 
-    // Apply coupon if provided
-    if (couponCode) {
-      const [coupon] = await db
+      // Fetch all coupons in one query
+      const coupons = await db
         .select({
           id: CouponsTable.id,
+          code: CouponsTable.code,
           discountType: CouponsTable.discountType,
           discountValue: CouponsTable.discountValue,
           createdByJyotishiId: CouponsTable.createdByJyotishiId,
           jyotishiRole: UsersTable.role,
           jyotishiCommissionRate: UsersTable.commissionRate,
+          jyotishiName: UsersTable.name,
         })
         .from(CouponsTable)
         .leftJoin(
           UsersTable,
           eq(CouponsTable.createdByJyotishiId, UsersTable.id)
         )
-        .where(eq(CouponsTable.code, couponCode.toUpperCase()))
-        .limit(1);
+        .where(inArray(CouponsTable.code, couponCodes));
 
-      if (coupon && coupon.id) {
-        appliedCoupon = coupon;
-        
+      if (coupons.length === 0) {
+        return NextResponse.json(
+          { error: "No valid coupons found" },
+          { status: 400 }
+        );
+      }
+
+      console.log('Found coupons:', coupons.map(c => ({ code: c.code, type: c.jyotishiRole })));
+
+      // Sort coupons: ADMIN coupons first, then JYOTISHI coupons
+      const sortedCoupons = coupons.sort((a, b) => {
+        if (a.jyotishiRole === 'ADMIN' && b.jyotishiRole !== 'ADMIN') return -1;
+        if (a.jyotishiRole !== 'ADMIN' && b.jyotishiRole === 'ADMIN') return 1;
+        return 0;
+      });
+
+      // Apply each coupon sequentially
+      for (const coupon of sortedCoupons) {
+        let discountAmount = 0;
+        let baseForDiscount = originalPrice;
+
+        // Determine the base price for this discount
+        if (coupon.jyotishiRole === 'JYOTISHI') {
+          // Jyotishi discount applies to price after admin discount
+          baseForDiscount = priceAfterAdminDiscount;
+        }
+
         // Calculate discount
         if (coupon.discountType === "PERCENTAGE") {
-          discountAmount = (baseAmount * parseFloat(coupon.discountValue)) / 100;
+          discountAmount = (baseForDiscount * parseFloat(coupon.discountValue)) / 100;
         } else {
           discountAmount = parseFloat(coupon.discountValue);
         }
 
         // Ensure discount doesn't exceed base amount
-        discountAmount = Math.min(discountAmount, baseAmount);
-        
-        couponId = coupon.id;
-        jyotishiId = coupon.createdByJyotishiId;
+        discountAmount = Math.min(discountAmount, baseForDiscount);
 
-        // Calculate commission ONLY if coupon creator is JYOTISHI (not ADMIN)
-        if (coupon.jyotishiRole === "JYOTISHI" && coupon.jyotishiCommissionRate) {
-          // Commission is calculated on the discounted amount (before GST)
-          const discountedBaseAmount = baseAmount - discountAmount;
-          commissionAmount = (discountedBaseAmount * parseFloat(coupon.jyotishiCommissionRate)) / 100;
+        console.log(`Applied coupon ${coupon.code}:`, {
+          type: coupon.jyotishiRole,
+          baseForDiscount,
+          discountAmount,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue
+        });
+
+        // Track discount amounts by creator type
+        if (coupon.jyotishiRole === "JYOTISHI") {
+          jyotishiDiscountAmount += discountAmount;
+          jyotishiId = coupon.createdByJyotishiId;
+
+          // Calculate commission ONLY for Jyotishi coupons
+          if (coupon.jyotishiCommissionRate) {
+            // Commission is 20% of price after admin discount
+            commissionAmount = (priceAfterAdminDiscount * parseFloat(coupon.jyotishiCommissionRate)) / 100;
+          }
+        } else {
+          adminDiscountAmount += discountAmount;
+          priceAfterAdminDiscount = originalPrice - adminDiscountAmount;
         }
+
+        totalDiscountAmount += discountAmount;
+        couponIds.push(coupon.id);
+
+        // Store coupon details
+        appliedCoupons.push({
+          id: coupon.id,
+          code: coupon.code,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          discountAmount: Math.round(discountAmount),
+          creatorType: coupon.jyotishiRole === "JYOTISHI" ? "JYOTISHI" : "ADMIN",
+          creatorName: coupon.jyotishiName
+        });
       }
+
+      // Calculate final subtotal after all discounts
+      subtotal = originalPrice - totalDiscountAmount;
+
+      console.log('Final pricing breakdown:', {
+        originalPrice,
+        adminDiscountAmount,
+        priceAfterAdminDiscount,
+        jyotishiDiscountAmount,
+        totalDiscountAmount,
+        subtotal,
+        commissionAmount
+      });
     }
 
-    // Recalculate final amount after discount
-    finalAmount = baseAmount - discountAmount + gstAmount;
+    // Apply GST for domestic payments (ONLY on discounted subtotal)
+    if (paymentType === "DOMESTIC") {
+      gstAmount = subtotal * 0.18;
+      finalAmount = subtotal + gstAmount;
+    } else {
+      finalAmount = subtotal;
+    }
 
     // Ensure final amount is not negative
     if (finalAmount < 0) {
@@ -152,33 +228,53 @@ export async function POST(req: NextRequest) {
       invoiceCounter
     ).padStart(5, "0")}`;
 
-    // Create Razorpay order
+    // Create Razorpay order with the CORRECT discounted amount
     const order = await razorpay.orders.create({
       amount: Math.round(finalAmount * 100), // Convert to paise
       currency: paymentType === "FOREX" ? "USD" : "INR",
       receipt: invoiceNumber,
+      notes: {
+        courseId,
+        userId,
+        coupons: couponCode || '',
+        original_price: originalPrice.toString(),
+        admin_discount: adminDiscountAmount.toString(),
+        jyotishi_discount: jyotishiDiscountAmount.toString(),
+        total_discount: totalDiscountAmount.toString(),
+        subtotal: subtotal.toString(),
+        gst: gstAmount.toString(),
+        commission: commissionAmount.toString()
+      }
     });
 
     // Create payment record
+    // Note: For multiple coupons, we store the first coupon ID in couponId field
+    // Full coupon details are stored in Razorpay order notes and can be retrieved from there
     const [payment] = await db
       .insert(PaymentsTable)
       .values({
         userId,
         invoiceNumber,
         paymentType,
-        amount: baseAmount.toString(),
+        amount: originalPrice.toString(),
         currency: paymentType === "FOREX" ? "USD" : "INR",
         gstAmount: gstAmount.toString(),
-        discountAmount: discountAmount.toString(),
+        discountAmount: totalDiscountAmount.toString(),
         finalAmount: finalAmount.toString(),
-        couponId,
-        jyotishiId,
+        couponId: couponIds.length > 0 ? couponIds[0] : null, // Store first coupon ID
+        jyotishiId: jyotishiId,
         commissionAmount: commissionAmount.toString(),
         razorpayOrderId: order.id,
         status: "PENDING",
         billingAddress: billingAddress || null,
       })
       .returning();
+
+    console.log('Payment created:', {
+      paymentId: payment.id,
+      finalAmount,
+      appliedCoupons: appliedCoupons.map(c => c.code)
+    });
 
     return NextResponse.json(
       {
@@ -188,13 +284,13 @@ export async function POST(req: NextRequest) {
         invoiceNumber,
         paymentId: payment.id,
         commission: commissionAmount > 0 ? commissionAmount : null,
-        discount: discountAmount,
-        appliedCoupon: appliedCoupon ? {
-          code: couponCode,
-          discountType: appliedCoupon.discountType,
-          discountValue: appliedCoupon.discountValue,
-          creatorType: appliedCoupon.jyotishiRole === "JYOTISHI" ? "JYOTISHI" : "ADMIN"
-        } : null
+        discount: totalDiscountAmount,
+        adminDiscount: adminDiscountAmount,
+        jyotishiDiscount: jyotishiDiscountAmount,
+        priceAfterAdminDiscount,
+        subtotal: subtotal,
+        gstAmount: gstAmount,
+        appliedCoupons // Return array of all applied coupons
       },
       { status: 200 }
     );

@@ -60,6 +60,9 @@ interface CoursePriceData {
   originalPrice: string;
   finalPrice: string;
   discountAmount: string;
+  adminDiscountAmount?: string;
+  jyotishiDiscountAmount?: string;
+  priceAfterAdminDiscount?: string;
   appliedCoupons?: AppliedCoupon[];
   hasAssignedCoupon: boolean;
 }
@@ -153,21 +156,22 @@ export function CoursesCatalog() {
             setEnrolledCourseIds(enrolledIds);
           }
 
-          const pricesMap: Record<string, CoursePriceData> = { ...basePrices };
-          priceResults.forEach((result) => {
-            if (result && result.priceData) {
-              pricesMap[result.courseId] = {
-                originalPrice:
-                  result.priceData.originalPrice || result.priceData.priceINR,
-                finalPrice:
-                  result.priceData.finalPrice || result.priceData.priceINR,
-                discountAmount: result.priceData.discountAmount || "0",
-                appliedCoupons: result.priceData.appliedCoupons || undefined,
-                hasAssignedCoupon: result.priceData.hasAssignedCoupon || false,
-              };
-            }
-          });
-          setCoursePrices(pricesMap);
+         const pricesMap: Record<string, CoursePriceData> = { ...basePrices };
+priceResults.forEach((result) => {
+  if (result && result.priceData) {
+    pricesMap[result.courseId] = {
+      originalPrice: result.priceData.originalPrice || basePrices[result.courseId].originalPrice,
+      finalPrice: result.priceData.finalPrice || basePrices[result.courseId].finalPrice,
+      discountAmount: result.priceData.discountAmount || "0",
+      adminDiscountAmount: result.priceData.adminDiscountAmount,
+      jyotishiDiscountAmount: result.priceData.jyotishiDiscountAmount,
+      priceAfterAdminDiscount: result.priceData.priceAfterAdminDiscount,
+      appliedCoupons: result.priceData.appliedCoupons || undefined,
+      hasAssignedCoupon: result.priceData.hasAssignedCoupon || false,
+    };
+  }
+});
+setCoursePrices(pricesMap);
         }
       } catch (err) {
         console.error("Catalog load error:", err);
@@ -176,31 +180,30 @@ export function CoursesCatalog() {
       }
     }
 
-    function batchFetch(courses: Course[]) {
-      return courses.map((course) =>
-        fetch(`/api/courses/${course.slug}`)
-          .then((res) => {
-            if (res.ok) {
-              const contentType = res.headers.get("content-type");
-              if (contentType && contentType.includes("application/json")) {
-                return res.json().then((data) => ({
-                  courseId: course.id,
-                  priceData: data.course,
-                }));
-              }
-            }
-            return null;
-          })
-          .catch(() => null)
-      );
-    }
-
+   function batchFetch(courses: Course[]) {
+  return courses.map((course) =>
+    fetch(`/api/courses/${course.slug}`)
+      .then((res) => {
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            return res.json().then((data) => ({
+              courseId: course.id,
+              priceData: data.course,
+            }));
+          }
+        }
+        return null;
+      })
+      .catch(() => null)
+  );
+}
     if (status !== "loading") {
       fetchData();
     }
   }, [userId, status]);
 
-  const isAdminOrAgent = userRole === "ADMIN" || userRole === "AGENT";
+  const isAdminOrJyotishi = userRole === "ADMIN" || userRole === "JYOTISHI";
 
   const courseCategories: CourseCategory[] = [
     {
@@ -288,19 +291,19 @@ export function CoursesCatalog() {
     };
   };
 
-  // const getCouponBadgeColor = (creatorType: "ADMIN" | "JYOTISHI") => {
-  //   return creatorType === "ADMIN"
-  //     ? "from-purple-500 to-purple-600"
-  //     : "from-green-500 to-green-600";
-  // };
+  const getCouponBadgeColor = (creatorType: "ADMIN" | "JYOTISHI") => {
+    return creatorType === "ADMIN"
+      ? "from-green-500 to-green-600"
+      : "from-blue-500 to-blue-600";
+  };
 
-  // const getCouponIcon = (creatorType: "ADMIN" | "JYOTISHI") => {
-  //   return creatorType === "ADMIN" ? (
-  //     <Crown className="h-3 w-3" />
-  //   ) : (
-  //     <Users className="h-3 w-3" />
-  //   );
-  // };
+  const getCouponIcon = (creatorType: "ADMIN" | "JYOTISHI") => {
+    return creatorType === "ADMIN" ? (
+      <Crown className="h-3 w-3" />
+    ) : (
+      <Users className="h-3 w-3" />
+    );
+  };
 
   if (status === "loading" || loading) {
     return (
@@ -495,45 +498,27 @@ export function CoursesCatalog() {
                             {getPlainText(course.description)}
                           </CardDescription>
 
+                          {/* Applied Coupons */}
+                          {priceInfo.appliedCoupons && priceInfo.appliedCoupons.length > 0 && (
+                            <div className="space-y-1 mb-2">
+                              {priceInfo.appliedCoupons.map((coupon) => (
+                                <div
+                                  key={coupon.id}
+                                  className={`inline-flex items-center gap-1 bg-gradient-to-r ${getCouponBadgeColor(
+                                    coupon.creatorType
+                                  )} text-white px-2 py-1 rounded text-xs font-medium`}
+                                >
+                                  {getCouponIcon(coupon.creatorType)}
+                                  <span>
+                                    {coupon.creatorType === "ADMIN" ? "Admin" : "Jyotishi"} Discount
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                           {/* Price Section */}
                           <div className="space-y-2 bg-gradient-to-br from-blue-50/50 to-amber-50/30 rounded-lg p-3 border border-blue-100">
-                            {userId && priceInfo.hasDiscount && priceInfo.appliedCoupons && (
-  <div className="space-y-2">
-    {(() => {
-      // Remove duplicates
-      const uniqueCoupons = priceInfo.appliedCoupons.filter(
-        (coupon, index, self) =>
-          index ===
-          self.findIndex(
-            (c) => c.id === coupon.id && c.creatorType === coupon.creatorType
-          )
-      );
-
-      // Calculate total discount value (if you want to combine them)
-      const totalDiscountValue = uniqueCoupons.reduce((acc, coupon) => {
-        return acc + Number(coupon.discountValue || 0);
-      }, 0);
-
-      // Assuming all are same type (₹ or %), or you can handle mixed logic if needed
-      const discountType =
-        uniqueCoupons[0]?.discountType === "PERCENTAGE" ? "%" : "₹";
-
-      return (
-        <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded px-2 py-1.5 shadow-sm">
-          <span className="text-xs font-semibold text-white">
-            Discount Applied
-          </span>
-          <span className="text-xs text-white/90 ml-auto">
-            {totalDiscountValue}
-            {discountType}
-          </span>
-        </div>
-      );
-    })()}
-  </div>
-)}
-
-
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-1 text-xs text-gray-500">
                                 <Users className="h-3 w-3 flex-shrink-0" />
@@ -564,13 +549,6 @@ export function CoursesCatalog() {
                                       {priceInfo.discountAmount.toLocaleString(
                                         "en-IN"
                                       )}
-                                      {priceInfo.appliedCoupons &&
-                                        priceInfo.appliedCoupons.length > 1 && (
-                                          <span className="text-xs ml-1">
-                                            ({priceInfo.appliedCoupons.length}{" "}
-                                            discounts)
-                                          </span>
-                                        )}
                                     </div>
                                   </div>
                                 ) : (
@@ -612,7 +590,7 @@ export function CoursesCatalog() {
                                 <CheckCircle className="h-3 w-3 mr-1" />
                                 Enrolled
                               </Button>
-                            ) : isAdminOrAgent ? (
+                            ) : isAdminOrJyotishi ? (
                               <Button
                                 disabled
                                 size="sm"

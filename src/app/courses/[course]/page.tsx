@@ -49,6 +49,9 @@ interface CourseData {
   finalPrice?: string;
   originalPrice?: string;
   discountAmount?: string;
+  adminDiscountAmount?: string;
+  jyotishiDiscountAmount?: string;
+  priceAfterAdminDiscount?: string;
   hasAssignedCoupon?: boolean;
   id: string;
   title: string;
@@ -234,11 +237,14 @@ export default function CoursePage() {
   const originalPrice = parseFloat(course?.originalPrice || course?.priceINR || "0");
   const displayPrice = parseFloat(course?.finalPrice || course?.priceINR || "0");
   const discountAmount = parseFloat(course?.discountAmount || "0");
+  // const adminDiscountAmount = parseFloat(course?.adminDiscountAmount || "0");
+  // const jyotishiDiscountAmount = parseFloat(course?.jyotishiDiscountAmount || "0");
+  // const priceAfterAdminDiscount = parseFloat(course?.priceAfterAdminDiscount || originalPrice.toString());
   
   const hasDiscount = hasAssignedCoupon && discountAmount > 0;
 
   // Get the primary coupon for display (first one in the array)
-  const primaryCoupon = appliedCoupons.length > 0 ? appliedCoupons[0] : undefined;
+  // const primaryCoupon = appliedCoupons.length > 0 ? appliedCoupons[0] : undefined;
 
   /* ---------------------------------------------------------
      Loading / error states
@@ -656,23 +662,36 @@ export default function CoursePage() {
       </div>
 
       {/* Checkout Sidebar */}
-      {!isEnrolled && (
-        <CheckoutSidebar
-          course={{
-            id: course.id,
-            title: course.title,
-            priceINR: course.priceINR || "0",
-            slug: course.slug,
-          }}
-          isOpen={showCheckout}
-          onClose={() => setShowCheckout(false)}
-          assignedCoupon={primaryCoupon} 
-          hasAssignedCoupon={course.hasAssignedCoupon}
-          finalPrice={course.finalPrice}
-          originalPrice={course.originalPrice}
-          discountAmount={course.discountAmount}
-        />
-      )}
+   
+
+{/* Checkout Sidebar */}
+{!isEnrolled && (
+  <CheckoutSidebar
+    course={{
+      id: course.id,
+      title: course.title,
+      priceINR: course.priceINR || "0",
+      slug: course.slug,
+    }}
+    isOpen={showCheckout}
+    onClose={() => setShowCheckout(false)}
+    // ❌ REMOVE THIS LINE:
+    // assignedCoupon={primaryCoupon}
+    
+    // ✅ ADD THIS LINE INSTEAD:
+    appliedCoupons={appliedCoupons}
+    
+    hasAssignedCoupon={course.hasAssignedCoupon}
+    finalPrice={course.finalPrice}
+    originalPrice={course.originalPrice}
+    discountAmount={course.discountAmount}
+    adminDiscountAmount={course.adminDiscountAmount}
+    jyotishiDiscountAmount={course.jyotishiDiscountAmount}
+    priceAfterAdminDiscount={course.priceAfterAdminDiscount}
+  />
+)}
+
+
     </div>
   );
 }
