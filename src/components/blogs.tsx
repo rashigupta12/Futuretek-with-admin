@@ -225,7 +225,7 @@ function BlogCard({ post }: { post: BlogPost }) {
           variant="ghost"
           className="w-full group/button justify-between text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium transition-all duration-200 rounded-lg text-sm py-2"
         >
-          <Link href={`/blog/${post.slug}`} className="flex items-center gap-1">
+          <Link href={`/blogs/${post.slug}`} className="flex items-center gap-1">
             <span>Read More</span>
             <ArrowRight className="h-3 w-3 ml-1 group-hover/button:translate-x-1 transition-transform duration-200" />
           </Link>

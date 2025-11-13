@@ -64,7 +64,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
       <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <Link
-            href="/blog"
+            href="/blogs"
             className="inline-block mb-6 text-blue-200 hover:text-white transition-colors"
           >
             Back to Blog
@@ -209,7 +209,7 @@ function ErrorState({ message }: { message: string }) {
         </h1>
         <p className="text-blue-700 mb-6">{message}</p>
         <Link
-          href="/blog"
+          href="/blogs"
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all"
         >
           Back to Blog

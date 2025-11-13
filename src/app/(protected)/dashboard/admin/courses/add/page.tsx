@@ -41,8 +41,8 @@ export default function AddCoursePage() {
   const [whyLearnIntro, setWhyLearnIntro] = useState("");
   const [whatYouLearn, setWhatYouLearn] = useState("");
   const [disclaimer, setDisclaimer] = useState("");
-  const [maxStudents, setMaxStudents] = useState("");
-  const [currentEnrollments, setCurrentEnrollments] = useState("0");
+  // const [maxStudents, setMaxStudents] = useState("");
+  // const [currentEnrollments, setCurrentEnrollments] = useState("0");
 
   // ── Arrays ───────────────────────────────────────────────────────
   const [features, setFeatures] = useState<string[]>([""]);
@@ -53,45 +53,46 @@ export default function AddCoursePage() {
   const [relatedTopics, setRelatedTopics] = useState<string[]>([""]);
 
   const [dateErrors, setDateErrors] = useState({
-  registrationDeadline: "",
-  startDate: "",
-  endDate: ""
-});
-
-const validateDates = () => {
-  const errors = {
     registrationDeadline: "",
     startDate: "",
-    endDate: ""
+    endDate: "",
+  });
+
+  const validateDates = () => {
+    const errors = {
+      registrationDeadline: "",
+      startDate: "",
+      endDate: "",
+    };
+
+    if (registrationDeadline && startDate) {
+      if (new Date(registrationDeadline) >= new Date(startDate)) {
+        errors.registrationDeadline =
+          "Registration deadline must be before start date";
+      }
+    }
+
+    if (startDate && endDate) {
+      if (new Date(startDate) >= new Date(endDate)) {
+        errors.startDate = "Start date must be before end date";
+      }
+    }
+
+    setDateErrors(errors);
+    return Object.values(errors).every((error) => !error);
   };
 
-  if (registrationDeadline && startDate) {
-    if (new Date(registrationDeadline) >= new Date(startDate)) {
-      errors.registrationDeadline = "Registration deadline must be before start date";
-    }
-  }
-
-  if (startDate && endDate) {
-    if (new Date(startDate) >= new Date(endDate)) {
-      errors.startDate = "Start date must be before end date";
-    }
-  }
-
-  setDateErrors(errors);
-  return Object.values(errors).every(error => !error);
-};
-
-// Call validateDates when dates change
-useEffect(() => {
-  validateDates();
-}, [registrationDeadline, startDate, endDate]);
+  // Call validateDates when dates change
+  useEffect(() => {
+    validateDates();
+  }, [registrationDeadline, startDate, endDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-     if (!validateDates()) {
-    alert("Please fix the date validation errors before submitting");
-    return;
-  }
+    if (!validateDates()) {
+      alert("Please fix the date validation errors before submitting");
+      return;
+    }
     setLoading(true);
 
     const payload = {
@@ -112,8 +113,8 @@ useEffect(() => {
       whyLearnIntro: whyLearnIntro || null,
       whatYouLearn: whatYouLearn || null,
       disclaimer: disclaimer || null,
-      maxStudents: maxStudents ? Number(maxStudents) : null,
-      currentEnrollments: Number(currentEnrollments),
+      // maxStudents: maxStudents ? Number(maxStudents) : null,
+      // currentEnrollments: Number(currentEnrollments),
 
       features: features.filter((f) => f.trim()),
       whyLearn: whyLearn.filter((w) => w.title.trim() && w.description.trim()),
@@ -144,14 +145,14 @@ useEffect(() => {
   };
 
   useEffect(() => {
-  if (title) {
-    const generatedSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)+/g, '');
-    setSlug(generatedSlug);
-  }
-}, [title]);
+    if (title) {
+      const generatedSlug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+      setSlug(generatedSlug);
+    }
+  }, [title]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
@@ -168,7 +169,9 @@ useEffect(() => {
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Course</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Add New Course
+              </h1>
               <p className="text-gray-600">
                 Create a new course with all necessary details and content.
               </p>
@@ -180,20 +183,23 @@ useEffect(() => {
           {/* ── Basic Info ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
-              <CardTitle className="text-xl text-gray-900">Basic Information</CardTitle>
+              <CardTitle className="text-xl text-gray-900">
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-             <Field label="Title *">
-  <TextInput
-    value={title}
-    onChange={(value) => {
-      const capitalized = value.charAt(0).toUpperCase() + value.slice(1);
-      setTitle(capitalized);
-    }}
-    placeholder="KP Astrology"
-    required
-  />
-</Field>
+              <Field label="Title *">
+                <TextInput
+                  value={title}
+                  onChange={(value) => {
+                    const capitalized =
+                      value.charAt(0).toUpperCase() + value.slice(1);
+                    setTitle(capitalized);
+                  }}
+                  placeholder="KP Astrology"
+                  required
+                />
+              </Field>
 
               <Field label="Slug *">
                 <TextInput
@@ -204,17 +210,18 @@ useEffect(() => {
                 />
               </Field>
 
-            <Field label="Tagline *">
-  <TextInput
-    value={tagline}
-    onChange={(value) => {
-      const capitalized = value.charAt(0).toUpperCase() + value.slice(1);
-      setTagline(capitalized);
-    }}
-    placeholder="Learn KP in its original form..."
-    required
-  />
-</Field>
+              <Field label="Tagline *">
+                <TextInput
+                  value={tagline}
+                  onChange={(value) => {
+                    const capitalized =
+                      value.charAt(0).toUpperCase() + value.slice(1);
+                    setTagline(capitalized);
+                  }}
+                  placeholder="Learn KP in its original form..."
+                  required
+                />
+              </Field>
 
               <Field label="Instructor">
                 <TextInput
@@ -269,23 +276,23 @@ useEffect(() => {
                 />
               </Field>
 
-              <DateInput 
-                label="Start Date" 
-                value={startDate} 
+              <DateInput
+                label="Start Date"
+                value={startDate}
                 onChange={setStartDate}
                 error={dateErrors.startDate}
               />
-              <DateInput 
-                label="End Date" 
-                value={endDate} 
+              <DateInput
+                label="End Date"
+                value={endDate}
                 onChange={setEndDate}
               />
-             <DateInput 
-  label="Registration Deadline" 
-  value={registrationDeadline} 
-  onChange={setRegistrationDeadline}
-  error={dateErrors.registrationDeadline}
-/>
+              <DateInput
+                label="Registration Deadline"
+                value={registrationDeadline}
+                onChange={setRegistrationDeadline}
+                error={dateErrors.registrationDeadline}
+              />
 
               <div className="md:col-span-2">
                 <StatusSelect value={status} onChange={setStatus} />
@@ -296,7 +303,9 @@ useEffect(() => {
           {/* ── Long Texts ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
-              <CardTitle className="text-xl text-gray-900">Content & SEO</CardTitle>
+              <CardTitle className="text-xl text-gray-900">
+                Content & SEO
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <Field label="Description *">
@@ -338,7 +347,7 @@ useEffect(() => {
           </Card>
 
           {/* ── Capacity ── */}
-          <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+          {/* <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50 border-b">
               <CardTitle className="text-xl text-gray-900">Capacity</CardTitle>
             </CardHeader>
@@ -361,7 +370,7 @@ useEffect(() => {
                 />
               </Field>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* ── Dynamic Lists ── */}
           <DynamicStringList
@@ -371,10 +380,7 @@ useEffect(() => {
             placeholder="25 live sessions on Zoom"
           />
 
-          <DynamicWhyLearn 
-            items={whyLearn} 
-            setItems={setWhyLearn}
-          />
+          <DynamicWhyLearn items={whyLearn} setItems={setWhyLearn} />
 
           <DynamicStringList
             title="Course Content"
@@ -392,16 +398,16 @@ useEffect(() => {
 
           {/* ── Submit ── */}
           <div className="flex gap-3 pt-6">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8"
             >
               {loading ? "Creating…" : "Create Course"}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               asChild
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >

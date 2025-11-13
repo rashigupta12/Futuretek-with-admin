@@ -38,11 +38,12 @@ export default function AddBlogPage() {
     setTags(tags.filter((_, i) => i !== index));
   };
 
-  const handleTagChange = (index: number, value: string) => {
-    const newTags = [...tags];
-    newTags[index] = value;
-    setTags(newTags);
-  };
+ const handleTagChange = (index: number, value: string) => {
+  const newTags = [...tags];
+  const capitalized = value.charAt(0).toUpperCase() + value.slice(1);
+  newTags[index] = capitalized;
+  setTags(newTags);
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,7 +216,7 @@ export default function AddBlogPage() {
                   <Input
                     value={tag}
                     onChange={(e) => handleTagChange(index, e.target.value)}
-                    placeholder="astrology"
+                    placeholder="Astrology"
                     className="flex-1 border-gray-300 focus:border-amber-500"
                   />
                   {tags.length > 1 && (
