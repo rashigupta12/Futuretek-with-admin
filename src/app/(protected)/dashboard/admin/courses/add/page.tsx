@@ -52,8 +52,46 @@ export default function AddCoursePage() {
   const [courseContent, setCourseContent] = useState<string[]>([""]);
   const [relatedTopics, setRelatedTopics] = useState<string[]>([""]);
 
+  const [dateErrors, setDateErrors] = useState({
+  registrationDeadline: "",
+  startDate: "",
+  endDate: ""
+});
+
+const validateDates = () => {
+  const errors = {
+    registrationDeadline: "",
+    startDate: "",
+    endDate: ""
+  };
+
+  if (registrationDeadline && startDate) {
+    if (new Date(registrationDeadline) >= new Date(startDate)) {
+      errors.registrationDeadline = "Registration deadline must be before start date";
+    }
+  }
+
+  if (startDate && endDate) {
+    if (new Date(startDate) >= new Date(endDate)) {
+      errors.startDate = "Start date must be before end date";
+    }
+  }
+
+  setDateErrors(errors);
+  return Object.values(errors).every(error => !error);
+};
+
+// Call validateDates when dates change
+useEffect(() => {
+  validateDates();
+}, [registrationDeadline, startDate, endDate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+     if (!validateDates()) {
+    alert("Please fix the date validation errors before submitting");
+    return;
+  }
     setLoading(true);
 
     const payload = {
@@ -145,14 +183,17 @@ export default function AddCoursePage() {
               <CardTitle className="text-xl text-gray-900">Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Title *">
-                <TextInput
-                  value={title}
-                  onChange={setTitle}
-                  placeholder="KP Astrology"
-                  required
-                />
-              </Field>
+             <Field label="Title *">
+  <TextInput
+    value={title}
+    onChange={(value) => {
+      const capitalized = value.charAt(0).toUpperCase() + value.slice(1);
+      setTitle(capitalized);
+    }}
+    placeholder="KP Astrology"
+    required
+  />
+</Field>
 
               <Field label="Slug *">
                 <TextInput
@@ -163,14 +204,17 @@ export default function AddCoursePage() {
                 />
               </Field>
 
-              <Field label="Tagline *">
-                <TextInput
-                  value={tagline}
-                  onChange={setTagline}
-                  placeholder="Learn KP in its original form..."
-                  required
-                />
-              </Field>
+            <Field label="Tagline *">
+  <TextInput
+    value={tagline}
+    onChange={(value) => {
+      const capitalized = value.charAt(0).toUpperCase() + value.slice(1);
+      setTagline(capitalized);
+    }}
+    placeholder="Learn KP in its original form..."
+    required
+  />
+</Field>
 
               <Field label="Instructor">
                 <TextInput
@@ -229,17 +273,19 @@ export default function AddCoursePage() {
                 label="Start Date" 
                 value={startDate} 
                 onChange={setStartDate}
+                error={dateErrors.startDate}
               />
               <DateInput 
                 label="End Date" 
                 value={endDate} 
                 onChange={setEndDate}
               />
-              <DateInput
-                label="Registration Deadline"
-                value={registrationDeadline}
-                onChange={setRegistrationDeadline}
-              />
+             <DateInput 
+  label="Registration Deadline" 
+  value={registrationDeadline} 
+  onChange={setRegistrationDeadline}
+  error={dateErrors.registrationDeadline}
+/>
 
               <div className="md:col-span-2">
                 <StatusSelect value={status} onChange={setStatus} />

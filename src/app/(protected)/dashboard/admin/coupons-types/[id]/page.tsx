@@ -10,9 +10,10 @@ import {
   Trash2,
   Ticket,
   Users,
-  TrendingUp,
   AlertCircle,
   Hash,
+  Calendar,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,7 @@ export default function ViewCouponTypePage() {
       });
       if (res.ok) {
         alert("Coupon type deactivated successfully");
-        router.push("/dashboard/admin/coupon-types");
+        router.push("/dashboard/admin/coupons-types");
       } else {
         alert("Delete failed");
       }
@@ -89,138 +90,148 @@ export default function ViewCouponTypePage() {
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
 
   if (!couponType)
     return (
       <div className="container mx-auto p-8 text-center">
-        <h2 className="text-2xl font-bold text-destructive mb-4">
-          Coupon Type Not Found
-        </h2>
-        <Button asChild>
-          <Link href="/dashboard/admin/coupon-types">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Coupon Types
-          </Link>
-        </Button>
+        <div className="bg-white border border-gray-200 rounded-lg p-8 max-w-md mx-auto shadow-sm">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Coupon Type Not Found
+          </h2>
+          <p className="text-gray-600 mb-6">The requested coupon type could not be found.</p>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+            <Link href="/dashboard/admin/coupons-types">
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Coupon Types
+            </Link>
+          </Button>
+        </div>
       </div>
     );
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("en-IN");
-
-  const getStatusColor = (isActive: boolean) =>
-    isActive ? "bg-green-500" : "bg-gray-500";
 
   const totalCoupons = couponType._count?.coupons || 0;
   const activeCoupons =
     couponType.coupons?.filter((c) => c.isActive).length || 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/50">
-      {/* Hero Section */}
-      <div className="relative py-12 mb-8 bg-gradient-to-r from-purple-500/10 to-blue-500/10">
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section - Simplified */}
+      <div className="bg-white border-b border-gray-200 py-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-4 mb-4">
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-4 mb-6">
               <Link
-                href="/dashboard/admin/coupon-types"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                href="/dashboard/admin/coupons-types"
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors duration-200"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Coupon Types
               </Link>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">
                 ADMIN VIEW
               </Badge>
             </div>
 
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500">
-                <span className="text-2xl font-bold text-white font-mono">
-                  {couponType.typeCode}
-                </span>
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-                  {couponType.typeName}
-                </h1>
-                <p className="text-lg text-muted-foreground mt-1">
-                  Type Code: {couponType.typeCode}
-                </p>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-blue-600 text-white shadow-sm">
+                  <span className="text-xl font-bold font-mono tracking-wide">
+                    {couponType.typeCode}
+                  </span>
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    {couponType.typeName}
+                  </h1>
+                  <p className="text-gray-600 text-lg">
+                    {couponType.description || "No description provided"}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3 mt-6">
               <Badge
-                variant="secondary"
-                className={`text-white ${getStatusColor(couponType.isActive)}`}
+                className={`${
+                  couponType.isActive 
+                    ? "bg-green-100 text-green-800 border-green-200" 
+                    : "bg-gray-100 text-gray-800 border-gray-200"
+                } font-medium`}
               >
                 {couponType.isActive ? "Active" : "Inactive"}
               </Badge>
               <Badge
-                variant={
-                  couponType.discountType === "PERCENTAGE" ? "default" : "secondary"
-                }
+                className={`${
+                  couponType.discountType === "PERCENTAGE" 
+                    ? "bg-amber-100 text-amber-800 border-amber-200" 
+                    : "bg-blue-100 text-blue-800 border-blue-200"
+                } font-medium`}
               >
                 {couponType.discountType === "PERCENTAGE"
                   ? "Percentage Discount"
                   : "Fixed Amount Discount"}
+              </Badge>
+              <Badge className="bg-gray-100 text-gray-800 border-gray-200 font-medium">
+                {totalCoupons} Total Coupons
               </Badge>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Overview */}
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-2xl">Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Overview Card */}
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-gray-600" />
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                      Description
-                    </h3>
-                    <p className="leading-relaxed">
-                      {couponType.description || "No description provided."}
-                    </p>
+                    <CardTitle className="text-xl text-gray-900">Overview</CardTitle>
+                    <CardDescription>
+                      Detailed information about this coupon type
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Type Code</label>
+                      <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                        <code className="font-mono text-lg font-bold text-blue-900">
+                          {couponType.typeCode}
+                        </code>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Max Discount Limit</label>
+                      <div className="p-3 bg-amber-50 rounded border border-amber-200">
+                        <span className="text-lg font-bold text-amber-900">
+                          {couponType.discountType === "PERCENTAGE"
+                            ? `${couponType.maxDiscountLimit}%`
+                            : `₹${Number(couponType.maxDiscountLimit).toLocaleString("en-IN")}`}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   <Separator />
 
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-500/10">
-                        <Hash className="h-5 w-5 text-purple-500" />
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Type Code</div>
-                        <div className="font-mono font-bold text-lg">
-                          {couponType.typeCode}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/10">
-                        <TrendingUp className="h-5 w-5 text-blue-500" />
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">
-                          Max Discount Limit
-                        </div>
-                        <div className="font-bold text-lg">
-                          {couponType.discountType === "PERCENTAGE"
-                            ? `${couponType.maxDiscountLimit}%`
-                            : `₹${Number(couponType.maxDiscountLimit).toLocaleString("en-IN")}`}
-                        </div>
-                      </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">Description</label>
+                    <div className="p-4 bg-gray-50 rounded border border-gray-200">
+                      <p className="text-gray-700 leading-relaxed">
+                        {couponType.description || "No description provided."}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -228,21 +239,26 @@ export default function ViewCouponTypePage() {
             </Card>
 
             {/* Coupon Code Format */}
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-2xl">Coupon Code Format</CardTitle>
-                <CardDescription>
-                  How coupons are generated using this type
-                </CardDescription>
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <Hash className="h-5 w-5 text-gray-600" />
+                  <div>
+                    <CardTitle className="text-xl text-gray-900">Coupon Code Format</CardTitle>
+                    <CardDescription>
+                      How coupons are generated using this type
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-muted/50 rounded-lg font-mono text-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Structure:</span>
+              <CardContent className="p-6">
+                <div className="space-y-6">
+                  <div className="p-4 bg-blue-600 rounded border">
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertCircle className="h-4 w-4 text-gray-400" />
+                      <span className="text-black font-medium">Code Structure</span>
                     </div>
-                    <div className="text-lg font-bold">
+                    <div className="text-white font-mono text-lg font-bold">
                       COUP[JyotishiCode]{couponType.typeCode}
                       {couponType.discountType === "PERCENTAGE"
                         ? "[PercentValue]"
@@ -250,31 +266,35 @@ export default function ViewCouponTypePage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Example Coupon Codes:</p>
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-gray-900">Example Coupon Codes:</h4>
                     <div className="space-y-3">
-                      <div className="space-y-1">
-                        <div className="p-3 bg-muted/30 rounded font-mono text-sm">
+                      <div className="p-4 bg-white border border-gray-200 rounded">
+                        <div className="font-mono text-lg font-bold text-gray-900 mb-1">
                           COUPJD001{couponType.typeCode}
                           {couponType.discountType === "PERCENTAGE" ? "015" : "500"}
                         </div>
-                        <p className="text-xs text-muted-foreground pl-3">
+                        <p className="text-sm text-gray-600">
                           John Doe&apos;s coupon offering{" "}
-                          {couponType.discountType === "PERCENTAGE"
-                            ? "15% discount"
-                            : "₹500 discount"}
+                          <span className="font-semibold text-amber-600">
+                            {couponType.discountType === "PERCENTAGE"
+                              ? "15% discount"
+                              : "₹500 discount"}
+                          </span>
                         </p>
                       </div>
-                      <div className="space-y-1">
-                        <div className="p-3 bg-muted/30 rounded font-mono text-sm">
+                      <div className="p-4 bg-white border border-gray-200 rounded">
+                        <div className="font-mono text-lg font-bold text-gray-900 mb-1">
                           COUPAS001{couponType.typeCode}
                           {couponType.discountType === "PERCENTAGE" ? "020" : "1000"}
                         </div>
-                        <p className="text-xs text-muted-foreground pl-3">
+                        <p className="text-sm text-gray-600">
                           Alice Smith&apos;s coupon offering{" "}
-                          {couponType.discountType === "PERCENTAGE"
-                            ? "20% discount"
-                            : "₹1000 discount"}
+                          <span className="font-semibold text-amber-600">
+                            {couponType.discountType === "PERCENTAGE"
+                              ? "20% discount"
+                              : "₹1000 discount"}
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -285,33 +305,40 @@ export default function ViewCouponTypePage() {
 
             {/* Recent Coupons */}
             {couponType.coupons && couponType.coupons.length > 0 && (
-              <Card className="hover:shadow-lg transition-shadow duration-300">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Recent Coupons</CardTitle>
-                  <CardDescription>
-                    Latest coupons created using this type
-                  </CardDescription>
+              <Card className="border border-gray-200 shadow-sm">
+                <CardHeader className="bg-gray-50 border-b border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <Ticket className="h-5 w-5 text-gray-600" />
+                    <div>
+                      <CardTitle className="text-xl text-gray-900">Recent Coupons</CardTitle>
+                      <CardDescription>
+                        Latest coupons created using this type
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
                     {couponType.coupons.slice(0, 5).map((coupon) => (
                       <div
                         key={coupon.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/50 rounded-lg transition-colors"
+                        className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded hover:border-gray-300 transition-colors"
                       >
                         <div className="space-y-1">
-                          <div className="font-mono font-bold">{coupon.code}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="font-mono font-bold text-gray-900">
+                            {coupon.code}
+                          </div>
+                          <div className="text-sm text-gray-600">
                             By {coupon.createdBy.name} ({coupon.createdBy.jyotishiCode})
                           </div>
                         </div>
                         <div className="text-right space-y-1">
-                          <div className="font-medium">
+                          <div className="font-bold text-amber-600">
                             {couponType.discountType === "PERCENTAGE"
                               ? `${coupon.discountValue}%`
                               : `₹${Number(coupon.discountValue).toLocaleString("en-IN")}`}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-gray-500">
                             {coupon.currentUsageCount}/{coupon.maxUsageCount} used
                           </div>
                         </div>
@@ -324,34 +351,34 @@ export default function ViewCouponTypePage() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="space-y-6">
             {/* Statistics */}
-            <Card className="lg:sticky lg:top-24 hover:shadow-lg transition-shadow duration-300 border-purple-500/20">
-              <CardHeader className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-t-lg">
-                <CardTitle className="text-2xl">Statistics</CardTitle>
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="bg-gray-50 border-b border-gray-200">
+                <CardTitle className="text-lg text-gray-900">Statistics</CardTitle>
                 <CardDescription>Usage metrics for this type</CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Ticket className="h-5 w-5 text-purple-500" />
-                        <span className="text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded">
+                      <div className="flex items-center gap-3">
+                        <Ticket className="h-5 w-5 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-700">
                           Total Coupons
                         </span>
                       </div>
-                      <span className="text-2xl font-bold">{totalCoupons}</span>
+                      <span className="text-xl font-bold text-gray-900">{totalCoupons}</span>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded">
+                      <div className="flex items-center gap-3">
+                        <Users className="h-5 w-5 text-green-600" />
+                        <span className="text-sm font-medium text-gray-700">
                           Active Coupons
                         </span>
                       </div>
-                      <span className="text-2xl font-bold text-green-500">
+                      <span className="text-xl font-bold text-green-600">
                         {activeCoupons}
                       </span>
                     </div>
@@ -360,8 +387,9 @@ export default function ViewCouponTypePage() {
                   <Separator />
 
                   {/* Admin Actions */}
-                  <div className="space-y-2">
-                    <Button asChild className="w-full justify-start">
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-900">Admin Actions</h4>
+                    <Button asChild className="w-full justify-start bg-blue-600 hover:bg-blue-700">
                       <Link
                         href={`/dashboard/admin/coupon-types/edit/${couponType.id}`}
                       >
@@ -370,8 +398,8 @@ export default function ViewCouponTypePage() {
                       </Link>
                     </Button>
                     <Button
-                      variant="destructive"
-                      className="w-full justify-start"
+                      variant="outline"
+                      className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-50"
                       onClick={handleDelete}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -381,14 +409,23 @@ export default function ViewCouponTypePage() {
 
                   <Separator />
 
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Created</span>
-                      <span>{formatDate(couponType.createdAt)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last Updated</span>
-                      <span>{formatDate(couponType.updatedAt)}</span>
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-900">Timeline</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-500" />
+                          <span className="text-gray-700">Created</span>
+                        </div>
+                        <span className="font-medium text-gray-900">{formatDate(couponType.createdAt)}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-500" />
+                          <span className="text-gray-700">Last Updated</span>
+                        </div>
+                        <span className="font-medium text-gray-900">{formatDate(couponType.updatedAt)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -396,26 +433,31 @@ export default function ViewCouponTypePage() {
             </Card>
 
             {/* Technical Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Technical Details</CardTitle>
+            <Card className="border border-gray-200 shadow-sm">
+              <CardHeader className="bg-gray-50 border-b border-gray-200">
+                <CardTitle className="text-lg text-gray-900">Technical Details</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">ID</span>
-                  <code className="bg-muted px-2 py-1 rounded text-xs">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between items-center p-2 bg-white border border-gray-200 rounded">
+                  <span className="text-sm text-gray-700">ID</span>
+                  <code className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-mono">
                     {couponType.id.substring(0, 8)}...
                   </code>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Discount Type</span>
-                  <code className="bg-muted px-2 py-1 rounded text-xs">
+                <div className="flex justify-between items-center p-2 bg-white border border-gray-200 rounded">
+                  <span className="text-sm text-gray-700">Discount Type</span>
+                  <code className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-mono">
                     {couponType.discountType}
                   </code>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status</span>
-                  <Badge variant={couponType.isActive ? "default" : "secondary"}>
+                <div className="flex justify-between items-center p-2 bg-white border border-gray-200 rounded">
+                  <span className="text-sm text-gray-700">Status</span>
+                  <Badge 
+                    className={couponType.isActive 
+                      ? "bg-green-100 text-green-800 border-green-200" 
+                      : "bg-gray-100 text-gray-800 border-gray-200"
+                    }
+                  >
                     {couponType.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>

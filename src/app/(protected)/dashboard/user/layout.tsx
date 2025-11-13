@@ -2,8 +2,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 "use client";
-
-
 import {
   BookOpen,
   CheckCircle,
@@ -110,12 +108,12 @@ export default function UserDashboardLayout({
       href: "/dashboard/user/payments",
       single: true,
     },
-    {
-      title: "Profile",
-      icon: Settings,
-      href: "/dashboard/user/profile",
-      single: true,
-    },
+    // {
+    //   title: "Profile",
+    //   icon: Settings,
+    //   href: "/dashboard/user/profile",
+    //   single: true,
+    // },
   ];
 
   return (

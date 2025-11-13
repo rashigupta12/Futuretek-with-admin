@@ -72,28 +72,31 @@ export function SiteHeader() {
         <nav className="text-slate-600 hover:[&_a]:text-slate-900 hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
          
           <div className="relative group">
-            <button className="flex items-center gap-1  transition-colors text-sm font-medium text-slate-600 hover:text-slate-900">
-              Courses
-              <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
-            </button>
-            <div className="absolute left-0 top-full hidden group-hover:block bg-white border border-slate-200 rounded-lg shadow-lg p-2 w-56 mt-2 z-50">
-              {loading ? (
-                <div className="px-4 py-2 text-sm text-slate-500">
-                  Loading...
-                </div>
-              ) : (
-                courses.map((course) => (
-                  <Link
-                    key={course.id}
-                    href={`/courses/${course.slug}`}
-                    className="block px-4 py-2.5 hover:bg-blue-50 rounded-md transition-colors text-sm text-slate-700 hover:text-blue-700"
-                  >
-                    {course.title}
-                  </Link>
-                ))
-              )}
-            </div>
-          </div>
+  <button className="flex items-center gap-1 transition-colors text-sm font-medium text-slate-600 hover:text-slate-900">
+    Courses
+    <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
+  </button>
+  <div className="absolute left-0 top-full hidden group-hover:block bg-white border border-slate-200 rounded-lg shadow-lg p-2 w-56 mt-2 z-50"
+       onMouseEnter={(e) => e.currentTarget.parentElement?.classList.add('group-hover:block')}
+       onMouseLeave={(e) => e.currentTarget.parentElement?.classList.remove('group-hover:block')}>
+    {loading ? (
+      <div className="px-4 py-2 text-sm text-slate-500">
+        Loading...
+      </div>
+    ) : (
+      courses.map((course) => (
+        <Link
+          key={course.id}
+          href={`/courses/${course.slug}`}
+          className="block px-4 py-2.5 hover:bg-blue-50 rounded-md transition-colors text-sm text-slate-700 hover:text-blue-700"
+          onClick={() => document.querySelector('.group')?.classList.remove('group-hover:block')}
+        >
+          {course.title}
+        </Link>
+      ))
+    )}
+  </div>
+</div>
           <Link
             href="/about"
             className="hover:text-blue-600 transition-colors"
