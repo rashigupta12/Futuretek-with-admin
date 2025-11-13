@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/*eslint-disable  @typescript-eslint/no-explicit-any*/
 
 import { db } from "@/db";
 import {
@@ -17,30 +17,40 @@ import { auth } from "@/auth"; // ✅ your /src/auth.ts file
 // 5. JYOTISHI - COUPON MANAGEMENT
 // =====================================================
 
-// GET - List Jyotishi's coupons
+
 export async function GET(req: NextRequest) {
   try {
-    // ✅ Get the authenticated user (server-side)
     const session = await auth();
     const jyotishiId = session?.user?.id;
     const role = session?.user?.role;
 
-    if (!jyotishiId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!jyotishiId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const isActive = searchParams.get("isActive");
+    const status = searchParams.get("status") || "ALL";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const offset = (page - 1) * limit;
 
-    // ✅ Build condition based on role (admin sees all, jyotishi sees own)
-    const conditions = [];
-    if (role === "JYOTISHI") {
-      conditions.push(eq(CouponsTable.createdByJyotishiId, jyotishiId));
+    const conditions: any[] = [];
+    if (role === "JYOTISHI") conditions.push(eq(CouponsTable.createdByJyotishiId, jyotishiId));
+
+    if (status !== "ALL") {
+      if (status === "EXPIRED") {
+        conditions.push(sql`${CouponsTable.validUntil} < NOW()`);
+        conditions.push(eq(CouponsTable.isActive, true));
+      } else if (status === "ACTIVE") {
+        conditions.push(eq(CouponsTable.isActive, true));
+        conditions.push(sql`${CouponsTable.validUntil} >= NOW() OR ${CouponsTable.validUntil} IS NULL`);
+      } else if (status === "INACTIVE") {
+        conditions.push(eq(CouponsTable.isActive, false));
+      }
     }
 
-    if (isActive !== null) {
-      conditions.push(eq(CouponsTable.isActive, isActive === "true"));
-    }
+    const [totalResult] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(CouponsTable)
+      .where(conditions.length ? and(...conditions) : undefined);
 
     const coupons = await db
       .select({
@@ -55,51 +65,26 @@ export async function GET(req: NextRequest) {
         isActive: CouponsTable.isActive,
         createdAt: CouponsTable.createdAt,
         typeName: CouponTypesTable.typeName,
-        typeCode: CouponTypesTable.typeCode,
+        totalUsage: sql<number>`COUNT(${PaymentsTable.id})`.mapWith(Number),
+        totalRevenue: sql<number>`COALESCE(SUM(${PaymentsTable.finalAmount}), 0)`.mapWith(Number),
+        totalCommission: sql<number>`COALESCE(SUM(${CommissionsTable.commissionAmount}), 0)`.mapWith(Number),
       })
       .from(CouponsTable)
-      .leftJoin(
-        CouponTypesTable,
-        eq(CouponsTable.couponTypeId, CouponTypesTable.id)
-      )
+      .leftJoin(CouponTypesTable, eq(CouponsTable.couponTypeId, CouponTypesTable.id))
+      .leftJoin(PaymentsTable, and(eq(PaymentsTable.couponId, CouponsTable.id), eq(PaymentsTable.status, "COMPLETED")))
+      .leftJoin(CommissionsTable, eq(PaymentsTable.id, CommissionsTable.paymentId))
       .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(desc(CouponsTable.createdAt));
+      .groupBy(CouponsTable.id, CouponTypesTable.typeName)
+      .orderBy(desc(CouponsTable.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    // Get usage + commission stats
-    const couponsWithStats = await Promise.all(
-      coupons.map(async (coupon) => {
-        const [stats] = await db
-          .select({
-            totalUsage: sql<number>`COUNT(*)`,
-            totalRevenue: sql<number>`COALESCE(SUM(${PaymentsTable.finalAmount}), 0)`,
-            totalCommission: sql<number>`COALESCE(SUM(${CommissionsTable.commissionAmount}), 0)`,
-          })
-          .from(PaymentsTable)
-          .leftJoin(
-            CommissionsTable,
-            eq(PaymentsTable.id, CommissionsTable.paymentId)
-          )
-          .where(
-            and(
-              eq(PaymentsTable.couponId, coupon.id),
-              eq(PaymentsTable.status, "COMPLETED")
-            )
-          );
-
-        return { ...coupon, stats };
-      })
-    );
-
-    return NextResponse.json({ coupons: couponsWithStats }, { status: 200 });
+    return NextResponse.json({ coupons, total: Number(totalResult?.count) || 0, page, limit }, { status: 200 });
   } catch (error) {
-    console.error("Error fetching coupons:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch coupons" },
-      { status: 500 }
-    );
+    console.error("Error:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }
-
 // POST - Create coupon with type selection
 export async function POST(req: NextRequest) {
   try {

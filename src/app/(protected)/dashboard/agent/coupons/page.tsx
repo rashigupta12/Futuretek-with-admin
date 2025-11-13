@@ -1,18 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/app/(protected)/dashboard/agent/coupons/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { Plus, Search, Edit, Eye, Trash2, Filter, MoreVertical, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { AlertCircle, Calendar as CalendarIcon, Copy, Filter, Plus, Search, X } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
+import { useDebouncedCallback } from "use-debounce";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type Coupon = {
   id: string;
@@ -27,87 +28,174 @@ type Coupon = {
   createdAt: string;
 };
 
+type CouponType = {
+  id: string;
+  typeCode: string;
+  typeName: string;
+  discountType: "FIXED_AMOUNT" | "PERCENTAGE";
+  maxDiscountLimit?: string;
+};
+
+const CouponRowSkeleton = () => (
+  <tr className="animate-pulse">
+    {[...Array(6)].map((_, i) => (
+      <td key={i} className="px-6 py-4">
+        <div className="h-4 bg-gray-200 rounded"></div>
+      </td>
+    ))}
+  </tr>
+);
+
 export default function MyCouponsPage() {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  // Form states
+  const [selectedType, setSelectedType] = useState("");
+  const [discountValue, setDiscountValue] = useState("");
+  const [maxUsageCount, setMaxUsageCount] = useState("");
+  const [validFrom, setValidFrom] = useState<Date | undefined>(undefined);
+  const [validUntil, setValidUntil] = useState<Date | undefined>(undefined);
+  const [previewCode, setPreviewCode] = useState("");
+  const [creatingCoupon, setCreatingCoupon] = useState(false);
+
+  // SWR for coupons
+  const { data: couponsData, isLoading, mutate } = useSWR(
+    `/api/jyotishi/coupons?page=${page}&limit=${limit}&status=${statusFilter}`,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+
+  // SWR for coupon types (cached)
+  const { data: typesData } = useSWR("/api/jyotishi/coupon-types", fetcher, {
+    dedupingInterval: 60000,
+    revalidateOnFocus: false,
+  });
+
+  const coupons: Coupon[] = useMemo(() => {
+    return (couponsData?.coupons || []).map((c: any) => {
+      const isExpired = c.validUntil && new Date(c.validUntil) < new Date();
+      const isActive = c.isActive && !isExpired;
+      return {
+        id: c.id,
+        code: c.code,
+        typeName: c.typeName,
+        discountValue: Number(c.discountValue),
+        discountType: c.discountType,
+        usageCount: c.currentUsageCount || 0,
+        maxUsage: c.maxUsageCount,
+        status: isActive ? "ACTIVE" : isExpired ? "EXPIRED" : "INACTIVE",
+        validUntil: c.validUntil,
+        createdAt: c.createdAt,
+      };
+    });
+  }, [couponsData]);
+
+  const types: CouponType[] = typesData?.couponTypes || [];
+
+  const filteredCoupons = useMemo(() => {
+    return coupons.filter(
+      (c) =>
+        c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.typeName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [coupons, searchTerm]);
+
+  const totalPages = Math.ceil((couponsData?.total || 0) / limit);
+
+  // Preview with debounce
+  const debouncedPreview = useDebouncedCallback(async () => {
+    if (!selectedType || !discountValue) {
+      setPreviewCode("");
+      return;
+    }
+    try {
+      const res = await fetch("/api/jyotishi/coupons/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ couponTypeId: selectedType, discountValue: Number(discountValue) }),
+      });
+      const data = await res.json();
+      setPreviewCode(data.couponCode || "");
+    } catch {
+      setPreviewCode("");
+    }
+  }, 500);
 
   useEffect(() => {
-    fetchCoupons();
-  }, [statusFilter]);
+    debouncedPreview();
+  }, [selectedType, discountValue, debouncedPreview]);
 
-  const fetchCoupons = async () => {
+  const handleCreateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedType || !discountValue || !validFrom || !validUntil) return;
+
+    const selectedTypeObj = types.find((t) => t.id === selectedType);
+    if (selectedTypeObj?.maxDiscountLimit) {
+      const max = Number(selectedTypeObj.maxDiscountLimit);
+      const entered = Number(discountValue);
+      if (entered > max) {
+        alert(`Max allowed: ${max}${selectedTypeObj.discountType === "PERCENTAGE" ? "%" : "₹"}`);
+        return;
+      }
+    }
+
+    setCreatingCoupon(true);
     try {
-      setLoading(true);
-      const url =
-        statusFilter === "ALL"
-          ? "/api/jyotishi/coupons"
-          : `/api/jyotishi/coupons?status=${statusFilter}`;
-
-      const res = await fetch(url);
-      const data = await res.json();
-
-      const mapped: Coupon[] = (data.coupons || []).map((c: any) => {
-        const isExpired = c.validUntil && new Date(c.validUntil) < new Date();
-        const isActive = c.isActive && !isExpired;
-
-        return {
-          id: c.id,
-          code: c.code,
-          typeName: c.typeName,
-          discountValue: Number(c.discountValue),
-          discountType: c.discountType,
-          usageCount: c.currentUsageCount || 0,
-          maxUsage: c.maxUsageCount,
-          status: isActive ? "ACTIVE" : isExpired ? "EXPIRED" : "INACTIVE",
-          validUntil: c.validUntil,
-          createdAt: c.createdAt,
-        };
+      const res = await fetch("/api/jyotishi/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          couponTypeId: selectedType,
+          discountValue: Number(discountValue),
+          maxUsageCount: maxUsageCount ? Number(maxUsageCount) : null,
+          validFrom: validFrom.toISOString(),
+          validUntil: validUntil.toISOString(),
+        }),
       });
 
-      setCoupons(mapped);
-    } catch (err) {
-      console.error("Failed to fetch coupons:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this coupon? This cannot be undone.")) return;
-
-    try {
-      const res = await fetch(`/api/jyotishi/coupons/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setCoupons((prev) => prev.filter((c) => c.id !== id));
+        alert("Coupon created!");
+        setShowSidebar(false);
+        mutate(); // Refresh list
+        // Reset
+        setSelectedType("");
+        setDiscountValue("");
+        setMaxUsageCount("");
+        setValidFrom(undefined);
+        setValidUntil(undefined);
+        setPreviewCode("");
       } else {
-        alert("Failed to delete coupon");
+        const err = await res.json();
+        alert(err.error || "Failed");
       }
-    } catch (err) {
-      console.error("Delete failed:", err);
-      alert("Error deleting coupon");
+    } catch {
+      alert("Error");
+    } finally {
+      setCreatingCoupon(false);
     }
   };
+
+  // const handleDelete = async (id: string) => {
+  //   if (!confirm("Delete this coupon?")) return;
+  //   try {
+  //     const res = await fetch(`/api/jyotishi/coupons/${id}`, { method: "DELETE" });
+  //     if (res.ok) {
+  //       mutate();
+  //       alert("Deleted");
+  //     }
+  //   } catch {
+  //     alert("Error");
+  //   }
+  // };
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     alert(`Copied: ${code}`);
   };
-
-  const filteredCoupons = coupons.filter((c) =>
-    c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.typeName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // const getStatusVariant = (status: string) => {
-  //   switch (status) {
-  //     case "ACTIVE": return "default";
-  //     case "INACTIVE": return "secondary";
-  //     case "EXPIRED": return "destructive";
-  //     default: return "outline";
-  //   }
-  // };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -118,34 +206,33 @@ export default function MyCouponsPage() {
     }
   };
 
+  const selectedTypeObj = types.find((t) => t.id === selectedType);
+  const isDiscountExceeded = selectedTypeObj?.maxDiscountLimit
+    ? Number(discountValue) > Number(selectedTypeObj.maxDiscountLimit)
+    : false;
+
   return (
     <div className="p-4 w-full mx-auto">
-      {/* Header with Search and Filters */}
+      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
         <div>
           <h2 className="text-3xl font-bold text-blue-700">My Coupons</h2>
-          <p className="text-gray-600 mt-1">
-            Create and manage discount coupons for your students.
-          </p>
+          <p className="text-gray-600 mt-1">Create and manage discount coupons.</p>
         </div>
-        
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search by code or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              className="pl-10 w-64"
             />
           </div>
-
-          {/* Filter */}
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-400" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -156,160 +243,67 @@ export default function MyCouponsPage() {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Create Button */}
-          <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 border-0">
-            <Link href="/dashboard/agent/coupons/create" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Create Coupon
-            </Link>
+          <Button onClick={() => setShowSidebar(true)} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+            <Plus className="h-4 w-4" /> Create Coupon
           </Button>
         </div>
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading coupons...</div>
+        {isLoading ? (
+          <div className="p-8">
+            {[...Array(5)].map((_, i) => (
+              <CouponRowSkeleton key={i} />
+            ))}
+          </div>
         ) : filteredCoupons.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            No coupons yet. <Link href="/dashboard/agent/coupons/create" className="text-blue-600 hover:text-blue-700 font-medium underline">Create your first!</Link>
+            No coupons. <button onClick={() => setShowSidebar(true)} className="text-blue-600 underline">Create one!</button>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-blue-600 border-blue-100 text-white">
+              <thead className="bg-blue-600 text-white">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                    Coupon Code
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                    Discount
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                    Usage
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                    Valid Until
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase">Code</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase">Type</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase">Discount</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase">Usage</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase">Valid Until</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredCoupons.map((coupon) => (
-                  <tr key={coupon.id} className="hover:bg-blue-50/30 transition-colors">
+                  <tr key={coupon.id} className="hover:bg-blue-50/30">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <code className="font-mono text-sm font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded border">
                           {coupon.code}
                         </code>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 hover:bg-blue-100 hover:text-blue-600"
-                          onClick={() => copyCode(coupon.code)}
-                        >
+                        <Button size="icon" variant="ghost" onClick={() => copyCode(coupon.code)}>
                           <Copy className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </td>
-
+                    <td className="px-6 py-4 text-sm font-medium">{coupon.typeName}</td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-gray-900">
-                        {coupon.typeName}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className={`text-sm font-bold ${
-                        coupon.discountType === "PERCENTAGE" 
-                          ? "text-amber-600" 
-                          : "text-blue-600"
-                      }`}>
-                        {coupon.discountType === "PERCENTAGE"
-                          ? `${coupon.discountValue}%`
-                          : `₹${coupon.discountValue.toLocaleString("en-IN")}`}
+                      <div className={`text-sm font-bold ${coupon.discountType === "PERCENTAGE" ? "text-amber-600" : "text-blue-600"}`}>
+                        {coupon.discountType === "PERCENTAGE" ? `${coupon.discountValue}%` : `₹${coupon.discountValue.toLocaleString("en-IN")}`}
                       </div>
                     </td>
-
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700">
-                        <span className="font-semibold">{coupon.usageCount}</span>
-                        {coupon.maxUsage ? (
-                          <span className="text-gray-500"> / {coupon.maxUsage}</span>
-                        ) : (
-                          <span className="text-gray-400 text-xs ml-1">(unlimited)</span>
-                        )}
-                      </div>
+                    <td className="px-6 py-4 text-sm">
+                      <span className="font-semibold">{coupon.usageCount}</span>
+                      {coupon.maxUsage ? <span className="text-gray-500"> / {coupon.maxUsage}</span> : <span className="text-gray-400 text-xs ml-1">(unlimited)</span>}
                     </td>
-
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(coupon.status)}`}>
                         {coupon.status}
                       </span>
                     </td>
-
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600">
-                        {coupon.validUntil
-                          ? new Date(coupon.validUntil).toLocaleDateString("en-IN")
-                          : "No expiry"}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4 text-right">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="hover:bg-blue-100 hover:text-blue-600"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="end" className="w-48 p-0 border border-gray-200 shadow-lg">
-                          <div className="flex flex-col">
-                            <Link href={`/dashboard/agent/coupons/${coupon.id}`}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start gap-2 rounded-none hover:bg-blue-50 hover:text-blue-600"
-                              >
-                                <Eye className="h-4 w-4" />
-                                View
-                              </Button>
-                            </Link>
-                            <Link href={`/dashboard/agent/coupons/edit/${coupon.id}`}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start gap-2 rounded-none hover:bg-amber-50 hover:text-amber-600"
-                              >
-                                <Edit className="h-4 w-4" />
-                                Edit
-                              </Button>
-                            </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-start gap-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-none"
-                              onClick={() => handleDelete(coupon.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </Button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString("en-IN") : "No expiry"}
                     </td>
                   </tr>
                 ))}
@@ -317,7 +311,136 @@ export default function MyCouponsPage() {
             </table>
           </div>
         )}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-between items-center px-6 py-3 border-t">
+            <Button disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+            <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
+            <Button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+          </div>
+        )}
       </div>
+
+      {/* Sidebar */}
+      {showSidebar && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowSidebar(false)} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
+            <div className="flex flex-col h-full">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-white">Create New Coupon</h2>
+                  <button onClick={() => setShowSidebar(false)} className="text-white p-1 rounded-lg hover:bg-blue-800">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <form onSubmit={handleCreateCoupon} className="space-y-6">
+                  {/* Type */}
+                  <div>
+                    <Label>Coupon Type</Label>
+                    <Select value={selectedType} onValueChange={setSelectedType} required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {types.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            <div className="flex justify-between w-full gap-3">
+                              <span>{t.typeCode} - {t.typeName}</span>
+                              <span className={`text-xs font-medium px-2 py-1 rounded ${t.discountType === "FIXED_AMOUNT" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                                {t.discountType === "FIXED_AMOUNT" ? "₹" : "%"}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Discount */}
+                  <div>
+                    <Label>
+                      Discount Value {selectedTypeObj?.discountType === "PERCENTAGE" ? <span className="text-amber-600">(%)</span> : <span className="text-blue-600">(₹)</span>}
+                    </Label>
+                    <Input
+                      type="number"
+                      value={discountValue}
+                      onChange={(e) => setDiscountValue(e.target.value)}
+                      placeholder={selectedTypeObj?.discountType === "PERCENTAGE" ? "e.g. 20" : "e.g. 500"}
+                      className={isDiscountExceeded ? "border-rose-500" : ""}
+                      required
+                    />
+                    {selectedTypeObj?.maxDiscountLimit && (
+                      <div className="flex justify-between text-xs mt-1">
+                        <span className="text-gray-500">Max: {selectedTypeObj.maxDiscountLimit}{selectedTypeObj.discountType === "PERCENTAGE" ? "%" : "₹"}</span>
+                        {isDiscountExceeded && <span className="text-rose-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Exceeds limit</span>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Max Usage */}
+                  <div>
+                    <Label>Max Usage (optional)</Label>
+                    <Input type="number" value={maxUsageCount} onChange={(e) => setMaxUsageCount(e.target.value)} placeholder="Unlimited" />
+                  </div>
+
+                  {/* Dates */}
+                  <div>
+                    <Label>Valid From *</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {validFrom ? format(validFrom, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent><Calendar mode="single" selected={validFrom} onSelect={setValidFrom} /></PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div>
+                    <Label>Valid Until *</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {validUntil ? format(validUntil, "PPP") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent><Calendar mode="single" selected={validUntil} onSelect={setValidUntil} /></PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Preview */}
+                  {previewCode && (
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium">Preview Code</span>
+                        <Button type="button" size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(previewCode); alert("Copied!"); }}>
+                          <Copy className="h-3 w-3 mr-1" /> Copy
+                        </Button>
+                      </div>
+                      <code className="text-lg font-mono font-bold text-blue-600 bg-white px-3 py-2 rounded border border-blue-200 inline-block">
+                        {previewCode}
+                      </code>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={creatingCoupon || isDiscountExceeded}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg disabled:opacity-50"
+                  >
+                    {creatingCoupon ? "Creating..." : "Create Coupon"}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,24 +1,24 @@
 // src/app/(protected)/dashboard/agent/layout.tsx
 "use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  ChevronDown,
+  DollarSign,
   Home,
-  Settings,
+  List,
+  LogOut,
   Tag,
+  Ticket,
   TrendingUp,
   Users,
-  Wallet,
-  BarChart3,
-  ChevronDown,
-  Plus,
-  List,
-  DollarSign,
-  Ticket,
+  Wallet
 } from "lucide-react";
-
+import { signOut, useSession } from "next-auth/react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 
 type SingleNavItem = {
   title: string;
@@ -46,38 +46,46 @@ export default function JyotishiLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { data: session, status } = useSession();
   const pathname = usePathname();
-  // Get user data from session
-  // const userName = session?.user?.name || "Agent";
-  // const userImage = session?.user?.image || "/images/user_alt_icon.png";
+  const router = useRouter();
 
-  // Generate avatar fallback from name
-  // const getAvatarFallback = () => {
-  //   if (session?.user?.name) {
-  //     return session.user.name
-  //       .split(" ")
-  //       .map((n) => n[0])
-  //       .join("")
-  //       .toUpperCase()
-  //       .slice(0, 2);
-  //   }
-  //   return "AG";
-  // };
+  const userName = session?.user?.name || "Agent";
+  const userImage = session?.user?.image || "/images/user_alt_icon.png";
 
-  const [expandedMenus, setExpandedMenus] = useState<
-    Record<"coupons" | "earnings", boolean>
-  >({
-    coupons: true,
-    earnings: false,
-  });
+  const getAvatarFallback = () => {
+    if (session?.user?.name) {
+      return session.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return "AG";
+  };
 
- 
+  // Keep expanded state in URL query
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const toggleMenu = (menu: keyof typeof expandedMenus) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [menu]: !prev[menu],
-    }));
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const coupons = params.get("menu") === "coupons";
+    const earnings = params.get("menu") === "earnings";
+    setExpanded({ coupons, earnings });
+  }, [pathname]);
+
+  const toggleMenu = (key: string) => {
+    const newState = !expanded[key];
+    setExpanded((prev) => ({ ...prev, [key]: newState }));
+
+    const params = new URLSearchParams(window.location.search);
+    if (newState) {
+      params.set("menu", key);
+    } else {
+      params.delete("menu");
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const isActive = (path: string) => pathname === path;
@@ -95,16 +103,7 @@ export default function JyotishiLayout({
       key: "coupons",
       subItems: [
         { title: "All Coupons", href: "/dashboard/agent/coupons", icon: List },
-        {
-          title: "Create Coupon",
-          href: "/dashboard/agent/coupons/create",
-          icon: Plus,
-        },
-        {
-          title: "Coupon Types",
-          href: "/dashboard/agent/coupon-types",
-          icon: Ticket,
-        },
+        { title: "Coupon Types", href: "/dashboard/agent/coupon-types", icon: Ticket },
       ],
     },
     {
@@ -112,56 +111,41 @@ export default function JyotishiLayout({
       icon: TrendingUp,
       key: "earnings",
       subItems: [
-        {
-          title: "Commission Overview",
-          href: "/dashboard/agent/earnings",
-          icon: DollarSign,
-        },
-        {
-          title: "Payout History",
-          href: "/dashboard/agent/payouts",
-          icon: Wallet,
-        },
-        {
-          title: "Request Payout",
-          href: "/dashboard/agent/payouts/request",
-          icon: Plus,
-        },
+        { title: "Commission Overview", href: "/dashboard/agent/earnings", icon: DollarSign },
+        { title: "Payout History", href: "/dashboard/agent/payouts", icon: Wallet },
       ],
     },
     {
-    title: "Assign Coupons",
-    icon: Users,
-    href: "/dashboard/agent/assign-coupons",
-    single: true,
-  },
-    {
-      title: "Analytics",
-      icon: BarChart3,
-      href: "/dashboard/agent/analytics",
-      single: true,
-    },
-    {
-      title: "Profile Settings",
-      icon: Settings,
-      href: "/dashboard/agent/profile",
+      title: "Assign Coupons",
+      icon: Users,
+      href: "/dashboard/agent/assign-coupons",
       single: true,
     },
   ];
 
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/auth/login" });
+  };
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation Bar */}
-      {/* <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50 ">
+      {/* Top Bar */}
+      <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-pink-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">FT</span>
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-gray-800">
-                FutureTek agent
-              </h1>
+              <h1 className="text-2xl font-semibold text-gray-800">FutureTek Agent</h1>
               <p className="text-xs text-gray-500">Affiliate Partner Portal</p>
             </div>
           </div>
@@ -174,22 +158,13 @@ export default function JyotishiLayout({
                   <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
                 </Avatar>
                 <div className="text-left">
-                  <span className="text-sm font-medium text-gray-700 block">
-                    {userName}
-                  </span>
-                  
+                  <span className="text-sm font-medium text-gray-700 block">{userName}</span>
                 </div>
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-56" align="end">
               <div className="space-y-1">
-                <Link href="/dashboard/agent/profile">
-                  <button className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                    <Settings className="h-4 w-4" />
-                    Profile Settings
-                  </button>
-                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 rounded-lg p-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
@@ -201,26 +176,26 @@ export default function JyotishiLayout({
             </PopoverContent>
           </Popover>
         </div>
-      </nav> */}
+      </nav>
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r min-h-[calc(100vh-64px)] p-4 fixed left-0 top-16 bottom-0 overflow-y-auto mt-4">
+        <aside className="w-64 bg-white border-r min-h-screen p-4 fixed left-0 top-16 overflow-y-auto">
           <nav className="space-y-1">
             {navigationItems.map((item) => (
               <div key={item.title}>
                 {item.single ? (
-                  <Link href={item.href}>
-                    <button
-                      className={`w-full flex items-center gap-3 rounded-lg p-3 transition-colors ${
+                  <Link href={item.href} prefetch={true}>
+                    <div
+                      className={`w-full flex items-center gap-3 rounded-lg p-3 transition-all cursor-pointer ${
                         isActive(item.href)
-                          ? "bg-blue-50 text-blue-700 font-medium"
+                          ? "bg-blue-50 text-blue-700 font-medium shadow-sm"
                           : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
                       <item.icon className="h-5 w-5" />
                       <span className="text-sm">{item.title}</span>
-                    </button>
+                    </div>
                   </Link>
                 ) : (
                   <>
@@ -230,23 +205,21 @@ export default function JyotishiLayout({
                     >
                       <div className="flex items-center gap-3">
                         <item.icon className="h-5 w-5" />
-                        <span className="text-sm font-medium">
-                          {item.title}
-                        </span>
+                        <span className="text-sm font-medium">{item.title}</span>
                       </div>
                       <ChevronDown
                         className={`h-4 w-4 transition-transform ${
-                          expandedMenus[item.key] ? "rotate-180" : ""
+                          expanded[item.key] ? "rotate-180" : ""
                         }`}
                       />
                     </button>
 
-                    {expandedMenus[item.key] && (
+                    {expanded[item.key] && (
                       <div className="ml-4 mt-1 space-y-1">
                         {item.subItems.map((sub) => (
-                          <Link key={sub.href} href={sub.href}>
-                            <button
-                              className={`w-full flex items-center gap-3 rounded-lg p-2 pl-3 transition-colors ${
+                          <Link key={sub.href} href={sub.href} prefetch={true}>
+                            <div
+                              className={`w-full flex items-center gap-3 rounded-lg p-2 pl-3 transition-all cursor-pointer ${
                                 isActive(sub.href)
                                   ? "bg-blue-50 text-blue-700 font-medium"
                                   : "text-gray-600 hover:bg-gray-50"
@@ -254,7 +227,7 @@ export default function JyotishiLayout({
                             >
                               <sub.icon className="h-4 w-4" />
                               <span className="text-sm">{sub.title}</span>
-                            </button>
+                            </div>
                           </Link>
                         ))}
                       </div>
@@ -264,33 +237,10 @@ export default function JyotishiLayout({
               </div>
             ))}
           </nav>
-
-          {/* Quick Stats in Sidebar */}
-          <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-pink-50 rounded-lg border border-blue-100">
-            <h3 className="text-xs font-semibold text-gray-600 mb-3">
-              Quick Stats
-            </h3>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-600">Active Coupons</span>
-                <span className="text-sm font-bold text-blue-700">12</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-600">Students</span>
-                <span className="text-sm font-bold text-blue-700">45</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-600">Pending Earnings</span>
-                <span className="text-sm font-bold text-green-600">
-                  ₹15,420
-                </span>
-              </div>
-            </div>
-          </div>
         </aside>
 
-        {/* Main Content - This is where child pages render */}
-        <main className="flex-1 ml-64 mt-4 p-6">
+        {/* Main Content */}
+        <main className="flex-1 ml-64  p-6 min-h-screen">
           <div className="w-full mx-auto">{children}</div>
         </main>
       </div>

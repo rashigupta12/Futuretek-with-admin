@@ -1,4 +1,4 @@
-
+/*eslint-disable  @typescript-eslint/no-explicit-any*/
 // app/api/jyotishi/earnings/route.ts
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -6,49 +6,42 @@ import {
   CommissionsTable,
   CouponsTable,
   CoursesTable,
-  UsersTable
+  UsersTable,
 } from "@/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-// GET - Get commission earnings
+
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth()
-    const jyotishiId = session?.user.id;
-       if (!jyotishiId) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+    const session = await auth();
+    const jyotishiId = session?.user?.id;
+    if (!jyotishiId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
+    const start = searchParams.get("startDate");
+    const end = searchParams.get("endDate");
+    const page = parseInt(searchParams.get("page") ?? "1");
+    const limit = parseInt(searchParams.get("limit") ?? "20");
+    const offset = (page - 1) * limit;
 
-    // Build conditions
-    const conditions = [eq(CommissionsTable.jyotishiId, jyotishiId)];
+    // ---------- base conditions ----------
+    const conds: any[] = [eq(CommissionsTable.jyotishiId, jyotishiId)];
+    if (start) conds.push(sql`${CommissionsTable.createdAt} >= ${new Date(start)}`);
+    if (end) conds.push(sql`${CommissionsTable.createdAt} <= ${new Date(end)}`);
 
-    if (startDate) {
-      conditions.push(
-        sql`${CommissionsTable.createdAt} >= ${new Date(startDate)}`
-      );
-    }
-    if (endDate) {
-      conditions.push(
-        sql`${CommissionsTable.createdAt} <= ${new Date(endDate)}`
-      );
-    }
-
-    // Overall statistics
+    // ---------- aggregated stats ----------
     const [stats] = await db
       .select({
-        totalEarnings: sql<number>`COALESCE(SUM(${CommissionsTable.commissionAmount}), 0)`,
-        pendingEarnings: sql<number>`COALESCE(SUM(CASE WHEN ${CommissionsTable.status} = 'PENDING' THEN ${CommissionsTable.commissionAmount} ELSE 0 END), 0)`,
-        paidEarnings: sql<number>`COALESCE(SUM(CASE WHEN ${CommissionsTable.status} = 'PAID' THEN ${CommissionsTable.commissionAmount} ELSE 0 END), 0)`,
-        totalSales: sql<number>`COUNT(*)`,
+        totalEarnings: sql<number>`COALESCE(SUM(${CommissionsTable.commissionAmount}),0)`.mapWith(Number),
+        pendingEarnings: sql<number>`COALESCE(SUM(CASE WHEN ${CommissionsTable.status}='PENDING' THEN ${CommissionsTable.commissionAmount} ELSE 0 END),0)`.mapWith(Number),
+        paidEarnings: sql<number>`COALESCE(SUM(CASE WHEN ${CommissionsTable.status}='PAID' THEN ${CommissionsTable.commissionAmount} ELSE 0 END),0)`.mapWith(Number),
+        totalSales: sql<number>`COUNT(*)`.mapWith(Number),
       })
       .from(CommissionsTable)
-      .where(and(...conditions));
+      .where(and(...conds));
 
-    // Recent commissions
-    const recentCommissions = await db
+    // ---------- recent commissions (paginated) ----------
+    const recent = await db
       .select({
         id: CommissionsTable.id,
         saleAmount: CommissionsTable.saleAmount,
@@ -64,22 +57,27 @@ export async function GET(req: NextRequest) {
       .leftJoin(CoursesTable, eq(CommissionsTable.courseId, CoursesTable.id))
       .leftJoin(UsersTable, eq(CommissionsTable.studentId, UsersTable.id))
       .leftJoin(CouponsTable, eq(CommissionsTable.couponId, CouponsTable.id))
-      .where(and(...conditions))
+      .where(and(...conds))
       .orderBy(desc(CommissionsTable.createdAt))
-      .limit(20);
+      .limit(limit)
+      .offset(offset);
+
+    // ---------- total rows for pagination ----------
+    const [{ total }] = await db
+      .select({ total: sql<number>`COUNT(*)` })
+      .from(CommissionsTable)
+      .where(and(...conds));
 
     return NextResponse.json(
       {
         stats,
-        recentCommissions,
+        recentCommissions: recent,
+        pagination: { page, limit, total: Number(total) },
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching earnings:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch earnings" },
-      { status: 500 }
-    );
+    console.error("Earnings API error:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }
