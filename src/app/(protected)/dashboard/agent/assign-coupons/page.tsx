@@ -2,7 +2,7 @@
 // app/(protected)/dashboard/agent/assign-coupons/page.tsx
 "use client";
 
-import { AlertCircle, Book, Calendar, Clock, Search, Tag, Users, X, Plus } from "lucide-react";
+import { AlertCircle, Book, Calendar, Clock, Search, Tag, Users, X, Plus, ShieldAlert } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 interface Student {
@@ -16,6 +16,8 @@ interface Course {
   id: string;
   title: string;
   priceINR: string;
+  hasAdminDiscount?: boolean;
+  adminDiscountAmount?: string;
 }
 
 interface Coupon {
@@ -62,7 +64,6 @@ export default function AssignCouponsPage() {
     fetchRecentAssignments();
   }, []);
 
-  // Check enrollments when course selection changes
   useEffect(() => {
     if (selectedCourse && students.length > 0) {
       checkStudentEnrollments();
@@ -71,11 +72,9 @@ export default function AssignCouponsPage() {
 
   const fetchData = async () => {
     try {
-      // Fetch students (users)
       const studentsRes = await fetch("/api/jyotishi/students");
       const studentsData = await studentsRes.json();
       
-      // Transform the student data to match our interface
       const transformedStudents: Student[] = studentsData.students?.map((student: any) => ({
         id: student.studentId,
         name: student.studentName || "Unknown Student",
@@ -84,33 +83,47 @@ export default function AssignCouponsPage() {
       
       setStudents(transformedStudents);
 
-      // Fetch courses
       const coursesRes = await fetch("/api/courses");
       const coursesData = await coursesRes.json();
       
-      // Transform course data - handle both array and object responses
       let transformedCourses: Course[] = [];
-      if (Array.isArray(coursesData)) {
-        transformedCourses = coursesData.map((course: any) => ({
-          id: course.id,
-          title: course.title,
-          priceINR: course.priceINR
-        }));
-      } else if (coursesData.courses) {
-        transformedCourses = coursesData.courses.map((course: any) => ({
-          id: course.id,
-          title: course.title,
-          priceINR: course.priceINR
-        }));
-      }
+      const courseArray = Array.isArray(coursesData) ? coursesData : coursesData.courses || [];
       
+      const courseDetailsPromises = courseArray.map(async (course: any) => {
+        try {
+          const detailRes = await fetch(`/api/courses/${course.slug}`);
+          const detailData = await detailRes.json();
+          
+          const hasAdminDiscount = detailData.course?.appliedCoupons?.some(
+            (coupon: any) => coupon.creatorType === 'ADMIN'
+          ) || false;
+          
+          const adminDiscountAmount = detailData.course?.adminDiscountAmount || "0";
+          
+          return {
+            id: course.id,
+            title: course.title,
+            priceINR: course.priceINR,
+            hasAdminDiscount,
+            adminDiscountAmount
+          };
+        } catch {
+          return {
+            id: course.id,
+            title: course.title,
+            priceINR: course.priceINR,
+            hasAdminDiscount: false,
+            adminDiscountAmount: "0"
+          };
+        }
+      });
+      
+      transformedCourses = await Promise.all(courseDetailsPromises);
       setCourses(transformedCourses);
 
-      // Fetch Jyotishi's coupons
       const couponsRes = await fetch("/api/jyotishi/coupons");
       const couponsData = await couponsRes.json();
       
-      // Transform coupon data
       const transformedCoupons: Coupon[] = couponsData.coupons?.map((coupon: any) => ({
         id: coupon.id,
         code: coupon.code,
@@ -146,7 +159,6 @@ export default function AssignCouponsPage() {
       if (data.enrollments) {
         setEnrollmentChecks(data.enrollments);
         
-        // Update students with enrollment status
         setStudents(prevStudents => 
           prevStudents.map(student => ({
             ...student,
@@ -169,7 +181,12 @@ export default function AssignCouponsPage() {
       return;
     }
 
-    // Check if student is already enrolled in this course
+    const selectedCourseData = courses.find(c => c.id === selectedCourse);
+    if (selectedCourseData?.hasAdminDiscount) {
+      alert("Cannot assign coupon to this course as it already has an admin discount applied.");
+      return;
+    }
+
     const selectedStudentData = students.find(s => s.id === selectedStudent);
     if (selectedStudentData?.isEnrolled) {
       alert("This student is already enrolled in the selected course. Cannot assign coupon.");
@@ -194,7 +211,6 @@ export default function AssignCouponsPage() {
 
       if (result.success) {
         alert("Coupon assigned successfully!");
-        // Reset form
         setSelectedStudent("");
         setSelectedCourse("");
         setSelectedCoupon("");
@@ -202,7 +218,6 @@ export default function AssignCouponsPage() {
         setEnrollmentChecks([]);
         setShowSidebar(false);
         
-        // Refresh recent assignments
         await fetchRecentAssignments();
       } else {
         alert(`Error: ${result.error}`);
@@ -215,16 +230,14 @@ export default function AssignCouponsPage() {
     }
   };
 
-  // Safe filtering with null checks and enrollment status
   const filteredStudents = students.filter(student =>
     (student.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (student.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
-  // Get selected student data for display
   const selectedStudentData = students.find(s => s.id === selectedStudent);
+  const selectedCourseData = courses.find(c => c.id === selectedCourse);
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
@@ -261,11 +274,16 @@ export default function AssignCouponsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Assignments - Main Content */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
-              <h2 className="text-lg font-semibold text-gray-900">Recent Assignments</h2>
+        <div className="lg:col-span-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
+                <h2 className="text-lg font-semibold text-gray-900">Recent Assignments</h2>
+                <span className="bg-blue-100 text-blue-700 text-sm px-2.5 py-0.5 rounded-full font-medium">
+                  {recentAssignments.length}
+                </span>
+              </div>
             </div>
             
             {recentAssignments.length === 0 ? (
@@ -275,74 +293,98 @@ export default function AssignCouponsPage() {
                 <p className="text-sm text-gray-500 mt-1">Assign your first coupon to get started</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {recentAssignments.map((assignment) => (
-                  <div key={assignment.id} className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50/30 transition-all duration-200">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                            <Users className="w-4 h-4 text-white" />
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Student & Course
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Coupon Details
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Assigned By
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date & Time
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {recentAssignments.map((assignment) => (
+                      <tr key={assignment.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                              <Users className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {assignment.studentName}
+                              </p>
+                              <p className="text-sm text-gray-500 truncate">
+                                {assignment.studentEmail}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                                <Book className="w-3 h-3" />
+                                {assignment.courseTitle}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-semibold text-gray-900">{assignment.studentName}</span>
-                            <span className="text-gray-500 text-sm block">{assignment.studentEmail}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Book className="w-4 h-4 text-blue-600" />
-                            <span className="text-gray-700">{assignment.courseTitle}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Tag className="w-4 h-4 text-amber-600" />
-                            <span>
-                              <code className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs font-mono border border-amber-200">
-                                {assignment.couponCode}
-                              </code>
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <span className={`font-medium ${
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <code className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs font-mono border border-amber-200 w-fit">
+                              {assignment.couponCode}
+                            </code>
+                            <span className={`text-sm font-medium ${
                               assignment.discountType === "PERCENTAGE" ? "text-amber-600" : "text-blue-600"
                             }`}>
-                              {assignment.discountType === "PERCENTAGE" ? `${assignment.discountValue}%` : `₹${assignment.discountValue}`} off
+                              {assignment.discountType === "PERCENTAGE" 
+                                ? `${assignment.discountValue}% off` 
+                                : `₹${assignment.discountValue} off`}
                             </span>
                           </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-600">{formatDate(assignment.assignedAt)}</span>
-                            <Clock className="w-4 h-4 text-gray-500 ml-2" />
-                            <span className="text-gray-600">{formatTime(assignment.assignedAt)}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-900">
+                            {assignment.assignedByName}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col text-sm">
+                            <span className="text-gray-900 flex items-center gap-1">
+                              <Calendar className="w-4 h-4 text-gray-500" />
+                              {formatDate(assignment.assignedAt)}
+                            </span>
+                            <span className="text-gray-500 flex items-center gap-1 mt-1">
+                              <Clock className="w-4 h-4 text-gray-500" />
+                              {formatTime(assignment.assignedAt)}
+                            </span>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <span className="text-xs text-gray-500">
-                        Assigned by: <span className="font-medium text-gray-700">{assignment.assignedByName}</span>
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
 
         {/* Quick Stats Sidebar */}
-        <div className="space-y-6">
+        {/* <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="font-semibold text-gray-900 mb-4">Overview</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Total Students</span>
                 <span className="font-semibold text-gray-900">{students.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Available Courses</span>
+                <span className="font-semibold text-blue-600">{courses.filter(c => !c.hasAdminDiscount).length}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Available Coupons</span>
@@ -367,7 +409,7 @@ export default function AssignCouponsPage() {
               Assign Coupon
             </button>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Assignment Sidebar */}
@@ -408,25 +450,52 @@ export default function AssignCouponsPage() {
                       value={selectedCourse}
                       onChange={(e) => {
                         setSelectedCourse(e.target.value);
-                        setSelectedStudent(""); // Reset student when course changes
+                        setSelectedStudent("");
                       }}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       required
                     >
                       <option value="">Choose a course...</option>
                       {courses.map((course) => (
-                        <option key={course.id} value={course.id}>
+                        <option 
+                          key={course.id} 
+                          value={course.id}
+                          disabled={course.hasAdminDiscount}
+                          className={course.hasAdminDiscount ? "text-gray-400 bg-gray-100" : ""}
+                        >
                           {course.title} (₹{course.priceINR})
+                          {course.hasAdminDiscount && " - Admin Discount Applied"}
                         </option>
                       ))}
                     </select>
                     {courses.length === 0 && (
-                      <p className="text-sm text-gray-500">No courses found</p>
+                      <p className="text-sm text-gray-500">No courses available</p>
+                    )}
+                    {courses.filter(c => !c.hasAdminDiscount).length === 0 && courses.length > 0 && (
+                      <p className="text-sm text-amber-600">All courses have admin discounts applied</p>
                     )}
                   </div>
 
+                  {/* Admin Discount Warning */}
+                  {selectedCourseData?.hasAdminDiscount && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <ShieldAlert className="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <span className="text-red-800 font-medium block">
+                            Admin Discount Already Applied
+                          </span>
+                          <p className="text-red-700 text-sm mt-1">
+                            This course already has an admin discount of ₹{selectedCourseData.adminDiscountAmount}. 
+                            Jyotishi coupons cannot be assigned to courses with existing admin discounts.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Student Selection */}
-                  {selectedCourse && (
+                  {selectedCourse && !selectedCourseData?.hasAdminDiscount && (
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
                         <Users className="w-4 h-4 inline mr-2 text-blue-600" />
@@ -473,7 +542,7 @@ export default function AssignCouponsPage() {
                   )}
 
                   {/* Coupon Selection */}
-                  {selectedCourse && selectedStudent && (
+                  {selectedCourse && selectedStudent && !selectedCourseData?.hasAdminDiscount && (
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
                         <Tag className="w-4 h-4 inline mr-2 text-amber-600" />
@@ -507,7 +576,7 @@ export default function AssignCouponsPage() {
                   )}
 
                   {/* Warning message if student is enrolled */}
-                  {selectedStudentData?.isEnrolled && (
+                  {selectedStudentData?.isEnrolled && !selectedCourseData?.hasAdminDiscount && (
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                       <div className="flex items-center">
                         <AlertCircle className="w-5 h-5 text-amber-600 mr-2" />
@@ -524,7 +593,7 @@ export default function AssignCouponsPage() {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    disabled={loading || selectedStudentData?.isEnrolled}
+                    disabled={loading || selectedStudentData?.isEnrolled || selectedCourseData?.hasAdminDiscount}
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
                   >
                     {loading ? (
