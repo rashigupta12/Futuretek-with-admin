@@ -93,6 +93,7 @@ export function CoursesCatalog() {
     Record<string, CoursePriceData>
   >({});
   const [loading, setLoading] = useState(true);
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const scrollRefs = {
@@ -101,13 +102,12 @@ export function CoursesCatalog() {
     ONGOING: useRef<HTMLDivElement>(null),
   };
 
-  // Optimized batch fetch with caching
-  const batchFetchCoursePrices = useCallback(async (courses: Course[]) => {
+  // Fetch discount details in background after courses are loaded
+  const fetchDiscountDetails = useCallback(async (courses: Course[]) => {
     const priceMap: Record<string, CoursePriceData> = {};
-    const promises = [];
     
     // Process in smaller batches to avoid overwhelming the API
-    const batchSize = 5;
+    const batchSize = 3;
     
     for (let i = 0; i < courses.length; i += batchSize) {
       const batch = courses.slice(i, i + batchSize);
@@ -146,21 +146,19 @@ export function CoursesCatalog() {
         return null;
       });
 
-      promises.push(...batchPromises);
+      const results = await Promise.allSettled(batchPromises);
       
+      results.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value) {
+          priceMap[result.value.courseId] = result.value.priceData;
+        }
+      });
+
       // Small delay between batches to avoid overwhelming the server
       if (i + batchSize < courses.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
-
-    const results = await Promise.allSettled(promises);
-    
-    results.forEach((result) => {
-      if (result.status === 'fulfilled' && result.value) {
-        priceMap[result.value.courseId] = result.value.priceData;
-      }
-    });
 
     return priceMap;
   }, [userId]);
@@ -168,32 +166,23 @@ export function CoursesCatalog() {
   useEffect(() => {
     let mounted = true;
 
-    async function fetchData() {
+    async function fetchCourses() {
       try {
         setLoading(true);
         setError(null);
 
-        // Fetch courses and prices in parallel
-        const [coursesRes, enrollmentsRes] = await Promise.allSettled([
-          fetch("/api/courses").then(res => {
-            if (!res.ok) throw new Error(`Failed to fetch courses: ${res.status}`);
-            const contentType = res.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-              throw new Error("Invalid response format from server");
-            }
-            return res.json();
-          }),
-          userId ? fetch(`/api/user/enrollments`).then(res => res.ok ? res.json() : null) : Promise.resolve(null)
-        ]);
-
-        if (!mounted) return;
-
-        // Handle courses response
-        if (coursesRes.status === 'rejected') {
-          throw coursesRes.reason;
+        // Fetch courses first
+        const coursesRes = await fetch("/api/courses");
+        if (!coursesRes.ok) {
+          throw new Error(`Failed to fetch courses: ${coursesRes.status}`);
         }
 
-        const data = coursesRes.value;
+        const contentType = coursesRes.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Invalid response format from server");
+        }
+
+        const data = await coursesRes.json();
         const rawCourses = data.courses || [];
         const filteredCourses = rawCourses.filter((course: Course) =>
           ["UPCOMING", "REGISTRATION_OPEN", "ONGOING"].includes(course.status)
@@ -202,60 +191,58 @@ export function CoursesCatalog() {
         if (!mounted) return;
 
         setCourses(filteredCourses);
+        setLoading(false);
+
+        // Fetch enrollments in parallel with discount details
+        const [enrollmentsData] = await Promise.allSettled([
+          // Fetch enrollments if user is logged in
+          userId ? fetch(`/api/user/enrollments`).then(res => res.ok ? res.json() : null) : Promise.resolve(null),
+          // Start background loading of discount details
+          (async () => {
+            setBackgroundLoading(true);
+            try {
+              const prices = await fetchDiscountDetails(filteredCourses);
+              if (mounted) {
+                setCoursePrices(prices);
+              }
+            } finally {
+              if (mounted) {
+                setBackgroundLoading(false);
+              }
+            }
+          })()
+        ]);
+
+        if (!mounted) return;
 
         // Handle enrollments
-        if (userId && enrollmentsRes.status === 'fulfilled' && enrollmentsRes.value?.enrollments) {
+        if (userId && enrollmentsData.status === 'fulfilled' && enrollmentsData.value?.enrollments) {
           const enrolledIds = new Set<string>(
-            enrollmentsRes.value.enrollments
+            enrollmentsData.value.enrollments
               .filter((e: any) => e.status === "ACTIVE" || e.status === "COMPLETED")
               .map((e: any) => e.courseId as string)
           );
           setEnrolledCourseIds(enrolledIds);
         }
 
-        // Set base prices immediately for instant display
-        const basePrices: Record<string, CoursePriceData> = {};
-        filteredCourses.forEach((course: Course) => {
-          basePrices[course.id] = {
-            originalPrice: course.priceINR.toString(),
-            finalPrice: course.priceINR.toString(),
-            discountAmount: "0",
-            hasAssignedCoupon: false,
-          };
-        });
-        setCoursePrices(basePrices);
-
-        // Fetch detailed prices in background
-        if (filteredCourses.length > 0) {
-          const detailedPrices = await batchFetchCoursePrices(filteredCourses);
-          if (mounted) {
-            setCoursePrices(prev => ({
-              ...prev,
-              ...detailedPrices
-            }));
-          }
-        }
-
-        if (mounted) {
-          setLoading(false);
-        }
       } catch (err) {
         if (mounted) {
           console.error("Catalog load error:", err);
           setError(err instanceof Error ? err.message : "Failed to load courses");
           setLoading(false);
+          setBackgroundLoading(false);
         }
       }
     }
 
     if (status !== "loading") {
-      fetchData();
+      fetchCourses();
     }
 
     return () => {
       mounted = false;
     };
-  }, [userId, status, batchFetchCoursePrices]);
+  }, [userId, status, fetchDiscountDetails]);
 
   const isAdminOrJyotishi = userRole === "ADMIN" || userRole === "JYOTISHI";
 
@@ -316,31 +303,36 @@ export function CoursesCatalog() {
   const getDisplayPrice = useCallback((course: Course) => {
     const priceData = coursePrices[course.id];
 
-    // Check if there are any applied coupons OR if there's a discount amount
-    const hasAnyCoupons = priceData?.appliedCoupons && priceData.appliedCoupons.length > 0;
-    const hasDiscountAmount = priceData?.discountAmount && parseFloat(priceData.discountAmount) > 0;
-    const hasAdminDiscount = priceData?.adminDiscountAmount && parseFloat(priceData.adminDiscountAmount) > 0;
-    const hasJyotishiDiscount = priceData?.jyotishiDiscountAmount && parseFloat(priceData.jyotishiDiscountAmount) > 0;
-    
-    // Show discount if ANY discount exists (coupons, admin discount, jyotishi discount, or overall discount)
-    const hasAnyDiscount = hasAnyCoupons || hasDiscountAmount || hasAdminDiscount || hasJyotishiDiscount;
-    
-    if (priceData && hasAnyDiscount) {
-      const originalPrice = parseFloat(priceData.originalPrice);
-      const finalPrice = parseFloat(priceData.finalPrice);
-      const discountAmount = parseFloat(priceData.discountAmount);
+    // Check if we have discount data for this course
+    if (priceData) {
+      // Check if there are any applied coupons OR if there's a discount amount
+      const hasAnyCoupons = priceData.appliedCoupons && priceData.appliedCoupons.length > 0;
+      const hasDiscountAmount = priceData.discountAmount && parseFloat(priceData.discountAmount) > 0;
+      const hasAdminDiscount = priceData.adminDiscountAmount && parseFloat(priceData.adminDiscountAmount) > 0;
+      const hasJyotishiDiscount = priceData.jyotishiDiscountAmount && parseFloat(priceData.jyotishiDiscountAmount) > 0;
+      
+      // Show discount if ANY discount exists (coupons, admin discount, jyotishi discount, or overall discount)
+      const hasAnyDiscount = hasAnyCoupons || hasDiscountAmount || hasAdminDiscount || hasJyotishiDiscount;
+      
+      if (hasAnyDiscount) {
+        const originalPrice = parseFloat(priceData.originalPrice);
+        const finalPrice = parseFloat(priceData.finalPrice);
+        const discountAmount = parseFloat(priceData.discountAmount);
 
-      return {
-        displayPrice: finalPrice,
-        originalPrice: originalPrice,
-        hasDiscount: finalPrice < originalPrice,
-        discountAmount: discountAmount,
-        appliedCoupons: priceData.appliedCoupons,
-        hasAssignedCoupon: priceData.hasAssignedCoupon,
-        hasAnyDiscount: true,
-      };
+        return {
+          displayPrice: finalPrice,
+          originalPrice: originalPrice,
+          hasDiscount: finalPrice < originalPrice,
+          discountAmount: discountAmount,
+          appliedCoupons: priceData.appliedCoupons,
+          hasAssignedCoupon: priceData.hasAssignedCoupon,
+          hasAnyDiscount: true,
+          isLoading: false,
+        };
+      }
     }
 
+    // Return base price (no discount data loaded yet or no discounts available)
     return {
       displayPrice: course.priceINR,
       originalPrice: course.priceINR,
@@ -349,10 +341,11 @@ export function CoursesCatalog() {
       appliedCoupons: undefined,
       hasAssignedCoupon: false,
       hasAnyDiscount: false,
+      isLoading: !priceData, // Still loading if no price data available
     };
   }, [coursePrices]);
 
-  // Memoized loading state
+  // Show loading state only for initial load
   if (status === "loading" || loading) {
     return (
       <section className="py-16 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30">
@@ -434,6 +427,18 @@ export function CoursesCatalog() {
         className="absolute bottom-0 right-0 w-72 h-72 bg-amber-200 rounded-full blur-3xl opacity-20 animate-pulse"
         style={{ animationDelay: "1s" }}
       ></div>
+
+      {/* Background Loading Indicator */}
+      {backgroundLoading && (
+        <div className="absolute top-4 right-4 z-10">
+          <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-blue-200 flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
+            <span className="text-xs text-gray-600 font-medium">
+              Loading discounts...
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
@@ -546,12 +551,22 @@ export function CoursesCatalog() {
                             {getPlainText(course.description)}
                           </CardDescription>
 
-                          {/* Applied Coupons - Show only ONCE regardless of how many coupons */}
+                          {/* Applied Coupons - Show only when discount data is loaded */}
                           {priceInfo.hasAnyDiscount && (
                             <div className="mb-2">
                               <div className="inline-flex items-center gap-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-2 py-1 rounded text-xs font-medium">
                                 <Sparkles className="h-3 w-3" />
                                 <span>Discount Applied</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Loading state for price */}
+                          {priceInfo.isLoading && (
+                            <div className="mb-2">
+                              <div className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <span>Checking discounts...</span>
                               </div>
                             </div>
                           )}
