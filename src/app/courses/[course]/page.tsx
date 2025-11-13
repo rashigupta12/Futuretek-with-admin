@@ -27,7 +27,8 @@ import {
   Shield,
   Star,
   Target,
-  Users
+  Users,
+  Crown
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -35,12 +36,19 @@ import { notFound, useSearchParams, useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 interface CourseData {
-  appliedCoupon?: {
+  appliedCoupons?: Array<{
+    id: string;
     code: string;
     discountType: "PERCENTAGE" | "FIXED_AMOUNT";
     discountValue: string;
-  };
+    discountAmount: number;
+    creatorType: "ADMIN" | "JYOTISHI";
+    creatorName?: string;
+    isPersonal: boolean;
+  }>;
   finalPrice?: string;
+  originalPrice?: string;
+  discountAmount?: string;
   hasAssignedCoupon?: boolean;
   id: string;
   title: string;
@@ -146,7 +154,6 @@ function getPlainText(html: string): string {
    MAIN PAGE COMPONENT
    ------------------------------------------------------------- */
 export default function CoursePage() {
-  // Use useParams hook instead of params prop
   const params = useParams();
   const slug = params?.course as string;
   
@@ -159,7 +166,6 @@ export default function CoursePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Auto-open checkout if enroll=true in URL
   const autoOpenCheckout = searchParams.get('enroll') === 'true';
   const [showCheckout, setShowCheckout] = useState(autoOpenCheckout);
 
@@ -219,21 +225,20 @@ export default function CoursePage() {
   }, [slug, userId, authStatus]);
 
   /* ---------------------------------------------------------
-     Calculate price and discount
+     Calculate price and discount - FIXED TO MATCH CATALOG
      --------------------------------------------------------- */
-  const coursePrice = parseFloat(course?.priceINR || "0");
   const hasAssignedCoupon = course?.hasAssignedCoupon || false;
-  const assignedCoupon = course?.appliedCoupon;
+  const appliedCoupons = course?.appliedCoupons || [];
   
-  let displayPrice = coursePrice;
-  let discountAmount = 0;
-  
-  if (hasAssignedCoupon && assignedCoupon && course?.finalPrice) {
-    displayPrice = parseFloat(course.finalPrice);
-    discountAmount = coursePrice - displayPrice;
-  }
+  // Use the prices directly from the API response (same as catalog)
+  const originalPrice = parseFloat(course?.originalPrice || course?.priceINR || "0");
+  const displayPrice = parseFloat(course?.finalPrice || course?.priceINR || "0");
+  const discountAmount = parseFloat(course?.discountAmount || "0");
   
   const hasDiscount = hasAssignedCoupon && discountAmount > 0;
+
+  // Get the primary coupon for display (first one in the array)
+  const primaryCoupon = appliedCoupons.length > 0 ? appliedCoupons[0] : undefined;
 
   /* ---------------------------------------------------------
      Loading / error states
@@ -341,7 +346,7 @@ export default function CoursePage() {
               {!isEnrolled && (
                 <Button 
                   onClick={() => setShowCheckout(true)}
-                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-8 py-6 rounded-lg border-0"
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-8 py-6 rounded-lg border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                   Enroll Now - ₹{displayPrice.toLocaleString("en-IN")}
                 </Button>
@@ -528,7 +533,7 @@ export default function CoursePage() {
                                 ₹{displayPrice.toLocaleString("en-IN")}
                               </span>
                               <span className="text-xl text-gray-500 line-through">
-                                ₹{coursePrice.toLocaleString("en-IN")}
+                                ₹{originalPrice.toLocaleString("en-IN")}
                               </span>
                             </div>
                             <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-medium border border-amber-200">
@@ -537,25 +542,63 @@ export default function CoursePage() {
                           </>
                         ) : (
                           <span className="text-3xl font-bold text-gray-900">
-                            ₹{coursePrice.toLocaleString("en-IN")}
+                            ₹{originalPrice.toLocaleString("en-IN")}
                           </span>
                         )}
                       </div>
                       
-                      {/* Assigned Coupon Badge */}
-                      {hasAssignedCoupon && assignedCoupon && (
-                        <div className="mb-3">
-                          <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-200">
-                            <span className="text-sm font-medium">Coupon Applied</span>
-                            <code className="bg-green-100 px-2 py-1 rounded text-xs font-mono border border-green-200">
-                              {assignedCoupon.code}
-                            </code>
-                            <span className="text-sm text-green-600">
-                              ({assignedCoupon.discountType === 'PERCENTAGE' ? 
-                                `${assignedCoupon.discountValue}% off` : 
-                                `₹${assignedCoupon.discountValue} off`})
-                            </span>
-                          </div>
+                      {/* Applied Coupons Display */}
+                      {hasAssignedCoupon && appliedCoupons.length > 0 && (
+                        <div className="mb-3 space-y-2">
+                          {appliedCoupons.map((coupon) => (
+                            <div 
+                              key={coupon.id} 
+                              className={`inline-flex flex-col gap-1 ${
+                                coupon.creatorType === 'JYOTISHI' 
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                  : 'bg-green-50 text-green-700 border-green-200'
+                              } px-3 py-2 rounded-lg border w-full`}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-2">
+                                  {coupon.creatorType === 'JYOTISHI' ? (
+                                    <Users className="h-4 w-4" />
+                                  ) : (
+                                    <Crown className="h-4 w-4" />
+                                  )}
+                                  <span className="text-sm font-medium">
+                                    {coupon.creatorType === 'JYOTISHI' ? 'Jyotishi Discount' : 'Admin Discount'}
+                                  </span>
+                                  <code className="bg-white px-2 py-1 rounded text-xs font-mono border">
+                                    {coupon.code}
+                                  </code>
+                                </div>
+                                <span className="text-sm">
+                                  ({coupon.discountType === 'PERCENTAGE' ? 
+                                    `${coupon.discountValue}% off` : 
+                                    `₹${coupon.discountValue} off`})
+                                </span>
+                              </div>
+                              
+                              {/* Commission Notice for Jyotishi Coupons */}
+                              {coupon.creatorType === 'JYOTISHI' && (
+                                <div className="flex items-center gap-1 text-xs bg-blue-100 px-2 py-1 rounded border border-blue-200">
+                                  <Users className="h-3 w-3" />
+                                  <span>Supports {coupon.creatorName || 'the Jyotishi'} with commission</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          
+                          {/* Combined Discounts Notice */}
+                          {appliedCoupons.length > 1 && (
+                            <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-2">
+                              <div className="flex items-center gap-2 text-orange-700 text-xs">
+                                <Star className="h-3 w-3" />
+                                <span className="font-medium">Combined Discounts Applied!</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -623,9 +666,11 @@ export default function CoursePage() {
           }}
           isOpen={showCheckout}
           onClose={() => setShowCheckout(false)}
-          assignedCoupon={course?.appliedCoupon}
+          assignedCoupon={primaryCoupon} 
           hasAssignedCoupon={course.hasAssignedCoupon}
           finalPrice={course.finalPrice}
+          originalPrice={course.originalPrice}
+          discountAmount={course.discountAmount}
         />
       )}
     </div>

@@ -427,25 +427,41 @@ export async function POST(req: NextRequest) {
           sql`UPDATE ${CouponsTable} SET current_usage_count = current_usage_count + 1 WHERE id = ${existingPayment.couponId}`
         );
 
-        // Create commission record if Jyotishi coupon was used
+        // Create commission record ONLY if Jyotishi coupon was used
         if (existingPayment.jyotishiId && parseFloat(existingPayment.commissionAmount) > 0) {
           const [jyotishi] = await db
-            .select({ commissionRate: UsersTable.commissionRate })
+            .select({ 
+              commissionRate: UsersTable.commissionRate,
+              name: UsersTable.name,
+              role: UsersTable.role 
+            })
             .from(UsersTable)
             .where(eq(UsersTable.id, existingPayment.jyotishiId))
             .limit(1);
 
-          await db.insert(CommissionsTable).values({
-            jyotishiId: existingPayment.jyotishiId,
-            paymentId: existingPayment.id,
-            courseId: courseId,
-            studentId: userId,
-            couponId: existingPayment.couponId,
-            commissionRate: jyotishi?.commissionRate || "0",
-            saleAmount: existingPayment.finalAmount,
-            commissionAmount: existingPayment.commissionAmount,
-            status: "PENDING",
-          });
+          // Only create commission if the creator is JYOTISHI (not ADMIN)
+          if (jyotishi?.role === "JYOTISHI") {
+            await db.insert(CommissionsTable).values({
+              jyotishiId: existingPayment.jyotishiId,
+              paymentId: existingPayment.id,
+              courseId: courseId,
+              studentId: userId,
+              couponId: existingPayment.couponId,
+              commissionRate: jyotishi?.commissionRate || "0",
+              saleAmount: existingPayment.finalAmount,
+              commissionAmount: existingPayment.commissionAmount,
+              status: "PENDING",
+            });
+
+            console.log('💰 Commission created for Jyotishi:', {
+              jyotishiId: existingPayment.jyotishiId,
+              jyotishiName: jyotishi.name,
+              commissionAmount: existingPayment.commissionAmount,
+              saleAmount: existingPayment.finalAmount
+            });
+          } else {
+            console.log('ℹ️ No commission created - coupon creator is ADMIN');
+          }
         }
       }
 
