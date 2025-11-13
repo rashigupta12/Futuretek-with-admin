@@ -1,23 +1,13 @@
 /*eslint-disable  @typescript-eslint/no-explicit-any*/
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { Search, Filter, MoreVertical, Eye } from "lucide-react";
+import { TableContainer } from "@/components/admin/TableContainer";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { TableContainer } from "@/components/admin/TableContainer";
-
-// type RawEnrollment = {
-//   id: string;
-//   userId: string;
-//   courseId: string;
-//   status: string;
-//   enrolledAt: string;
-//   certificateIssued: boolean;
-// };
+import { Filter, Search } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type User = {
   id: string;
@@ -46,7 +36,7 @@ type Enrollment = {
   course: { id: string; title: string; slug: string };
   status: string;
   enrolledAt: string;
-  payment: { amount: number; invoiceId: string };
+  payment: { amount: number; invoiceId: string; status: string };
 };
 
 export default function EnrollmentsPage() {
@@ -55,101 +45,105 @@ export default function EnrollmentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [courseFilter, setCourseFilter] = useState("ALL");
-useEffect(() => {
-  const fetchAll = async () => {
-    try {
-      setLoading(true);
 
-      const [enrollRes, courseRes, userRes, paymentRes] = await Promise.all([
-        fetch("/api/admin/enrollments"),
-        fetch("/api/courses"),
-        fetch("/api/admin/users"),
-        fetch("/api/admin/payments"),
-      ]);
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        setLoading(true);
 
-      const [enrollData, courseData, userData, paymentData] = await Promise.all([
-        enrollRes.json(),
-        courseRes.json(),
-        userRes.json(),
-        paymentRes.json(),
-      ]);
+        const [enrollRes, courseRes, userRes, paymentRes] = await Promise.all([
+          fetch("/api/admin/enrollments"),
+          fetch("/api/courses"),
+          fetch("/api/admin/users"),
+          fetch("/api/admin/payments"),
+        ]);
 
-      // ✅ Unwrap nested arrays
-      const enrollments = enrollData?.enrollments || [];
-      const users = userData?.users || [];
-      const payments = paymentData?.payments || [];
-      const courses = courseData || [];
+        const [enrollData, courseData, userData, paymentData] = await Promise.all([
+          enrollRes.json(),
+          courseRes.json(),
+          userRes.json(),
+          paymentRes.json(),
+        ]);
 
-      // ✅ Map users
-      const userMap = new Map<string, User>();
-      users.forEach((u: any) => {
-        userMap.set(u.id, { id: u.id, name: u.name, email: u.email });
-      });
+        // ✅ Unwrap nested arrays
+        const enrollments = enrollData?.enrollments || [];
+        const users = userData?.users || [];
+        const payments = paymentData?.payments || [];
+        const courses = courseData.courses || [];
 
-      // ✅ Map courses
-      const courseList: Course[] = courses.map((c: any) => ({
-        id: c.id,
-        title: c.title,
-        slug: c.slug,
-      }));
+        // ✅ Map users
+        const userMap = new Map<string, User>();
+        users.forEach((u: any) => {
+          userMap.set(u.id, { id: u.id, name: u.name, email: u.email });
+        });
 
-      // ✅ Map payments by enrollmentId
-      const paymentMap = new Map<string, Payment>();
-      payments.forEach((p: any) => {
-        if (p.enrollmentId) {
-          paymentMap.set(p.enrollmentId, {
-            id: p.id,
-            enrollmentId: p.enrollmentId,
-            invoiceNumber: p.invoiceNumber,
-            finalAmount: (p.finalAmount || 0),
-            status: p.status,
-            createdAt: p.createdAt,
+        // ✅ Map courses
+        const courseList: Course[] = courses.map((c: any) => ({
+          id: c.id,
+          title: c.title,
+          slug: c.slug,
+        }));
+
+        // ✅ Map payments by enrollmentId - ONLY COMPLETED payments
+        const paymentMap = new Map<string, Payment>();
+        payments.forEach((p: any) => {
+          if (p.enrollmentId && p.status === "COMPLETED") {
+            paymentMap.set(p.enrollmentId, {
+              id: p.id,
+              enrollmentId: p.enrollmentId,
+              invoiceNumber: p.invoiceNumber,
+              finalAmount: p.finalAmount || "0",
+              status: p.status,
+              createdAt: p.createdAt,
+            });
+          }
+        });
+
+        // ✅ Build enrollments - ONLY include those with COMPLETED payments
+        const builtEnrollments: Enrollment[] = enrollments
+          .filter((e: any) => paymentMap.has(e.id)) // Only include if payment is completed
+          .map((e: any) => {
+            const user = userMap.get(e.userId) || {
+              id: e.userId,
+              name: "Unknown User",
+              email: "",
+            };
+
+            const course = courseList.find((c) => c.id === e.courseId) || {
+              id: e.courseId,
+              title: `Course #${e.courseId.slice(0, 8)}`,
+              slug: e.courseId,
+            };
+
+            const payment = paymentMap.get(e.id)!; // We know it exists because of filter
+            const paymentInfo = {
+              amount: parseFloat(payment.finalAmount),
+              invoiceId: payment.invoiceNumber,
+              status: payment.status,
+            };
+
+            return {
+              id: e.id,
+              user,
+              course,
+              status: e.status,
+              enrolledAt: e.enrolledAt,
+              payment: paymentInfo,
+            };
           });
-        }
-      });
 
-      // ✅ Build enrollments
-      const builtEnrollments: Enrollment[] = enrollments.map((e: any) => {
-        const user = userMap.get(e.userId) || {
-          id: e.userId,
-          name: "Unknown User",
-          email: "",
-        };
+        // ✅ Update states
+        setEnrollments(builtEnrollments);
+        setCourses([{ id: "ALL", title: "All Courses", slug: "" }, ...courseList]);
+      } catch (err) {
+        console.error("Failed to load data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        const course = courseList.find((c) => c.id === e.courseId) || {
-          id: e.courseId,
-          title: `Course #${e.courseId.slice(0, 8)}`,
-          slug: e.courseId,
-        };
-
-        const payment = paymentMap.get(e.id);
-        const paymentInfo = payment
-          ? { amount: payment.finalAmount, invoiceId: payment.invoiceNumber }
-          : { amount: 0, invoiceId: "N/A" };
-
-        return {
-          id: e.id,
-          user,
-          course,
-          status: e.status,
-          enrolledAt: e.enrolledAt,
-          payment: paymentInfo,
-        };
-      });
-
-      // ✅ Update states
-      setEnrollments(builtEnrollments);
-      setCourses([{ id: "ALL", title: "All Courses", slug: "" }, ...courseList]);
-    } catch (err) {
-      console.error("Failed to load data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchAll();
-}, []);
-
+    fetchAll();
+  }, []);
 
   const filtered = enrollments.filter((e) => {
     const matchesSearch =
@@ -165,7 +159,9 @@ useEffect(() => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-foreground">All Enrollments</h2>
-          <p className="text-muted-foreground mt-1">Track student progress and payments.</p>
+          <p className="text-muted-foreground mt-1">
+            Track student progress with completed payments ({filtered.length} enrollments)
+          </p>
         </div>
       </div>
 
@@ -202,7 +198,9 @@ useEffect(() => {
         {loading ? (
           <div className="p-8 text-center text-muted-foreground">Loading enrollments...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">No enrollments found.</div>
+          <div className="p-8 text-center text-muted-foreground">
+            No enrollments found with completed payments.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -223,9 +221,9 @@ useEffect(() => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Enrolled
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {/* <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Actions
-                  </th>
+                  </th> */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -241,13 +239,18 @@ useEffect(() => {
                     <td className="px-6 py-4">
                       <Badge variant="secondary">{e.status}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">
-                      ₹{e.payment.amount.toLocaleString("en-IN")}
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-foreground">
+                        ₹{e.payment.amount.toLocaleString("en-IN")}
+                      </div>
+                      {/* <Badge variant="default" className="mt-1 text-xs">
+                        {e.payment.status}
+                      </Badge> */}
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">
                       {new Date(e.enrolledAt).toLocaleDateString("en-IN")}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    {/* <td className="px-6 py-4 text-right">
                       <Popover>
                         <PopoverTrigger asChild>
                           <button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9">
@@ -263,7 +266,7 @@ useEffect(() => {
                           </Link>
                         </PopoverContent>
                       </Popover>
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>

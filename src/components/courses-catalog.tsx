@@ -22,7 +22,7 @@ import {
   Loader2,
   Sparkles,
   TrendingUp,
-  Users,
+  Users
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";

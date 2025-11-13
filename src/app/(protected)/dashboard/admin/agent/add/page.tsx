@@ -9,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+// import toast, { Toaster } from "react-hot-toast";
 
 export default function AddJyotishiPage() {
   const router = useRouter();
@@ -63,18 +63,18 @@ export default function AddJyotishiPage() {
 
     setLoading(true);
 
-    // Validation
-    if (!name || !email || !password || !commissionRate) {
-toast.error("Name, Email, Password, and Commission Rate are required.");      setLoading(false);
-      return;
-    }
+    //     // Validation
+    //     if (!name || !email || !password || !commissionRate) {
+    // toast.error("Name, Email, Password, and Commission Rate are required.");      setLoading(false);
+    //       return;
+    // }
 
     const payload = {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password,
       mobile: mobile.trim() || null,
-       jyotishiCode: jyotishiCode.trim().toUpperCase(), 
+      jyotishiCode: jyotishiCode.trim().toUpperCase(),
       commissionRate: Number(commissionRate),
       bankAccountNumber: bankAccountNumber.trim() || null,
       bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
@@ -90,23 +90,23 @@ toast.error("Name, Email, Password, and Commission Rate are required.");      se
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      // const data = await res.json();
 
-       if (res.ok) {
-        toast.success("Jyotishi account created successfully!", {
-          duration: 4000,
-          position: "top-center",
-        });
-        
+      if (res.ok) {
+        // toast.success("Jyotishi account created successfully!", {
+        //   duration: 4000,
+        //   position: "top-center",
+        // });
+
         setTimeout(() => {
           router.push("/dashboard/admin/agent");
         }, 1500);
       } else {
-        toast.error(data.error || "Failed to create jyotishi"); 
+        // toast.error(data.error || "Failed to create jyotishi");
       }
     } catch (err) {
       console.error("Submission error:", err);
-      toast.error("Unexpected error occurred");
+      // toast.error("Unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ toast.error("Name, Email, Password, and Commission Rate are required.");      se
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
-    <Toaster/>
+      {/* <Toaster/> */}
       <div className="w-full mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -229,19 +229,21 @@ toast.error("Name, Email, Password, and Commission Rate are required.");      se
               </div>
 
               <div className="space-y-2">
-  <Label htmlFor="jyotishiCode" className="text-sm text-gray-700">
-    Jyotishi Code *
-  </Label>
-  <Input
-    id="jyotishiCode"
-    type="text"
-    value={jyotishiCode}
-    onChange={(e) => setJyotishiCode(e.target.value.toUpperCase())}
-    placeholder="JYO001"
-    required
-    className="border-gray-300 focus:border-blue-500 font-mono uppercase"
-  />
-</div>
+                <Label htmlFor="jyotishiCode" className="text-sm text-gray-700">
+                  Jyotishi Code *
+                </Label>
+                <Input
+                  id="jyotishiCode"
+                  type="text"
+                  value={jyotishiCode}
+                  onChange={(e) =>
+                    setJyotishiCode(e.target.value.toUpperCase())
+                  }
+                  placeholder="JYO001"
+                  required
+                  className="border-gray-300 focus:border-blue-500 font-mono uppercase"
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label
@@ -367,7 +369,7 @@ toast.error("Name, Email, Password, and Commission Rate are required.");      se
               asChild
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              <Link href="/dashboard/admin/jyotishis">Cancel</Link>
+              <Link href="/dashboard/admin/agent">Cancel</Link>
             </Button>
           </div>
         </form>

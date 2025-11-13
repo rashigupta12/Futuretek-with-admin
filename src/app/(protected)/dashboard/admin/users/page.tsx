@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Filter, MoreVertical, Phone, Search, UserCheck, UserX } from "lucide-react";
+import { Eye, Filter, MoreVertical, Phone, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -121,9 +121,9 @@ export default function UsersPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
-                </th>
+                </th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Joined
                 </th>
@@ -154,12 +154,12 @@ export default function UsersPage() {
                       {user.role}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4">
+                  {/* <td className="px-6 py-4">
                    <Badge variant={user.isActive ? "default" : "destructive"}>
   {user.isActive ? <UserCheck className="h-3 w-3 mr-1" /> : <UserX className="h-3 w-3 mr-1" />}
   {user.isActive ? "Active" : "Inactive"}
 </Badge>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 text-sm text-muted-foreground">
                     {new Date(user.createdAt).toLocaleDateString("en-IN")}
                   </td>
