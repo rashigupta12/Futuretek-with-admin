@@ -110,7 +110,7 @@ function Sidebar({
   session,
   handleLogout,
   courses,
-  loading,
+  // loading,
 }: {
   session: Session | null;
   handleLogout: () => void;

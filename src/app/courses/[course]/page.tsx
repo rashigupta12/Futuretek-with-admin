@@ -32,7 +32,7 @@ import {
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { notFound, useParams, useSearchParams } from "next/navigation";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /* -------------------------------------------------------------
    Types (unchanged)
@@ -194,7 +194,8 @@ export default function CoursePage() {
           setIsEnrolled(enrolled);
         }
       } catch (e) {
-        if (!cancelled) setError("Failed to load course");
+        if (!cancelled) setError("Failed to load course" );
+        console.log(e)
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -364,7 +365,7 @@ export default function CoursePage() {
             {course.features?.length ? (
               <Card className="border border-gray-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-2xl font-bold text-gray-900">What's Included</CardTitle>
+                  <CardTitle className="text-2xl font-bold text-gray-900">What&apos;s Included</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 gap-3">
