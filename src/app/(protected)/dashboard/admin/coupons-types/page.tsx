@@ -24,8 +24,10 @@ type CouponType = {
   maxDiscountLimit: number;
   isActive: boolean;
   createdAt: string;
-  _count?: {
-    coupons: number;
+  stats?: {
+    totalCoupons: string;
+    activeCoupons: string;
+    totalUsage: string;
   };
 };
 
@@ -60,7 +62,11 @@ export default function CouponTypesPage() {
         maxDiscountLimit: Number(ct.maxDiscountLimit || 0),
         isActive: ct.isActive ?? true,
         createdAt: ct.createdAt,
-        _count: ct._count,
+        stats: ct.stats || {
+          totalCoupons: "0",
+          activeCoupons: "0",
+          totalUsage: "0"
+        },
       }));
 
       setCouponTypes(mapped);
@@ -191,6 +197,9 @@ export default function CouponTypesPage() {
                     Coupons
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Usage
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -207,7 +216,9 @@ export default function CouponTypesPage() {
 
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-foreground">{couponType.typeName}</div>
-                      <div className="text-sm text-muted-foreground">{couponType.description}</div>
+                      {couponType.description && (
+                        <div className="text-sm text-muted-foreground">{couponType.description}</div>
+                      )}
                     </td>
 
                     <td className="px-6 py-4">
@@ -224,8 +235,19 @@ export default function CouponTypesPage() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-sm text-foreground">
-                      {couponType._count?.coupons || 0}
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-foreground">
+                        {couponType.stats?.totalCoupons || "0"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {couponType.stats?.activeCoupons || "0"} active
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-foreground">
+                        {couponType.stats?.totalUsage || "0"} times
+                      </div>
                     </td>
 
                     <td className="px-6 py-4">

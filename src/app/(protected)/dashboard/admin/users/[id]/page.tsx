@@ -1,15 +1,24 @@
 /*eslint-disable  @typescript-eslint/no-explicit-any*/
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, MapPin, Calendar, DollarSign, Award, Users, CreditCard, Edit } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Award,
+  Calendar,
+  CreditCard,
+  DollarSign,
+  Mail,
+  MapPin,
+  Phone,
+  Users
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface UserDetail {
   id: string;
@@ -48,79 +57,80 @@ export default function UserDetailPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  const fetchData = async () => {
-    if (!id) return;
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!id) return;
 
-    try {
-      const [userRes, enrollRes, paymentRes] = await Promise.all([
-        fetch(`/api/admin/users/${id}`),
-        fetch(`/api/admin/enrollments?userId=${id}`),
-        fetch(`/api/admin/payments?userId=${id}`),
-      ]);
+      try {
+        const [userRes, enrollRes, paymentRes] = await Promise.all([
+          fetch(`/api/admin/users/${id}`),
+          fetch(`/api/admin/enrollments?userId=${id}`),
+          fetch(`/api/admin/payments?userId=${id}`),
+        ]);
 
-      // Parse JSON from all responses
-      const [userDataRes, enrollDataRes, paymentDataRes] = await Promise.all([
-        userRes.json(),
-        enrollRes.json(),
-        paymentRes.json(),
-      ]);
+        // Parse JSON from all responses
+        const [userDataRes, enrollDataRes, paymentDataRes] = await Promise.all([
+          userRes.json(),
+          enrollRes.json(),
+          paymentRes.json(),
+        ]);
 
-      // Access data from parsed JSON (not from Response)
-      const userData = userDataRes.user;
-      const enrollData = enrollDataRes.enrollments;
-      const paymentData = paymentDataRes.payments;
+        // Access data from parsed JSON (not from Response)
+        const userData = userDataRes.user;
+        const enrollData = enrollDataRes.enrollments;
+        const paymentData = paymentDataRes.payments;
 
-      // Map API response to UI model
-      const mappedUser: UserDetail = {
-        id: userData.id,
-        name: userData.name,
-        email: userData.email,
-        phone: userData.mobile || null,
-        role: userData.role,
-        gst: userData.gstNumber || null,
-        isActive: userData.emailVerified ? true : false, // or use isActive if exists
-        createdAt: userData.createdAt,
-        addresses: [], // populate if API sends addresses
-      };
+        // Map API response to UI model
+        const mappedUser: UserDetail = {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          phone: userData.mobile || null,
+          role: userData.role,
+          gst: userData.gstNumber || null,
+          isActive: userData.emailVerified ? true : false, // or use isActive if exists
+          createdAt: userData.createdAt,
+          addresses: [], // populate if API sends addresses
+        };
 
-      // Enrollments mapping
-      const mappedEnrollments: Enrollment[] = (enrollData || []).map((e: any) => ({
-        id: e.id,
-        course: {
-          id: e.courseId,
-          title: e.course?.title || `Course #${e.courseId.slice(0, 8)}`, // fallback title
-          slug: e.courseId,
-        },
-        status: e.status,
-        enrolledAt: e.enrolledAt,
-        certificateIssued: e.certificateIssued || false,
-      }));
+        // Enrollments mapping
+        const mappedEnrollments: Enrollment[] = (enrollData || []).map(
+          (e: any) => ({
+            id: e.id,
+            course: {
+              id: e.courseId,
+              title: e.course?.title || `Course #${e.courseId.slice(0, 8)}`, // fallback title
+              slug: e.courseId,
+            },
+            status: e.status,
+            enrolledAt: e.enrolledAt,
+            certificateIssued: e.certificateIssued || false,
+          })
+        );
 
-      // Payments mapping
-      const mappedPayments: Payment[] = (paymentData || []).map((p: any) => ({
-        id: p.id,
-        amount: Number(p.finalAmount || p.amount),
-        currency: p.currency,
-        status: p.status,
-        method: p.paymentMethod || "Razorpay",
-        createdAt: p.createdAt,
-        invoiceId: p.invoiceNumber,
-      }));
+        // Payments mapping
+        const mappedPayments: Payment[] = (paymentData || []).map((p: any) => ({
+          id: p.id,
+          amount: Number(p.finalAmount || p.amount),
+          currency: p.currency,
+          status: p.status,
+          method: p.paymentMethod || "Razorpay",
+          createdAt: p.createdAt,
+          invoiceId: p.invoiceNumber,
+        }));
 
-      setUser(mappedUser);
-      setEnrollments(mappedEnrollments);
-      setPayments(mappedPayments);
-    } catch (err) {
-      console.error("Failed to load user data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        setUser(mappedUser);
+        setEnrollments(mappedEnrollments);
+        setPayments(mappedPayments);
+      } catch (err) {
+        console.error("Failed to load user data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchData();
-}, [id]);
-
+    fetchData();
+  }, [id]);
 
   if (loading) {
     return (
@@ -138,7 +148,9 @@ useEffect(() => {
       <div className="p-8 text-center">
         <p className="text-destructive">User not found.</p>
         <Link href="/dashboard/admin/users">
-          <Button variant="outline" className="mt-4">Back to Users</Button>
+          <Button variant="outline" className="mt-4">
+            Back to Users
+          </Button>
         </Link>
       </div>
     );
@@ -182,14 +194,14 @@ useEffect(() => {
                 </Badge>
               </div>
             </div>
-            <div className="flex gap-2">
+            {/* <div className="flex gap-2">
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/dashboard/admin/users/edit/${user.id}`}>
                   <Edit className="h-4 w-4 mr-1" />
                   Edit
                 </Link>
               </Button>
-            </div>
+            </div> */}
           </div>
         </CardHeader>
         <CardContent>
@@ -210,7 +222,9 @@ useEffect(() => {
             )}
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>Joined: {new Date(user.createdAt).toLocaleDateString("en-IN")}</span>
+              <span>
+                Joined: {new Date(user.createdAt).toLocaleDateString("en-IN")}
+              </span>
             </div>
           </div>
 
@@ -252,23 +266,36 @@ useEffect(() => {
             </CardHeader>
             <CardContent>
               {enrollments.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No enrollments yet.</p>
+                <p className="text-center text-muted-foreground py-8">
+                  No enrollments yet.
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Course</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Enrolled</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Certificate</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Course
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Enrolled
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Certificate
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {enrollments.map((e) => (
                         <tr key={e.id} className="hover:bg-muted/50">
                           <td className="px-4 py-3">
-                            <Link href={`/courses/${e.course.slug}`} className="font-medium hover:underline">
+                            <Link
+                              href={`/courses/${e.course.slug}`}
+                              className="font-medium hover:underline"
+                            >
                               {e.course.title}
                             </Link>
                           </td>
@@ -302,37 +329,66 @@ useEffect(() => {
             </CardHeader>
             <CardContent>
               {payments.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No payments recorded.</p>
+                <p className="text-center text-muted-foreground py-8">
+                  No payments recorded.
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Invoice</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Amount</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Method</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Date</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Action</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Invoice
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Amount
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Method
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                          Date
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                          Action
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {payments.map((p) => (
                         <tr key={p.id} className="hover:bg-muted/50">
-                          <td className="px-4 py-3 font-mono text-sm">{p.invoiceId}</td>
-                          <td className="px-4 py-3 font-medium">₹{p.amount.toLocaleString("en-IN")}</td>
+                          <td className="px-4 py-3 font-mono text-sm">
+                            {p.invoiceId}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            ₹{p.amount.toLocaleString("en-IN")}
+                          </td>
                           <td className="px-4 py-3">
-                            <Badge variant={p.status === "COMPLETED" ? "default" : "secondary"}>
-                              {p.status}
+                            <Badge
+                              variant={
+                                p.status === "COMPLETED"
+                                  ? "default"
+                                  : p.status === "PENDING"
+                                  ? "destructive" // or "secondary" if you don’t have a 'destructive' variant
+                                  : "secondary"
+                              }
+                            >
+                              {p.status === "PENDING" ? "FAILED" : p.status}
                             </Badge>
                           </td>
+
                           <td className="px-4 py-3 text-sm">{p.method}</td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">
                             {new Date(p.createdAt).toLocaleDateString("en-IN")}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <Link href={`/dashboard/admin/payments/${p.id}`}>
-                              <Button size="sm" variant="ghost">View</Button>
+                              <Button size="sm" variant="ghost">
+                                View
+                              </Button>
                             </Link>
                           </td>
                         </tr>

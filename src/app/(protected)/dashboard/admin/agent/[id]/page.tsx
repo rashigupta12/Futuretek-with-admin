@@ -37,7 +37,7 @@ import {
   Wallet,
   X,
   Eye,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -80,7 +80,9 @@ export default function ViewJyotishiPage() {
   const router = useRouter();
   const [jyotishi, setJyotishi] = useState<Jyotishi | null>(null);
   const [stats, setStats] = useState<CommissionStats | null>(null);
-  const [recentCommissions, setRecentCommissions] = useState<RecentCommission[]>([]);
+  const [recentCommissions, setRecentCommissions] = useState<
+    RecentCommission[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -200,7 +202,7 @@ export default function ViewJyotishiPage() {
       });
       if (res.ok) {
         alert("Jyotishi deactivated successfully");
-        router.push("/dashboard/admin/jyotishis");
+        router.push("/dashboard/admin/agent");
       } else {
         alert("Failed to deactivate");
       }
@@ -210,9 +212,9 @@ export default function ViewJyotishiPage() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -231,7 +233,7 @@ export default function ViewJyotishiPage() {
           Jyotishi Not Found
         </h2>
         <Button asChild className="bg-blue-600 hover:bg-blue-700">
-          <Link href="/dashboard/admin/jyotishis">
+          <Link href="/dashboard/admin/agent">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Jyotishi List
           </Link>
         </Button>
@@ -262,7 +264,7 @@ export default function ViewJyotishiPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
                 <Link
-                  href="/dashboard/admin/jyotishis"
+                  href="/dashboard/admin/agent"
                   className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -272,8 +274,6 @@ export default function ViewJyotishiPage() {
                   ADMIN VIEW
                 </Badge>
               </div>
-
-             
             </div>
 
             <div className="flex items-center gap-4">
@@ -285,13 +285,17 @@ export default function ViewJyotishiPage() {
                   <div className="space-y-4">
                     <Input
                       value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("name", e.target.value)
+                      }
                       placeholder="Jyotishi Name"
                       className="font-bold border-blue-300 focus:border-blue-500 h-16 text-2xl"
                     />
                     <Input
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
                       placeholder="Email Address"
                       className="text-lg border-blue-300 focus:border-blue-500"
                     />
@@ -351,12 +355,16 @@ export default function ViewJyotishiPage() {
               <CardContent className="p-6">
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm text-gray-700">Full Name</Label>
+                    <Label htmlFor="name" className="text-sm text-gray-700">
+                      Full Name
+                    </Label>
                     {isEditing ? (
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("name", e.target.value)
+                        }
                         className="border-gray-300 focus:border-blue-500"
                       />
                     ) : (
@@ -366,32 +374,42 @@ export default function ViewJyotishiPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="mobile" className="text-sm text-gray-700">Mobile</Label>
+                    <Label htmlFor="mobile" className="text-sm text-gray-700">
+                      Mobile
+                    </Label>
                     {isEditing ? (
                       <Input
                         id="mobile"
                         value={formData.mobile}
-                        onChange={(e) => handleInputChange('mobile', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("mobile", e.target.value)
+                        }
                         className="border-gray-300 focus:border-blue-500"
                       />
                     ) : (
                       <div className="flex items-center gap-3 p-2">
                         <Phone className="h-4 w-4 text-blue-500" />
-                        <p className="font-medium">{jyotishi.mobile || "Not provided"}</p>
+                        <p className="font-medium">
+                          {jyotishi.mobile || "Not provided"}
+                        </p>
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm text-gray-700">Email</Label>
+                    <Label htmlFor="email" className="text-sm text-gray-700">
+                      Email
+                    </Label>
                     {isEditing ? (
                       <Input
                         id="email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
                         className="border-gray-300 focus:border-blue-500"
                       />
                     ) : (
@@ -401,17 +419,24 @@ export default function ViewJyotishiPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label className="text-sm text-gray-700">Joined On</Label>
                     <div className="flex items-center gap-3 p-2">
                       <Calendar className="h-4 w-4 text-blue-500" />
-                      <p className="font-medium">{formatDate(jyotishi.createdAt)}</p>
+                      <p className="font-medium">
+                        {formatDate(jyotishi.createdAt)}
+                      </p>
                     </div>
                   </div>
 
                   <div className="sm:col-span-2 space-y-2">
-                    <Label htmlFor="commissionRate" className="text-sm text-gray-700">Commission Rate (%)</Label>
+                    <Label
+                      htmlFor="commissionRate"
+                      className="text-sm text-gray-700"
+                    >
+                      Commission Rate (%)
+                    </Label>
                     {isEditing ? (
                       <Input
                         id="commissionRate"
@@ -420,27 +445,37 @@ export default function ViewJyotishiPage() {
                         max="100"
                         step="0.01"
                         value={formData.commissionRate}
-                        onChange={(e) => handleInputChange('commissionRate', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("commissionRate", e.target.value)
+                        }
                         className="border-gray-300 focus:border-blue-500"
                       />
                     ) : (
-                      <p className="font-medium text-lg text-amber-600">{jyotishi.commissionRate}%</p>
+                      <p className="font-medium text-lg text-amber-600">
+                        {jyotishi.commissionRate}%
+                      </p>
                     )}
                   </div>
 
                   <div className="sm:col-span-2 space-y-2">
-                    <Label htmlFor="bio" className="text-sm text-gray-700">Bio / Introduction</Label>
+                    <Label htmlFor="bio" className="text-sm text-gray-700">
+                      Bio / Introduction
+                    </Label>
                     {isEditing ? (
                       <Textarea
                         id="bio"
                         rows={4}
                         value={formData.bio}
-                        onChange={(e) => handleInputChange('bio', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("bio", e.target.value)
+                        }
                         className="border-gray-300 focus:border-blue-500"
                         placeholder="Brief introduction about the jyotishi, expertise, and experience..."
                       />
                     ) : (
-                      <p className="font-medium text-gray-700">{jyotishi.bio || "No bio provided"}</p>
+                      <p className="font-medium text-gray-700">
+                        {jyotishi.bio || "No bio provided"}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -448,7 +483,9 @@ export default function ViewJyotishiPage() {
             </Card>
 
             {/* Bank Details */}
-            {(jyotishi.bankAccountNumber || jyotishi.panNumber || isEditing) && (
+            {(jyotishi.bankAccountNumber ||
+              jyotishi.panNumber ||
+              isEditing) && (
               <Card className="border border-gray-200 hover:shadow-md transition-shadow">
                 <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50">
                   <CardTitle className="flex items-center gap-2">
@@ -460,28 +497,50 @@ export default function ViewJyotishiPage() {
                   <div className="grid sm:grid-cols-2 gap-6">
                     {(isEditing || jyotishi.bankAccountHolderName) && (
                       <div className="space-y-2">
-                        <Label htmlFor="bankAccountHolderName" className="text-sm text-gray-700">Account Holder Name</Label>
+                        <Label
+                          htmlFor="bankAccountHolderName"
+                          className="text-sm text-gray-700"
+                        >
+                          Account Holder Name
+                        </Label>
                         {isEditing ? (
                           <Input
                             id="bankAccountHolderName"
                             value={formData.bankAccountHolderName}
-                            onChange={(e) => handleInputChange('bankAccountHolderName', e.target.value)}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "bankAccountHolderName",
+                                e.target.value
+                              )
+                            }
                             className="border-gray-300 focus:border-amber-500"
                           />
                         ) : (
-                          <p className="font-medium">{jyotishi.bankAccountHolderName}</p>
+                          <p className="font-medium">
+                            {jyotishi.bankAccountHolderName}
+                          </p>
                         )}
                       </div>
                     )}
 
                     {(isEditing || jyotishi.bankAccountNumber) && (
                       <div className="space-y-2">
-                        <Label htmlFor="bankAccountNumber" className="text-sm text-gray-700">Bank Account Number</Label>
+                        <Label
+                          htmlFor="bankAccountNumber"
+                          className="text-sm text-gray-700"
+                        >
+                          Bank Account Number
+                        </Label>
                         {isEditing ? (
                           <Input
                             id="bankAccountNumber"
                             value={formData.bankAccountNumber}
-                            onChange={(e) => handleInputChange('bankAccountNumber', e.target.value)}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "bankAccountNumber",
+                                e.target.value
+                              )
+                            }
                             className="border-gray-300 focus:border-amber-500 font-mono"
                           />
                         ) : (
@@ -494,12 +553,22 @@ export default function ViewJyotishiPage() {
 
                     {(isEditing || jyotishi.bankIfscCode) && (
                       <div className="space-y-2">
-                        <Label htmlFor="bankIfscCode" className="text-sm text-gray-700">IFSC Code</Label>
+                        <Label
+                          htmlFor="bankIfscCode"
+                          className="text-sm text-gray-700"
+                        >
+                          IFSC Code
+                        </Label>
                         {isEditing ? (
                           <Input
                             id="bankIfscCode"
                             value={formData.bankIfscCode}
-                            onChange={(e) => handleInputChange('bankIfscCode', e.target.value.toUpperCase())}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "bankIfscCode",
+                                e.target.value.toUpperCase()
+                              )
+                            }
                             className="border-gray-300 focus:border-amber-500 font-mono uppercase"
                           />
                         ) : (
@@ -512,12 +581,22 @@ export default function ViewJyotishiPage() {
 
                     {(isEditing || jyotishi.panNumber) && (
                       <div className="space-y-2">
-                        <Label htmlFor="panNumber" className="text-sm text-gray-700">PAN Number</Label>
+                        <Label
+                          htmlFor="panNumber"
+                          className="text-sm text-gray-700"
+                        >
+                          PAN Number
+                        </Label>
                         {isEditing ? (
                           <Input
                             id="panNumber"
                             value={formData.panNumber}
-                            onChange={(e) => handleInputChange('panNumber', e.target.value.toUpperCase())}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "panNumber",
+                                e.target.value.toUpperCase()
+                              )
+                            }
                             className="border-gray-300 focus:border-amber-500 font-mono uppercase"
                           />
                         ) : (
@@ -528,13 +607,16 @@ export default function ViewJyotishiPage() {
                       </div>
                     )}
 
-                    {isEditing && !jyotishi.bankAccountNumber && !jyotishi.panNumber && (
-                      <div className="sm:col-span-2 text-center py-4">
-                        <p className="text-sm text-amber-600">
-                          No banking details added yet. Fill in the information above.
-                        </p>
-                      </div>
-                    )}
+                    {isEditing &&
+                      !jyotishi.bankAccountNumber &&
+                      !jyotishi.panNumber && (
+                        <div className="sm:col-span-2 text-center py-4">
+                          <p className="text-sm text-amber-600">
+                            No banking details added yet. Fill in the
+                            information above.
+                          </p>
+                        </div>
+                      )}
                   </div>
                 </CardContent>
               </Card>
@@ -555,11 +637,19 @@ export default function ViewJyotishiPage() {
                       <TableHeader>
                         <TableRow className="bg-gray-50">
                           <TableHead className="text-gray-700">Date</TableHead>
-                          <TableHead className="text-gray-700">Course</TableHead>
-                          <TableHead className="text-gray-700">Student</TableHead>
+                          <TableHead className="text-gray-700">
+                            Course
+                          </TableHead>
+                          <TableHead className="text-gray-700">
+                            Student
+                          </TableHead>
                           <TableHead className="text-gray-700">Sale</TableHead>
-                          <TableHead className="text-gray-700">Commission</TableHead>
-                          <TableHead className="text-gray-700">Status</TableHead>
+                          <TableHead className="text-gray-700">
+                            Commission
+                          </TableHead>
+                          <TableHead className="text-gray-700">
+                            Status
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -669,60 +759,59 @@ export default function ViewJyotishiPage() {
 
                 <Separator />
 
-                 <div className="space-y-2">
-              
-              
+                <div className="space-y-2">
+                  {/* Actions */}
 
-                {/* Actions */}
-                
-                  <Button asChild variant="outline" className="w-full justify-start">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
                     <Link href={`/jyotishi/${jyotishi.id}`} target="_blank">
                       <Eye className="h-2 w-2 mr-2" />
                       View Profile
                     </Link>
                   </Button>
-                  </div>
-                  <div className="space-y-2">
-                  
-                      {isEditing ? (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="bg-green-600 hover:bg-green-700 w-full"
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {saving ? "Saving..." : "Save Changes"}
-                    </Button>
+                </div>
+                <div className="space-y-2">
+                  {isEditing ? (
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="bg-green-600 hover:bg-green-700 w-full"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? "Saving..." : "Save Changes"}
+                      </Button>
+                      <Button
+                        onClick={handleEditToggle}
+                        variant="outline"
+                        disabled={saving}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
                     <Button
                       onClick={handleEditToggle}
-                      variant="outline"
-                      disabled={saving}
+                      className="bg-blue-600 hover:bg-blue-700 w-full justify-start"
                     >
-                      <X className="h-4 w-4 mr-2" />
-                      Cancel
+                      <Edit className="h-2 w-2 mr-1" />
+                      Edit Jyotishi
                     </Button>
-                  </div>
-                ) : (
-                  <Button
-                    onClick={handleEditToggle}
-                    className="bg-blue-600 hover:bg-blue-700 w-full justify-start"
-                  >
-                    <Edit className="h-2 w-2 mr-1" />
-                    Edit Jyotishi
-                  </Button>
-                )}
-                    
+                  )}
                 </div>
                 <Button
-                    variant="destructive"
-                    className="w-full justify-start"
-                    onClick={handleDeactivate}
-                    disabled={!jyotishi.isActive}
-                  >
-                <Trash2 className="h-4 w-4 mr-2" />
-                    Deactivate Account
-                  </Button>
+                  variant="destructive"
+                  className="w-full justify-start"
+                  onClick={handleDeactivate}
+                  disabled={!jyotishi.isActive}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Deactivate Account
+                </Button>
 
                 <p className="text-xs text-gray-500 text-center italic">
                   Last updated: {formatDate(jyotishi.createdAt)}
