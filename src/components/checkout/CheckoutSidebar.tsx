@@ -112,7 +112,7 @@ export const CheckoutSidebar = ({
   }, [hasAssignedCoupon, assignedCoupon]);
 
   const calculatePrices = (): PriceSummary => {
-    const discount = courseDiscountAmount;
+  const  discount = courseDiscountAmount;
     const subtotal = courseFinalPrice;
     let commission = 0;
     let creatorType: 'ADMIN' | 'JYOTISHI' | undefined = undefined;

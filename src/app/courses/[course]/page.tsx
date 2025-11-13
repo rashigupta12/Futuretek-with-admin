@@ -84,7 +84,7 @@ interface CourseData {
    ------------------------------------------------------------- */
 async function getCourse(slug: string): Promise<CourseData | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const url = `${baseUrl}/api/courses/${slug}`;
 
     const response = await fetch(url, {
