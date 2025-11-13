@@ -62,8 +62,8 @@ export default function PaymentsPage() {
         icon: "✓"
       },
       PENDING: {
-        label: "Pending",
-        color: "bg-amber-50 text-amber-700 border-amber-200",
+        label: "Failed",
+        color: "bg-red-50 text-red-700 border-red-200",
         icon: "⏳"
       },
       FAILED: {
@@ -177,7 +177,7 @@ export default function PaymentsPage() {
       <p className="text-3xl font-bold">
         {payments.filter(p => p.status === "PENDING").length}
       </p>
-      <p className="text-sm font-medium text-blue-600 mt-1">Pending</p>
+      <p className="text-sm font-medium text-blue-600 mt-1">Failed</p>
     </div>
   </div>
 
@@ -230,11 +230,11 @@ export default function PaymentsPage() {
                   <p className="text-2xl font-bold text-gray-900 flex items-center gap-1">
                     <IndianRupee className="h-5 w-5 text-amber-600" />
                     {Number(payment.finalAmount).toLocaleString("en-IN")}
-                    {payment.amount !== payment.finalAmount && (
+                    {/* {payment.amount !== payment.finalAmount && (
                       <span className="text-sm text-gray-500 line-through ml-2">
                         ₹{Number(payment.amount).toLocaleString("en-IN")}
                       </span>
-                    )}
+                    )} */}
                   </p>
                 </div>
                 
