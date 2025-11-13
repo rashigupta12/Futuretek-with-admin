@@ -1,7 +1,7 @@
 /*eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { AlertCircle, CheckCircle2, Loader2, ShoppingCart, X, Users } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, ShoppingCart, X, Users, Crown } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
@@ -61,86 +61,99 @@ interface AppliedCoupon {
   creatorName?: string;
 }
 
-interface PriceSummary {
-  originalPrice: number;
-  discount: number;
-  subtotal: number;
-  gst: number;
-  total: number;
-  commission: number;
-  creatorType?: 'ADMIN' | 'JYOTISHI';
-}
-
 interface CheckoutSidebarProps {
   course: Course;
   isOpen: boolean;
   onClose: () => void;
-  assignedCoupon?: AppliedCoupon;
+  // CHANGED: Accept array of coupons instead of single coupon
+  appliedCoupons?: AppliedCoupon[];
   hasAssignedCoupon?: boolean;
   finalPrice?: string;
   originalPrice?: string;
   discountAmount?: string;
+  adminDiscountAmount?: string;
+  jyotishiDiscountAmount?: string;
+  priceAfterAdminDiscount?: string;
 }
 
 export const CheckoutSidebar = ({ 
   course, 
   isOpen, 
   onClose, 
-  assignedCoupon,
+  appliedCoupons = [],
   hasAssignedCoupon = false,
   finalPrice,
   originalPrice,
-  discountAmount
+  discountAmount,
+  adminDiscountAmount,
+  jyotishiDiscountAmount,
+  priceAfterAdminDiscount
 }: CheckoutSidebarProps) => {
   const { data: session } = useSession();
   
-  // Always start on payment step (coupon step is disabled)
   const [step, setStep] = useState<'coupon' | 'payment' | 'processing'>('payment');
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [gstNumber, setGstNumber] = useState('');
+  const [isGstValid, setIsGstValid] = useState(false);
   
-  // Use prices from props (same as course detail page)
+  // Use prices from props
   const courseOriginalPrice = parseFloat(originalPrice || course.priceINR);
   const courseFinalPrice = parseFloat(finalPrice || course.priceINR);
   const courseDiscountAmount = parseFloat(discountAmount || "0");
+  const courseAdminDiscountAmount = parseFloat(adminDiscountAmount || "0");
+  const courseJyotishiDiscountAmount = parseFloat(jyotishiDiscountAmount || "0");
+  const coursePriceAfterAdminDiscount = parseFloat(priceAfterAdminDiscount || courseOriginalPrice.toString());
+
+  // Separate admin and jyotishi coupons
+  const adminCoupon = appliedCoupons.find(c => c.creatorType === 'ADMIN');
+  const jyotishiCoupon = appliedCoupons.find(c => c.creatorType === 'JYOTISHI');
 
   // Initialize with assigned coupon if available
   useEffect(() => {
-    if (hasAssignedCoupon && assignedCoupon) {
+    if (hasAssignedCoupon && appliedCoupons.length > 0) {
       setStep('payment');
     }
-  }, [hasAssignedCoupon, assignedCoupon]);
+  }, [hasAssignedCoupon, appliedCoupons]);
 
-  const calculatePrices = (): PriceSummary => {
-  const  discount = courseDiscountAmount;
-    const subtotal = courseFinalPrice;
-    let commission = 0;
-    let creatorType: 'ADMIN' | 'JYOTISHI' | undefined = undefined;
-    
-    if (hasAssignedCoupon && assignedCoupon) {
-      // For display purposes only - show commission for Jyotishi coupons
-      if (assignedCoupon.creatorType === "JYOTISHI") {
-        // Example: 10% commission on discounted price for display
-        commission = subtotal * 0.10;
-        creatorType = "JYOTISHI";
-      }
-    }
-    
-    const gst = subtotal * 0.18;
-    const total = subtotal + gst;
-
-    return { 
-      originalPrice: courseOriginalPrice, 
-      discount, 
-      subtotal, 
-      gst, 
-      total, 
-      commission,
-      creatorType 
-    };
+  // GST validation
+  const validateGST = (gst: string) => {
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
+    return gstRegex.test(gst);
   };
 
-  const prices = calculatePrices();
+  const handleGstChange = (value: string) => {
+    setGstNumber(value);
+    setIsGstValid(validateGST(value));
+  };
+
+  // Calculate subtotal (price after all discounts)
+  const subtotal = courseFinalPrice;
+  
+  // Calculate GST on the discounted price (subtotal)
+  const gst = subtotal * 0.18;
+  
+  // Total is subtotal + GST
+  const total = subtotal + gst;
+
+  // Calculate commission
+  let commission = 0;
+  if (courseJyotishiDiscountAmount > 0) {
+    commission = coursePriceAfterAdminDiscount * 0.20; // 20% commission rate
+  }
+
+  const prices = {
+    originalPrice: courseOriginalPrice,
+    discount: courseDiscountAmount,
+    subtotal,
+    gst,
+    total,
+    commission,
+    adminDiscountAmount: courseAdminDiscountAmount,
+    jyotishiDiscountAmount: courseJyotishiDiscountAmount,
+    priceAfterAdminDiscount: coursePriceAfterAdminDiscount,
+    creatorType: courseJyotishiDiscountAmount > 0 ? "JYOTISHI" as const : undefined
+  };
 
   const initializeRazorpay = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -174,7 +187,6 @@ export const CheckoutSidebar = ({
       if (!verifyResponse.ok) {
         const errorData = await verifyResponse.json();
         
-        // If verification fails, try to recover
         if (errorData.error?.includes('signature') || errorData.error?.includes('verification')) {
           console.log('Payment verification failed, attempting recovery...');
           
@@ -189,7 +201,6 @@ export const CheckoutSidebar = ({
           if (recoveryResponse.ok) {
             const recoveryData = await recoveryResponse.json();
             if (recoveryData.success) {
-              // Recovery successful
               window.location.href = `/dashboard/user/courses`;
               return;
             }
@@ -208,14 +219,11 @@ export const CheckoutSidebar = ({
       }
     } catch (err: any) {
       console.error('Payment verification error:', err);
-      
-      // Show user-friendly error message with recovery options
       setError(
         err.message.includes('verification failed') 
           ? 'Payment was successful but verification failed. Please contact support with your payment ID.'
           : err.message || 'Payment verification failed. Please contact support.'
       );
-      
       setStep('payment');
       setIsProcessing(false);
     }
@@ -235,17 +243,27 @@ export const CheckoutSidebar = ({
       const res = await initializeRazorpay();
       if (!res) throw new Error('Failed to load payment gateway');
 
-      const activeCouponCode = hasAssignedCoupon ? assignedCoupon?.code : undefined;
+      // FIXED: Send ALL coupon codes, comma-separated
+      const couponCodes = appliedCoupons.length > 0 
+        ? appliedCoupons.map(c => c.code).join(',')
+        : null;
 
+      console.log('Sending payment request with coupons:', {
+        appliedCoupons,
+        couponCodes,
+        courseId: course.id
+      });
+
+      // Send payment request with ALL coupon codes
       const orderResponse = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           courseId: course.id,
-          couponCode: activeCouponCode,
-          amount: Math.round(prices.total * 100),
+          couponCode: couponCodes, // Send comma-separated codes or null
           paymentType: "DOMESTIC",
-          billingAddress: null
+          billingAddress: null,
+          gstNumber: gstNumber || null
         })
       });
 
@@ -256,10 +274,23 @@ export const CheckoutSidebar = ({
 
       const orderData = await orderResponse.json();
 
+      // Verify the amount matches what we calculated
+      const amountDifference = Math.abs(orderData.amount - prices.total);
+      if (amountDifference > 1) {
+        console.warn('Amount mismatch detected:', { 
+          frontend: prices.total, 
+          backend: orderData.amount,
+          difference: amountDifference
+        });
+        
+        // Use the backend amount to ensure consistency
+        prices.total = orderData.amount;
+      }
+
       const options: RazorpayOptions = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
-        amount: orderData.amount * 100,
-        currency: orderData.currency,
+        amount: Math.round(orderData.amount * 100), // Use the amount from backend
+        currency: 'INR',
         name: 'Futuretek',
         description: course.title,
         order_id: orderData.orderId,
@@ -281,7 +312,18 @@ export const CheckoutSidebar = ({
         notes: {
           courseId: course.id,
           courseName: course.title,
-          invoiceNumber: orderData.invoiceNumber
+          invoiceNumber: orderData.invoiceNumber,
+          original_price: prices.originalPrice.toString(),
+          admin_discount: prices.adminDiscountAmount.toString(),
+          jyotishi_discount: prices.jyotishiDiscountAmount.toString(),
+          total_discount: prices.discount.toString(),
+          price_after_discount: prices.subtotal.toString(),
+          gst_18_percent: prices.gst.toString(),
+          final_amount: prices.total.toString(),
+          jyotishi_commission: prices.commission.toString(),
+          coupons_applied: couponCodes || '',
+          gst_number: gstNumber || '',
+          user_id: session.user?.id || ''
         }
       };
 
@@ -344,18 +386,46 @@ export const CheckoutSidebar = ({
                     ₹{courseOriginalPrice.toLocaleString('en-IN')}
                   </span>
                 </div>
-                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                  assignedCoupon?.creatorType === 'JYOTISHI' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {assignedCoupon?.creatorType === 'JYOTISHI' ? 'Jyotishi Discount' : 'Admin Discount'}
+                <div className="flex flex-wrap gap-1">
+                  {adminCoupon && (
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                      <Crown className="h-3 w-3" />
+                      Admin Discount
+                    </div>
+                  )}
+                  {jyotishiCoupon && (
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                      <Users className="h-3 w-3" />
+                      Jyotishi Discount
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
               <p className="text-xl font-bold text-blue-600">
                 ₹{courseOriginalPrice.toLocaleString('en-IN')}
               </p>
+            )}
+          </div>
+
+          {/* GST Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              GST Number (Optional)
+            </label>
+            <input
+              type="text"
+              value={gstNumber}
+              onChange={(e) => handleGstChange(e.target.value)}
+              placeholder="22AAAAA0000A1Z5"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              disabled={isProcessing}
+            />
+            {gstNumber && !isGstValid && (
+              <p className="text-xs text-red-600">Please enter a valid GST number</p>
+            )}
+            {isGstValid && (
+              <p className="text-xs text-green-600">✓ Valid GST number format</p>
             )}
           </div>
 
@@ -368,45 +438,50 @@ export const CheckoutSidebar = ({
           {/* Payment Step */}
           {step === 'payment' && (
             <div className="space-y-4">
-              {/* Assigned Coupon Notice */}
-              {hasAssignedCoupon && assignedCoupon && (
-                <div className={`rounded-lg p-3 border ${
-                  assignedCoupon.creatorType === 'JYOTISHI'
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'bg-amber-50 border-amber-200'
-                }`}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                        assignedCoupon.creatorType === 'JYOTISHI' ? 'text-blue-600' : 'text-amber-600'
-                      }`} />
-                      <div>
-                        <p className={`font-semibold text-sm mb-0.5 ${
-                          assignedCoupon.creatorType === 'JYOTISHI' ? 'text-blue-800' : 'text-amber-800'
-                        }`}>
-                          {assignedCoupon.creatorType === 'JYOTISHI' ? 'Jyotishi Discount Applied!' : 'Admin Discount Applied!'}
-                        </p>
-                        <p className={`text-xs ${
-                          assignedCoupon.creatorType === 'JYOTISHI' ? 'text-blue-700' : 'text-amber-700'
-                        }`}>
-                          Coupon <code className="bg-white/80 px-1.5 py-0.5 rounded text-xs font-mono">{assignedCoupon.code}</code> auto-applied
-                        </p>
-                        <p className={`text-xs mt-0.5 ${
-                          assignedCoupon.creatorType === 'JYOTISHI' ? 'text-blue-600' : 'text-amber-600'
-                        }`}>
-                          You save ₹{courseDiscountAmount.toLocaleString('en-IN')}
-                        </p>
-                        
-                        {/* Commission Notice for Jyotishi Coupons */}
-                        {assignedCoupon.creatorType === 'JYOTISHI' && (
-                          <div className="flex items-center gap-1 mt-1 text-blue-600">
-                            <Users className="h-3 w-3" />
-                            <span className="text-xs">Supports {assignedCoupon.creatorName || 'the Jyotishi'}</span>
-                          </div>
-                        )}
+              {/* Applied Coupons Notice */}
+              {hasAssignedCoupon && appliedCoupons.length > 0 && (
+                <div className="space-y-2">
+                  {adminCoupon && (
+                    <div className="rounded-lg p-3 border bg-green-50 border-green-200">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5 text-green-600" />
+                        <div>
+                          <p className="font-semibold text-sm mb-0.5 text-green-800">
+                            Admin Discount Applied!
+                          </p>
+                          <p className="text-xs text-green-700">
+                            Coupon <code className="bg-white/80 px-1.5 py-0.5 rounded text-xs font-mono">{adminCoupon.code}</code> auto-applied
+                          </p>
+                          <p className="text-xs mt-0.5 text-green-600">
+                            You save ₹{courseAdminDiscountAmount.toLocaleString('en-IN')}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+                  
+                  {jyotishiCoupon && (
+                    <div className="rounded-lg p-3 border bg-blue-50 border-blue-200">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-600" />
+                        <div>
+                          <p className="font-semibold text-sm mb-0.5 text-blue-800">
+                            Jyotishi Discount Applied!
+                          </p>
+                          <p className="text-xs text-blue-700">
+                            Coupon <code className="bg-white/80 px-1.5 py-0.5 rounded text-xs font-mono">{jyotishiCoupon.code}</code> auto-applied
+                          </p>
+                          <p className="text-xs mt-0.5 text-blue-600">
+                            You save ₹{courseJyotishiDiscountAmount.toLocaleString('en-IN')}
+                          </p>
+                          <div className="flex items-center gap-1 mt-1 text-blue-600">
+                            <Users className="h-3 w-3" />
+                            <span className="text-xs">Supports {jyotishiCoupon.creatorName || 'the Jyotishi'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -420,13 +495,26 @@ export const CheckoutSidebar = ({
                     <span className="font-semibold text-sm">₹{prices.originalPrice.toLocaleString('en-IN')}</span>
                   </div>
 
-                  {prices.discount > 0 && (
+                  {prices.adminDiscountAmount > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-green-600 font-medium text-sm">
-                        Discount Applied
+                      <span className="text-green-600 font-medium text-sm flex items-center gap-1">
+                        <Crown className="h-3 w-3" />
+                        Admin Discount
                       </span>
                       <span className="font-semibold text-green-600 text-sm">
-                        -₹{prices.discount.toLocaleString('en-IN')}
+                        -₹{prices.adminDiscountAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  )}
+
+                  {prices.jyotishiDiscountAmount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-600 font-medium text-sm flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        Jyotishi Discount
+                      </span>
+                      <span className="font-semibold text-blue-600 text-sm">
+                        -₹{prices.jyotishiDiscountAmount.toLocaleString('en-IN')}
                       </span>
                     </div>
                   )}
@@ -448,7 +536,7 @@ export const CheckoutSidebar = ({
                     <div className="flex justify-between items-center text-xs bg-blue-50 p-2 rounded border border-blue-100">
                       <span className="text-blue-600 flex items-center gap-1">
                         <Users className="h-3 w-3" />
-                        Jyotishi Commission
+                        Jyotishi Commission (20%)
                       </span>
                       <span className="text-blue-600 font-medium">
                         ₹{prices.commission.toLocaleString('en-IN')}
@@ -463,6 +551,9 @@ export const CheckoutSidebar = ({
                         ₹{prices.total.toLocaleString('en-IN')}
                       </span>
                     </div>
+                    <p className="text-xs text-gray-500 text-center mt-1">
+                      This amount will be charged to Razorpay
+                    </p>
                   </div>
                 </div>
               </div>
@@ -477,7 +568,7 @@ export const CheckoutSidebar = ({
               <div className="space-y-2">
                 <button
                   onClick={handlePayment}
-                  disabled={isProcessing}
+                  disabled={isProcessing || (gstNumber ? !isGstValid : false)}
                   className="w-full py-2.5 bg-blue-700 hover:bg-blue-900 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg text-sm"
                 >
                   {isProcessing ? (
