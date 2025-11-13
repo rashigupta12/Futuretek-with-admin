@@ -142,9 +142,9 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
           {/* Author Bio */}
           <div className="mt-12 p-6 bg-blue-50 rounded-xl border border-blue-200">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+              {/* <div className="w-16 h-16 bg-gradient-to-br from-gold-400 to-gold-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
                 {blog.authorName.charAt(0)}
-              </div>
+              </div> */}
               <div>
                 <p className="font-semibold text-blue-900">{blog.authorName}</p>
                 <p className="text-blue-700 text-sm">Astrology Expert at FutureTek</p>
