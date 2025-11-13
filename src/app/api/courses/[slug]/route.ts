@@ -56,7 +56,7 @@ export async function GET(
       .from(CourseTopicsTable)
       .where(eq(CourseTopicsTable.courseId, course.id));
 
-    // Handle coupon logic
+    // Handle coupon logic - FOR BOTH LOGGED-IN AND LOGGED-OUT USERS
     const session = await auth();
     let finalPrice = parseFloat(course.priceINR);
     let totalDiscountAmount = 0;
@@ -66,11 +66,137 @@ export async function GET(
     const appliedCoupons: any[] = [];
     let hasAssignedCoupon = false;
 
-    if (session?.user?.id) {
-      const userId = session.user.id;
-      let currentPrice = finalPrice;
+    const userId = session?.user?.id;
 
-      // 1️⃣ Personal coupons (assigned to this user for this course)
+    // Get general coupons (available to everyone) - RUNS FOR ALL USERS
+    const generalCoupons = await db
+      .select({
+        coupon: CouponsTable,
+        couponType: CouponTypesTable,
+        creator: UsersTable,
+      })
+      .from(CouponsTable)
+      .innerJoin(
+        CouponTypesTable,
+        eq(CouponsTable.couponTypeId, CouponTypesTable.id)
+      )
+      .leftJoin(
+        UsersTable,
+        eq(CouponsTable.createdByJyotishiId, UsersTable.id)
+      )
+      .leftJoin(
+        CouponCoursesTable,
+        eq(CouponCoursesTable.couponId, CouponsTable.id)
+      )
+      .where(
+        and(
+          eq(CouponsTable.isActive, true),
+          lt(CouponsTable.validFrom, new Date()),
+          gt(CouponsTable.validUntil, new Date()),
+          or(
+            isNull(CouponsTable.maxUsageCount),
+            lt(CouponsTable.currentUsageCount, CouponsTable.maxUsageCount)
+          ),
+          // Only include coupons that are not personally assigned
+          notExists(
+            db
+              .select()
+              .from(UserCourseCouponsTable)
+              .where(eq(UserCourseCouponsTable.couponId, CouponsTable.id))
+          ),
+          // Course-specific or general coupons
+          or(
+            isNull(CouponCoursesTable.id),
+            eq(CouponCoursesTable.courseId, course.id)
+          )
+        )
+      )
+      .groupBy(CouponsTable.id, CouponTypesTable.id, UsersTable.id);
+
+    console.log("General coupons for course", course.id, ":", generalCoupons.length);
+
+    let currentPrice = finalPrice;
+
+    // Separate coupons by creator type
+    const adminCoupons = generalCoupons.filter(
+      (c) => c.creator?.role === "ADMIN" || c.coupon.createdByJyotishiId === null
+    );
+    const jyotishiCoupons = generalCoupons.filter(
+      (c) => c.creator?.role === "JYOTISHI" && c.coupon.createdByJyotishiId !== null
+    );
+
+    console.log("Admin coupons:", adminCoupons.length);
+    console.log("Jyotishi coupons:", jyotishiCoupons.length);
+
+    // Apply admin coupons first
+    for (const couponData of adminCoupons) {
+      const { coupon, creator } = couponData;
+      let discountAmount = 0;
+
+      if (coupon.discountType === "FIXED_AMOUNT") {
+        discountAmount = Math.min(
+          parseFloat(coupon.discountValue),
+          currentPrice
+        );
+      } else {
+        discountAmount = (currentPrice * parseFloat(coupon.discountValue)) / 100;
+      }
+
+      if (discountAmount > 0) {
+        currentPrice -= discountAmount;
+        totalDiscountAmount += discountAmount;
+        adminDiscountAmount += discountAmount;
+
+        appliedCoupons.push({
+          id: coupon.id,
+          code: coupon.code,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          discountAmount,
+          creatorType: "ADMIN" as const,
+          creatorName: creator?.name,
+          isPersonal: false, // General coupons are not personal
+        });
+      }
+    }
+
+    // Update price after admin discounts
+    priceAfterAdminDiscount = currentPrice;
+
+    // Apply jyotishi coupons second
+    for (const couponData of jyotishiCoupons) {
+      const { coupon, creator } = couponData;
+      let discountAmount = 0;
+
+      if (coupon.discountType === "FIXED_AMOUNT") {
+        discountAmount = Math.min(
+          parseFloat(coupon.discountValue),
+          currentPrice
+        );
+      } else {
+        discountAmount = (currentPrice * parseFloat(coupon.discountValue)) / 100;
+      }
+
+      if (discountAmount > 0) {
+        currentPrice -= discountAmount;
+        totalDiscountAmount += discountAmount;
+        jyotishiDiscountAmount += discountAmount;
+
+        appliedCoupons.push({
+          id: coupon.id,
+          code: coupon.code,
+          discountType: coupon.discountType,
+          discountValue: coupon.discountValue,
+          discountAmount,
+          creatorType: "JYOTISHI" as const,
+          creatorName: creator?.name,
+          isPersonal: false, // General coupons are not personal
+        });
+      }
+    }
+
+    // Only fetch and apply personal coupons if user is logged in
+    if (userId) {
       const personalCoupons = await db
         .select({
           coupon: CouponsTable,
@@ -105,100 +231,15 @@ export async function GET(
           )
         );
 
-      console.log(
-        "Personal coupons for user",
-        userId,
-        "course",
-        course.id,
-        ":",
-        personalCoupons.length
-      );
+      console.log("Personal coupons for user", userId, "course", course.id, ":", personalCoupons.length);
 
-      // 2️⃣ General coupons (available to everyone, not personally assigned)
-      const generalCoupons = await db
-        .select({
-          coupon: CouponsTable,
-          couponType: CouponTypesTable,
-          creator: UsersTable,
-        })
-        .from(CouponsTable)
-        .innerJoin(
-          CouponTypesTable,
-          eq(CouponsTable.couponTypeId, CouponTypesTable.id)
-        )
-        .leftJoin(
-          UsersTable,
-          eq(CouponsTable.createdByJyotishiId, UsersTable.id)
-        )
-        .leftJoin(
-          CouponCoursesTable,
-          eq(CouponCoursesTable.couponId, CouponsTable.id)
-        )
-        .where(
-          and(
-            eq(CouponsTable.isActive, true),
-            lt(CouponsTable.validFrom, new Date()),
-            gt(CouponsTable.validUntil, new Date()),
-            or(
-              isNull(CouponsTable.maxUsageCount),
-              lt(CouponsTable.currentUsageCount, CouponsTable.maxUsageCount)
-            ),
-            notExists(
-              db
-                .select()
-                .from(UserCourseCouponsTable)
-                .where(eq(UserCourseCouponsTable.couponId, CouponsTable.id))
-            ),
-            or(
-              isNull(CouponCoursesTable.id),
-              eq(CouponCoursesTable.courseId, course.id)
-            )
-          )
-        )
-        .groupBy(CouponsTable.id, CouponTypesTable.id, UsersTable.id);
-
-      console.log(
-        "General coupons for course",
-        course.id,
-        ":",
-        generalCoupons.length
-      );
-
-      // ✅ Fix type issue here by normalizing structures
-      type CouponData = {
-        coupon: typeof CouponsTable.$inferSelect;
-        couponType: typeof CouponTypesTable.$inferSelect;
-        creator: typeof UsersTable.$inferSelect | null;
-        assignment?: typeof UserCourseCouponsTable.$inferSelect | null;
-      };
-
-      const allApplicableCoupons: CouponData[] = [
-        ...personalCoupons,
-        ...generalCoupons.map((gc) => ({ ...gc, assignment: null })),
-      ];
-
-      // Remove duplicates (same coupon from multiple sources)
-      const uniqueCoupons = allApplicableCoupons.filter(
-        (coupon, index, self) =>
-          index === self.findIndex((c) => c.coupon.id === coupon.coupon.id)
-      );
-
-      console.log("Total unique applicable coupons:", uniqueCoupons.length);
-
-      // Separate coupons by creator type
-      const adminCoupons = uniqueCoupons.filter(
-        (c) => c.creator?.role === "ADMIN" || c.coupon.createdByJyotishiId === null
-      );
-      const jyotishiCoupons = uniqueCoupons.filter(
-        (c) => c.creator?.role === "JYOTISHI" && c.coupon.createdByJyotishiId !== null
-      );
-
-      console.log("Admin coupons:", adminCoupons.length);
-      console.log("Jyotishi coupons:", jyotishiCoupons.length);
-
-      // Apply admin coupons first
-      for (const couponData of adminCoupons) {
-        const { coupon, creator, assignment } = couponData;
+      // Apply personal coupons on top of general coupons
+      for (const couponData of personalCoupons) {
+        const { coupon, creator} = couponData;
+        
+        // Skip if this coupon was already applied as a general coupon
+        if (appliedCoupons.some(ac => ac.id === coupon.id)) continue;
+        
         let discountAmount = 0;
 
         if (coupon.discountType === "FIXED_AMOUNT") {
@@ -213,7 +254,13 @@ export async function GET(
         if (discountAmount > 0) {
           currentPrice -= discountAmount;
           totalDiscountAmount += discountAmount;
-          adminDiscountAmount += discountAmount;
+
+          // Add to appropriate discount type
+          if (creator?.role === "ADMIN" || coupon.createdByJyotishiId === null) {
+            adminDiscountAmount += discountAmount;
+          } else {
+            jyotishiDiscountAmount += discountAmount;
+          }
 
           appliedCoupons.push({
             id: coupon.id,
@@ -221,54 +268,17 @@ export async function GET(
             discountType: coupon.discountType,
             discountValue: coupon.discountValue,
             discountAmount,
-            creatorType: "ADMIN" as const,
+            creatorType: (creator?.role === "ADMIN" || coupon.createdByJyotishiId === null) ? "ADMIN" as const : "JYOTISHI" as const,
             creatorName: creator?.name,
-            isPersonal: !!assignment,
+            isPersonal: true,
           });
 
-          if (assignment) hasAssignedCoupon = true;
+          hasAssignedCoupon = true;
         }
       }
-
-      // Update price after admin discounts for commission calculation
-      priceAfterAdminDiscount = currentPrice;
-
-      // Apply jyotishi coupons second
-      for (const couponData of jyotishiCoupons) {
-        const { coupon, creator, assignment } = couponData;
-        let discountAmount = 0;
-
-        if (coupon.discountType === "FIXED_AMOUNT") {
-          discountAmount = Math.min(
-            parseFloat(coupon.discountValue),
-            currentPrice
-          );
-        } else {
-          discountAmount = (currentPrice * parseFloat(coupon.discountValue)) / 100;
-        }
-
-        if (discountAmount > 0) {
-          currentPrice -= discountAmount;
-          totalDiscountAmount += discountAmount;
-          jyotishiDiscountAmount += discountAmount;
-
-          appliedCoupons.push({
-            id: coupon.id,
-            code: coupon.code,
-            discountType: coupon.discountType,
-            discountValue: coupon.discountValue,
-            discountAmount,
-            creatorType: "JYOTISHI" as const,
-            creatorName: creator?.name,
-            isPersonal: !!assignment,
-          });
-
-          if (assignment) hasAssignedCoupon = true;
-        }
-      }
-
-      finalPrice = Math.max(0, currentPrice);
     }
+
+    finalPrice = Math.max(0, currentPrice);
 
     // ✅ Return response
     return NextResponse.json(

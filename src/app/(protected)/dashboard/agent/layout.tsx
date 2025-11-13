@@ -1,21 +1,17 @@
 // src/app/(protected)/dashboard/agent/layout.tsx
 "use client";
-
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronDown,
   DollarSign,
   Home,
   List,
-  LogOut,
   Tag,
   Ticket,
   TrendingUp,
   Users,
   Wallet
 } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -46,24 +42,22 @@ export default function JyotishiLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session, status } = useSession();
+  const {status } = useSession();
   const pathname = usePathname();
   const router = useRouter();
 
-  const userName = session?.user?.name || "Agent";
-  const userImage = session?.user?.image || "/images/user_alt_icon.png";
-
-  const getAvatarFallback = () => {
-    if (session?.user?.name) {
-      return session.user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return "AG";
-  };
+ 
+  // const getAvatarFallback = () => {
+  //   if (session?.user?.name) {
+  //     return session.user.name
+  //       .split(" ")
+  //       .map((n) => n[0])
+  //       .join("")
+  //       .toUpperCase()
+  //       .slice(0, 2);
+  //   }
+  //   return "AG";
+  // };
 
   // Keep expanded state in URL query
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -123,9 +117,9 @@ export default function JyotishiLayout({
     },
   ];
 
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: "/auth/login" });
-  };
+  // const handleLogout = async () => {
+  //   await signOut({ callbackUrl: "/auth/login" });
+  // };
 
   if (status === "loading") {
     return (
@@ -138,7 +132,7 @@ export default function JyotishiLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
-      <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50">
+      {/* <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-pink-600 rounded-lg flex items-center justify-center">
@@ -176,7 +170,7 @@ export default function JyotishiLayout({
             </PopoverContent>
           </Popover>
         </div>
-      </nav>
+      </nav> */}
 
       <div className="flex">
         {/* Sidebar */}

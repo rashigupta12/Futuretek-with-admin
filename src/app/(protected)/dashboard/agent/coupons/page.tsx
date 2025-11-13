@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { AlertCircle, Calendar as CalendarIcon, Copy, Filter, Plus, Search, X } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import useSWR from "swr";
 import { useDebouncedCallback } from "use-debounce";
 
@@ -61,6 +61,7 @@ export default function MyCouponsPage() {
   const [validUntil, setValidUntil] = useState<Date | undefined>(undefined);
   const [previewCode, setPreviewCode] = useState("");
   const [creatingCoupon, setCreatingCoupon] = useState(false);
+  const [maxUsageError, setMaxUsageError] = useState("");
 
   // SWR for coupons
   const { data: couponsData, isLoading, mutate } = useSWR(
@@ -106,32 +107,76 @@ export default function MyCouponsPage() {
 
   const totalPages = Math.ceil((couponsData?.total || 0) / limit);
 
-  // Preview with debounce
-  const debouncedPreview = useDebouncedCallback(async () => {
-    if (!selectedType || !discountValue) {
-      setPreviewCode("");
-      return;
+  // Validation function for max usage
+  const validateMaxUsage = useCallback((value: string) => {
+    if (value && Number(value) < 1) {
+      setMaxUsageError("Max usage must be at least 1");
+    } else {
+      setMaxUsageError("");
     }
-    try {
-      const res = await fetch("/api/jyotishi/coupons/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ couponTypeId: selectedType, discountValue: Number(discountValue) }),
-      });
-      const data = await res.json();
-      setPreviewCode(data.couponCode || "");
-    } catch {
-      setPreviewCode("");
-    }
-  }, 500);
+  }, []);
 
+  // Stable handler for max usage changes
+  const handleMaxUsageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMaxUsageCount(value);
+    
+    // Only validate if there's a value, don't validate empty/cleared field immediately
+    if (value === "") {
+      setMaxUsageError("");
+    } else {
+      validateMaxUsage(value);
+    }
+  }, [validateMaxUsage]);
+
+  // Stable handler for discount value changes
+  const handleDiscountValueChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setDiscountValue(e.target.value);
+  }, []);
+
+  // Debounced preview with stable dependencies
+  const debouncedPreview = useDebouncedCallback(
+    async (type: string, value: string) => {
+      if (!type || !value) {
+        setPreviewCode("");
+        return;
+      }
+      try {
+        const res = await fetch("/api/jyotishi/coupons/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            couponTypeId: type, 
+            discountValue: Number(value) 
+          }),
+        });
+        const data = await res.json();
+        setPreviewCode(data.couponCode || "");
+      } catch {
+        setPreviewCode("");
+      }
+    },
+    500
+  );
+
+  // Stable preview effect
   useEffect(() => {
-    debouncedPreview();
+    debouncedPreview(selectedType, discountValue);
+    
+    return () => {
+      debouncedPreview.cancel();
+    };
   }, [selectedType, discountValue, debouncedPreview]);
 
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedType || !discountValue || !validFrom || !validUntil) return;
+
+    // Validate max usage
+    if (maxUsageCount && Number(maxUsageCount) < 1) {
+      setMaxUsageError("Max usage must be at least 1");
+      return;
+    }
 
     const selectedTypeObj = types.find((t) => t.id === selectedType);
     if (selectedTypeObj?.maxDiscountLimit) {
@@ -168,6 +213,7 @@ export default function MyCouponsPage() {
         setValidFrom(undefined);
         setValidUntil(undefined);
         setPreviewCode("");
+        setMaxUsageError("");
       } else {
         const err = await res.json();
         alert(err.error || "Failed");
@@ -367,7 +413,7 @@ export default function MyCouponsPage() {
                     <Input
                       type="number"
                       value={discountValue}
-                      onChange={(e) => setDiscountValue(e.target.value)}
+                      onChange={handleDiscountValueChange}
                       placeholder={selectedTypeObj?.discountType === "PERCENTAGE" ? "e.g. 20" : "e.g. 500"}
                       className={isDiscountExceeded ? "border-rose-500" : ""}
                       required
@@ -383,7 +429,20 @@ export default function MyCouponsPage() {
                   {/* Max Usage */}
                   <div>
                     <Label>Max Usage (optional)</Label>
-                    <Input type="number" value={maxUsageCount} onChange={(e) => setMaxUsageCount(e.target.value)} placeholder="Unlimited" />
+                    <Input 
+                      type="number" 
+                      value={maxUsageCount} 
+                      onChange={handleMaxUsageChange}
+                      placeholder="Unlimited" 
+                      min="1"
+                      className={maxUsageError ? "border-rose-500" : ""}
+                    />
+                    {maxUsageError && (
+                      <p className="text-rose-600 text-xs mt-1 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {maxUsageError}
+                      </p>
+                    )}
                   </div>
 
                   {/* Dates */}
@@ -430,7 +489,7 @@ export default function MyCouponsPage() {
 
                   <button
                     type="submit"
-                    disabled={creatingCoupon || isDiscountExceeded}
+                    disabled={creatingCoupon || isDiscountExceeded || !!maxUsageError}
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg disabled:opacity-50"
                   >
                     {creatingCoupon ? "Creating..." : "Create Coupon"}

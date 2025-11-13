@@ -168,7 +168,7 @@ export default function PayoutsPage() {
         </div>
         <Button
           onClick={() => setShowSidebar(true)}
-          className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
         >
           <DollarSign className="h-4 w-4 mr-2" />
           Request Payout
@@ -318,12 +318,12 @@ export default function PayoutsPage() {
           <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowSidebar(false)} />
           <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
             <div className="flex flex-col h-full">
-              <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
                 <div className="flex justify-between items-center">
                   <h2 className="text-lg font-semibold text-white">Request Payout</h2>
                   <button
                     onClick={() => setShowSidebar(false)}
-                    className="text-white p-1 rounded-lg hover:bg-emerald-800"
+                    className="text-white p-1 rounded-lg hover:bg-blue-800"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -381,7 +381,7 @@ export default function PayoutsPage() {
                   <Button
                     onClick={handleSubmit}
                     disabled={submitting || !!error || !amount}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                   >
                     {submitting ? "Submitting..." : "Request Payout"}
                   </Button>
