@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 
 interface Course {
   id: string;
@@ -77,6 +77,9 @@ interface CourseCategory {
   courses: Course[];
 }
 
+// Cache for course prices to avoid refetching
+const priceCache = new Map<string, CoursePriceData>();
+
 export function CoursesCatalog() {
   const { data: session, status } = useSession();
   const userId = session?.user?.id as string | undefined;
@@ -98,30 +101,119 @@ export function CoursesCatalog() {
     ONGOING: useRef<HTMLDivElement>(null),
   };
 
+  // Optimized batch fetch with caching
+  const batchFetchCoursePrices = useCallback(async (courses: Course[]) => {
+    const priceMap: Record<string, CoursePriceData> = {};
+    const promises = [];
+    
+    // Process in smaller batches to avoid overwhelming the API
+    const batchSize = 5;
+    
+    for (let i = 0; i < courses.length; i += batchSize) {
+      const batch = courses.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async (course) => {
+        // Check cache first
+        const cacheKey = `${course.slug}-${userId || 'anonymous'}`;
+        if (priceCache.has(cacheKey)) {
+          return {
+            courseId: course.id,
+            priceData: priceCache.get(cacheKey)!
+          };
+        }
+
+        try {
+          const res = await fetch(`/api/courses/${course.slug}`);
+          if (res.ok) {
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const data = await res.json();
+              const priceData = data.course;
+              
+              // Cache the result
+              priceCache.set(cacheKey, priceData);
+              
+              return {
+                courseId: course.id,
+                priceData
+              };
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch price for ${course.slug}:`, error);
+        }
+        
+        return null;
+      });
+
+      promises.push(...batchPromises);
+      
+      // Small delay between batches to avoid overwhelming the server
+      if (i + batchSize < courses.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    const results = await Promise.allSettled(promises);
+    
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value) {
+        priceMap[result.value.courseId] = result.value.priceData;
+      }
+    });
+
+    return priceMap;
+  }, [userId]);
+
   useEffect(() => {
+    let mounted = true;
+
     async function fetchData() {
       try {
         setLoading(true);
         setError(null);
 
-        const coursesRes = await fetch("/api/courses");
-        if (!coursesRes.ok) {
-          throw new Error(`Failed to fetch courses: ${coursesRes.status}`);
+        // Fetch courses and prices in parallel
+        const [coursesRes, enrollmentsRes] = await Promise.allSettled([
+          fetch("/api/courses").then(res => {
+            if (!res.ok) throw new Error(`Failed to fetch courses: ${res.status}`);
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+              throw new Error("Invalid response format from server");
+            }
+            return res.json();
+          }),
+          userId ? fetch(`/api/user/enrollments`).then(res => res.ok ? res.json() : null) : Promise.resolve(null)
+        ]);
+
+        if (!mounted) return;
+
+        // Handle courses response
+        if (coursesRes.status === 'rejected') {
+          throw coursesRes.reason;
         }
 
-        const contentType = coursesRes.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          throw new Error("Invalid response format from server");
-        }
-
-        const data = await coursesRes.json();
+        const data = coursesRes.value;
         const rawCourses = data.courses || [];
-
         const filteredCourses = rawCourses.filter((course: Course) =>
           ["UPCOMING", "REGISTRATION_OPEN", "ONGOING"].includes(course.status)
         );
 
+        if (!mounted) return;
+
         setCourses(filteredCourses);
+
+        // Handle enrollments
+        if (userId && enrollmentsRes.status === 'fulfilled' && enrollmentsRes.value?.enrollments) {
+          const enrolledIds = new Set<string>(
+            enrollmentsRes.value.enrollments
+              .filter((e: any) => e.status === "ACTIVE" || e.status === "COMPLETED")
+              .map((e: any) => e.courseId as string)
+          );
+          setEnrolledCourseIds(enrolledIds);
+        }
+
+        // Set base prices immediately for instant display
         const basePrices: Record<string, CoursePriceData> = {};
         filteredCourses.forEach((course: Course) => {
           basePrices[course.id] = {
@@ -132,89 +224,42 @@ export function CoursesCatalog() {
           };
         });
         setCoursePrices(basePrices);
-        
-        // Fetch prices for ALL users (logged-in and logged-out)
+
+        // Fetch detailed prices in background
         if (filteredCourses.length > 0) {
-          const promises = [
-            // Only fetch enrollments if user is logged in
-            userId ? fetch(`/api/user/enrollments`)
-              .then((res) => (res.ok ? res.json() : null))
-              .catch(() => null) : Promise.resolve(null),
-            // ALWAYS fetch price data for all courses (for both logged-in and logged-out users)
-            ...batchFetch(rawCourses),
-          ];
-
-          const [enrollData, ...priceResults] = await Promise.all(promises);
-
-          if (userId && enrollData?.enrollments && Array.isArray(enrollData.enrollments)) {
-            const enrolledIds = new Set<string>(
-              enrollData.enrollments
-                .filter(
-                  (e: any) => e.status === "ACTIVE" || e.status === "COMPLETED"
-                )
-                .map((e: any) => e.courseId as string)
-            );
-            setEnrolledCourseIds(enrolledIds);
+          const detailedPrices = await batchFetchCoursePrices(filteredCourses);
+          if (mounted) {
+            setCoursePrices(prev => ({
+              ...prev,
+              ...detailedPrices
+            }));
           }
-
-          const pricesMap: Record<string, CoursePriceData> = { ...basePrices };
-          priceResults.forEach((result) => {
-            if (result && result.priceData) {
-              pricesMap[result.courseId] = {
-                originalPrice:
-                  result.priceData.originalPrice ||
-                  basePrices[result.courseId].originalPrice,
-                finalPrice:
-                  result.priceData.finalPrice ||
-                  basePrices[result.courseId].finalPrice,
-                discountAmount: result.priceData.discountAmount || "0",
-                adminDiscountAmount: result.priceData.adminDiscountAmount,
-                jyotishiDiscountAmount: result.priceData.jyotishiDiscountAmount,
-                priceAfterAdminDiscount:
-                  result.priceData.priceAfterAdminDiscount,
-                appliedCoupons: result.priceData.appliedCoupons || undefined,
-                hasAssignedCoupon: result.priceData.hasAssignedCoupon || false,
-              };
-            }
-          });
-          setCoursePrices(pricesMap);
         }
-        
-        setLoading(false);
+
+        if (mounted) {
+          setLoading(false);
+        }
       } catch (err) {
-        console.error("Catalog load error:", err);
-        setError(err instanceof Error ? err.message : "Failed to load courses");
-        setLoading(false);
+        if (mounted) {
+          console.error("Catalog load error:", err);
+          setError(err instanceof Error ? err.message : "Failed to load courses");
+          setLoading(false);
+        }
       }
     }
 
-    function batchFetch(courses: Course[]) {
-      return courses.map((course) =>
-        fetch(`/api/courses/${course.slug}`)
-          .then((res) => {
-            if (res.ok) {
-              const contentType = res.headers.get("content-type");
-              if (contentType && contentType.includes("application/json")) {
-                return res.json().then((data) => ({
-                  courseId: course.id,
-                  priceData: data.course,
-                }));
-              }
-            }
-            return null;
-          })
-          .catch(() => null)
-      );
-    }
-    
     if (status !== "loading") {
       fetchData();
     }
-  }, [userId, status]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId, status, batchFetchCoursePrices]);
 
   const isAdminOrJyotishi = userRole === "ADMIN" || userRole === "JYOTISHI";
 
-  const courseCategories: CourseCategory[] = [
+  const courseCategories: CourseCategory[] = useMemo(() => [
     {
       type: "REGISTRATION_OPEN",
       title: "Enrolling Now",
@@ -244,16 +289,16 @@ export function CoursesCatalog() {
       badgeColor: "bg-gradient-to-r from-amber-500 to-amber-600",
       courses: courses.filter((course) => course.status === "UPCOMING"),
     },
-  ];
+  ], [courses]);
 
-  const getPlainText = (html: string) => {
+  const getPlainText = useCallback((html: string) => {
     if (!html) return "";
     const div = document.createElement("div");
     div.innerHTML = html;
     return div.textContent || div.innerText || "";
-  };
+  }, []);
 
-  const scroll = (
+  const scroll = useCallback((
     direction: "left" | "right",
     category: keyof typeof scrollRefs
   ) => {
@@ -266,9 +311,9 @@ export function CoursesCatalog() {
         behavior: "smooth",
       });
     }
-  };
+  }, []);
 
-  const getDisplayPrice = (course: Course) => {
+  const getDisplayPrice = useCallback((course: Course) => {
     const priceData = coursePrices[course.id];
 
     // Check if there are any applied coupons OR if there's a discount amount
@@ -292,7 +337,7 @@ export function CoursesCatalog() {
         discountAmount: discountAmount,
         appliedCoupons: priceData.appliedCoupons,
         hasAssignedCoupon: priceData.hasAssignedCoupon,
-        hasAnyDiscount: true, // Always true if any discount exists
+        hasAnyDiscount: true,
       };
     }
 
@@ -305,8 +350,9 @@ export function CoursesCatalog() {
       hasAssignedCoupon: false,
       hasAnyDiscount: false,
     };
-  };
+  }, [coursePrices]);
 
+  // Memoized loading state
   if (status === "loading" || loading) {
     return (
       <section className="py-16 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30">
