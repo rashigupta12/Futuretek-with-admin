@@ -28,7 +28,7 @@ import {
   Star,
   Target,
   Users,
-  Crown
+  Crown,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -159,18 +159,22 @@ function getPlainText(html: string): string {
 export default function CoursePage() {
   const params = useParams();
   const slug = params?.course as string;
-  
+
   const searchParams = useSearchParams();
   const { data: session, status: authStatus } = useSession();
   const userId = session?.user?.id as string | undefined;
+  const userRole = session?.user?.role as string | undefined;
 
   const [course, setCourse] = useState<CourseData | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const autoOpenCheckout = searchParams.get('enroll') === 'true';
+
+  const autoOpenCheckout = searchParams.get("enroll") === "true";
   const [showCheckout, setShowCheckout] = useState(autoOpenCheckout);
+
+  // Check if user is admin or jyotishi
+  const isAdminOrJyotishi = userRole === "ADMIN" || userRole === "JYOTISHI";
 
   /* ---------------------------------------------------------
      Scroll to top on page load and data load
@@ -191,18 +195,23 @@ export default function CoursePage() {
   useEffect(() => {
     async function load() {
       if (!slug) return;
-      
+
       try {
         setLoading(true);
         setError(null);
 
         // Parallel fetch: course data + enrollment check
         const coursePromise = getCourse(slug);
-        const enrollmentPromise = userId 
-          ? fetch("/api/user/enrollments").then(res => res.ok ? res.json() : null).catch(() => null)
+        const enrollmentPromise = userId
+          ? fetch("/api/user/enrollments")
+              .then((res) => (res.ok ? res.json() : null))
+              .catch(() => null)
           : Promise.resolve(null);
 
-        const [c, enrollData] = await Promise.all([coursePromise, enrollmentPromise]);
+        const [c, enrollData] = await Promise.all([
+          coursePromise,
+          enrollmentPromise,
+        ]);
 
         if (!c) throw new Error("Course not found");
         setCourse(c);
@@ -232,19 +241,17 @@ export default function CoursePage() {
      --------------------------------------------------------- */
   const hasAssignedCoupon = course?.hasAssignedCoupon || false;
   const appliedCoupons = course?.appliedCoupons || [];
-  
-  // Use the prices directly from the API response (same as catalog)
-  const originalPrice = parseFloat(course?.originalPrice || course?.priceINR || "0");
-  const displayPrice = parseFloat(course?.finalPrice || course?.priceINR || "0");
-  const discountAmount = parseFloat(course?.discountAmount || "0");
-  // const adminDiscountAmount = parseFloat(course?.adminDiscountAmount || "0");
-  // const jyotishiDiscountAmount = parseFloat(course?.jyotishiDiscountAmount || "0");
-  // const priceAfterAdminDiscount = parseFloat(course?.priceAfterAdminDiscount || originalPrice.toString());
-  
-  const hasDiscount = hasAssignedCoupon && discountAmount > 0;
 
-  // Get the primary coupon for display (first one in the array)
-  // const primaryCoupon = appliedCoupons.length > 0 ? appliedCoupons[0] : undefined;
+  // Use the prices directly from the API response (same as catalog)
+  const originalPrice = parseFloat(
+    course?.originalPrice || course?.priceINR || "0"
+  );
+  const displayPrice = parseFloat(
+    course?.finalPrice || course?.priceINR || "0"
+  );
+  const discountAmount = parseFloat(course?.discountAmount || "0");
+
+  const hasDiscount = hasAssignedCoupon && discountAmount > 0;
 
   /* ---------------------------------------------------------
      Loading / error states
@@ -296,7 +303,9 @@ export default function CoursePage() {
                   <Clock className="w-4 h-4 text-white" />
                   <div>
                     <div className="text-white/80 text-xs">Duration</div>
-                    <div className="text-white font-semibold text-sm">{course.duration || "Self-paced"}</div>
+                    <div className="text-white font-semibold text-sm">
+                      {course.duration || "Self-paced"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -306,7 +315,9 @@ export default function CoursePage() {
                   <Users className="w-4 h-4 text-white" />
                   <div>
                     <div className="text-white/80 text-xs">Students</div>
-                    <div className="text-white font-semibold text-sm">{course.currentEnrollments || "100"}+</div>
+                    <div className="text-white font-semibold text-sm">
+                      {course.currentEnrollments || "100"}+
+                    </div>
                   </div>
                 </div>
               </div>
@@ -317,7 +328,9 @@ export default function CoursePage() {
                     <BookOpen className="w-4 h-4 text-white" />
                     <div>
                       <div className="text-white/80 text-xs">Sessions</div>
-                      <div className="text-white font-semibold text-sm">{course.totalSessions}</div>
+                      <div className="text-white font-semibold text-sm">
+                        {course.totalSessions}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -328,7 +341,9 @@ export default function CoursePage() {
                   <Award className="w-4 h-4 text-white" />
                   <div>
                     <div className="text-white/80 text-xs">Certificate</div>
-                    <div className="text-white font-semibold text-sm">Included</div>
+                    <div className="text-white font-semibold text-sm">
+                      Included
+                    </div>
                   </div>
                 </div>
               </div>
@@ -349,8 +364,8 @@ export default function CoursePage() {
                   ))}
               </div>
 
-              {!isEnrolled && (
-                <Button 
+              {!isEnrolled && !isAdminOrJyotishi && (
+                <Button
                   onClick={() => setShowCheckout(true)}
                   className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-8 py-6 rounded-lg border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
@@ -377,22 +392,30 @@ export default function CoursePage() {
                 <div className="text-gray-700 leading-relaxed">
                   <SafeHTML content={course.description} />
                 </div>
-                
+
                 {/* Instructor & Duration */}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
                     <Users className="h-5 w-5 text-blue-600" />
                     <div>
-                      <div className="font-semibold text-gray-900">Instructor</div>
-                      <div className="text-gray-600 text-sm">{course.instructor || "Expert Instructor"}</div>
+                      <div className="font-semibold text-gray-900">
+                        Instructor
+                      </div>
+                      <div className="text-gray-600 text-sm">
+                        {course.instructor || "Expert Instructor"}
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-100">
                     <Clock className="h-5 w-5 text-amber-600" />
                     <div>
-                      <div className="font-semibold text-gray-900">Duration</div>
-                      <div className="text-gray-600 text-sm">{course.duration || "Flexible Schedule"}</div>
+                      <div className="font-semibold text-gray-900">
+                        Duration
+                      </div>
+                      <div className="text-gray-600 text-sm">
+                        {course.duration || "Flexible Schedule"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -440,7 +463,11 @@ export default function CoursePage() {
                   )}
                 </CardHeader>
                 <CardContent>
-                  <Accordion type="single" collapsible className="w-full space-y-3">
+                  <Accordion
+                    type="single"
+                    collapsible
+                    className="w-full space-y-3"
+                  >
                     {course.whyLearn.map((item, i) => (
                       <AccordionItem
                         key={i}
@@ -450,7 +477,9 @@ export default function CoursePage() {
                         <AccordionTrigger className="hover:no-underline px-4 py-3 hover:bg-gray-50">
                           <div className="flex items-center gap-3 text-left">
                             <Target className="h-4 w-4 text-blue-600" />
-                            <span className="font-semibold text-gray-900">{item.title}</span>
+                            <span className="font-semibold text-gray-900">
+                              {item.title}
+                            </span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="text-gray-700 px-4 pb-4 text-sm">
@@ -468,7 +497,9 @@ export default function CoursePage() {
               <Card className="border border-gray-200 shadow-sm">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl font-bold text-gray-900">
-                    {course.courseContent?.length ? "Course Curriculum" : "What You'll Learn"}
+                    {course.courseContent?.length
+                      ? "Course Curriculum"
+                      : "What You'll Learn"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -506,13 +537,40 @@ export default function CoursePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-green-800 text-sm">
-                    You have successfully enrolled in this course. Head over to your dashboard to start learning!
+                    You have successfully enrolled in this course. Head over to
+                    your dashboard to start learning!
                   </p>
                   <Button
                     asChild
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
                   >
                     <Link href="/dashboard/user/courses">Go to My Courses</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : isAdminOrJyotishi ? (
+              <Card className="border border-amber-200 bg-amber-50 sticky top-6">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl font-bold text-amber-900 flex items-center gap-2">
+                    <Crown className="h-5 w-5" />
+                    Staff Access
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-amber-800 text-sm">
+                    As {userRole?.toLowerCase()}, you have full access to this course.
+                  </p>
+                  <Button
+                    asChild
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 rounded-lg"
+                  >
+                    <Link href={
+                      userRole === "ADMIN" 
+                        ? "/dashboard/admin/courses" 
+                        : "/dashboard/jyotishi/courses"
+                    }>
+                      Access Course
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -523,90 +581,33 @@ export default function CoursePage() {
                     {course.enrollment?.title || "Enroll Now"}
                   </CardTitle>
                   <CardDescription className="text-blue-100 text-sm mt-1">
-                    {course.enrollment?.description || "Start your journey today"}
+                    {course.enrollment?.description ||
+                      "Start your journey today"}
                   </CardDescription>
                 </div>
-                
+
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     {/* Price Display */}
                     <div className="text-center">
                       <div className="flex flex-col items-center gap-2 mb-3">
-                        {hasDiscount ? (
+                        {/* Always show the display price (which includes discounts) */}
+                        <span className="text-3xl font-bold text-gray-900">
+                          ₹{displayPrice.toLocaleString("en-IN")}
+                        </span>
+
+                        {/* Only show original price and discount badge if there's a discount */}
+                        {hasDiscount && (
                           <>
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl font-bold text-gray-900">
-                                ₹{displayPrice.toLocaleString("en-IN")}
-                              </span>
-                              <span className="text-xl text-gray-500 line-through">
-                                ₹{originalPrice.toLocaleString("en-IN")}
-                              </span>
-                            </div>
+                            <span className="text-xl text-gray-500 line-through">
+                              ₹{originalPrice.toLocaleString("en-IN")}
+                            </span>
                             <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-medium border border-amber-200">
                               Save ₹{discountAmount.toLocaleString("en-IN")}
                             </div>
                           </>
-                        ) : (
-                          <span className="text-3xl font-bold text-gray-900">
-                            ₹{originalPrice.toLocaleString("en-IN")}
-                          </span>
                         )}
                       </div>
-                      
-                      {/* Applied Coupons Display */}
-                      {hasAssignedCoupon && appliedCoupons.length > 0 && (
-                        <div className="mb-3 space-y-2">
-                          {appliedCoupons.map((coupon) => (
-                            <div 
-                              key={coupon.id} 
-                              className={`inline-flex flex-col gap-1 ${
-                                coupon.creatorType === 'JYOTISHI' 
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                                  : 'bg-green-50 text-green-700 border-green-200'
-                              } px-3 py-2 rounded-lg border w-full`}
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center gap-2">
-                                  {coupon.creatorType === 'JYOTISHI' ? (
-                                    <Users className="h-4 w-4" />
-                                  ) : (
-                                    <Crown className="h-4 w-4" />
-                                  )}
-                                  <span className="text-sm font-medium">
-                                    {coupon.creatorType === 'JYOTISHI' ? 'Jyotishi Discount' : 'Admin Discount'}
-                                  </span>
-                                  <code className="bg-white px-2 py-1 rounded text-xs font-mono border">
-                                    {coupon.code}
-                                  </code>
-                                </div>
-                                <span className="text-sm">
-                                  ({coupon.discountType === 'PERCENTAGE' ? 
-                                    `${coupon.discountValue}% off` : 
-                                    `₹${coupon.discountValue} off`})
-                                </span>
-                              </div>
-                              
-                              {/* Commission Notice for Jyotishi Coupons */}
-                              {coupon.creatorType === 'JYOTISHI' && (
-                                <div className="flex items-center gap-1 text-xs bg-blue-100 px-2 py-1 rounded border border-blue-200">
-                                  <Users className="h-3 w-3" />
-                                  <span>Supports {coupon.creatorName || 'the Jyotishi'} with commission</span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          
-                          {/* Combined Discounts Notice */}
-                          {appliedCoupons.length > 1 && (
-                            <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-2">
-                              <div className="flex items-center gap-2 text-orange-700 text-xs">
-                                <Star className="h-3 w-3" />
-                                <span className="font-medium">Combined Discounts Applied!</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
 
                     {/* Buy Now Button */}
@@ -634,10 +635,13 @@ export default function CoursePage() {
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Shield className="h-4 w-4 text-amber-600" />
                         <span className="font-semibold text-amber-900 text-sm">
-                          {course.enrollment?.offer?.guarantee || "30-Day Money-Back Guarantee"}
+                          {course.enrollment?.offer?.guarantee ||
+                            "30-Day Money-Back Guarantee"}
                         </span>
                       </div>
-                      <p className="text-amber-700 text-xs">Risk-free enrollment</p>
+                      <p className="text-amber-700 text-xs">
+                        Risk-free enrollment
+                      </p>
                     </div>
 
                     {/* Quick Stats */}
@@ -649,7 +653,9 @@ export default function CoursePage() {
                         <div className="text-xs text-blue-700">Sessions</div>
                       </div>
                       <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="font-bold text-blue-900 text-lg">24/7</div>
+                        <div className="font-bold text-blue-900 text-lg">
+                          24/7
+                        </div>
                         <div className="text-xs text-blue-700">Support</div>
                       </div>
                     </div>
@@ -661,37 +667,27 @@ export default function CoursePage() {
         </div>
       </div>
 
-      {/* Checkout Sidebar */}
-   
-
-{/* Checkout Sidebar */}
-{!isEnrolled && (
-  <CheckoutSidebar
-    course={{
-      id: course.id,
-      title: course.title,
-      priceINR: course.priceINR || "0",
-      slug: course.slug,
-    }}
-    isOpen={showCheckout}
-    onClose={() => setShowCheckout(false)}
-    // ❌ REMOVE THIS LINE:
-    // assignedCoupon={primaryCoupon}
-    
-    // ✅ ADD THIS LINE INSTEAD:
-    appliedCoupons={appliedCoupons}
-    
-    hasAssignedCoupon={course.hasAssignedCoupon}
-    finalPrice={course.finalPrice}
-    originalPrice={course.originalPrice}
-    discountAmount={course.discountAmount}
-    adminDiscountAmount={course.adminDiscountAmount}
-    jyotishiDiscountAmount={course.jyotishiDiscountAmount}
-    priceAfterAdminDiscount={course.priceAfterAdminDiscount}
-  />
-)}
-
-
+      {/* Checkout Sidebar - Only show for regular users who are not enrolled */}
+      {!isEnrolled && !isAdminOrJyotishi && (
+        <CheckoutSidebar
+          course={{
+            id: course.id,
+            title: course.title,
+            priceINR: course.priceINR || "0",
+            slug: course.slug,
+          }}
+          isOpen={showCheckout}
+          onClose={() => setShowCheckout(false)}
+          appliedCoupons={appliedCoupons}
+          hasAssignedCoupon={course.hasAssignedCoupon}
+          finalPrice={course.finalPrice}
+          originalPrice={course.originalPrice}
+          discountAmount={course.discountAmount}
+          adminDiscountAmount={course.adminDiscountAmount}
+          jyotishiDiscountAmount={course.jyotishiDiscountAmount}
+          priceAfterAdminDiscount={course.priceAfterAdminDiscount}
+        />
+      )}
     </div>
   );
 }

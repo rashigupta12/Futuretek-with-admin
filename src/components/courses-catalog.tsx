@@ -22,7 +22,7 @@ import {
   Loader2,
   Sparkles,
   TrendingUp,
-  Users
+  Users,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -156,22 +156,27 @@ export function CoursesCatalog() {
             setEnrolledCourseIds(enrolledIds);
           }
 
-         const pricesMap: Record<string, CoursePriceData> = { ...basePrices };
-priceResults.forEach((result) => {
-  if (result && result.priceData) {
-    pricesMap[result.courseId] = {
-      originalPrice: result.priceData.originalPrice || basePrices[result.courseId].originalPrice,
-      finalPrice: result.priceData.finalPrice || basePrices[result.courseId].finalPrice,
-      discountAmount: result.priceData.discountAmount || "0",
-      adminDiscountAmount: result.priceData.adminDiscountAmount,
-      jyotishiDiscountAmount: result.priceData.jyotishiDiscountAmount,
-      priceAfterAdminDiscount: result.priceData.priceAfterAdminDiscount,
-      appliedCoupons: result.priceData.appliedCoupons || undefined,
-      hasAssignedCoupon: result.priceData.hasAssignedCoupon || false,
-    };
-  }
-});
-setCoursePrices(pricesMap);
+          const pricesMap: Record<string, CoursePriceData> = { ...basePrices };
+          priceResults.forEach((result) => {
+            if (result && result.priceData) {
+              pricesMap[result.courseId] = {
+                originalPrice:
+                  result.priceData.originalPrice ||
+                  basePrices[result.courseId].originalPrice,
+                finalPrice:
+                  result.priceData.finalPrice ||
+                  basePrices[result.courseId].finalPrice,
+                discountAmount: result.priceData.discountAmount || "0",
+                adminDiscountAmount: result.priceData.adminDiscountAmount,
+                jyotishiDiscountAmount: result.priceData.jyotishiDiscountAmount,
+                priceAfterAdminDiscount:
+                  result.priceData.priceAfterAdminDiscount,
+                appliedCoupons: result.priceData.appliedCoupons || undefined,
+                hasAssignedCoupon: result.priceData.hasAssignedCoupon || false,
+              };
+            }
+          });
+          setCoursePrices(pricesMap);
         }
       } catch (err) {
         console.error("Catalog load error:", err);
@@ -180,24 +185,24 @@ setCoursePrices(pricesMap);
       }
     }
 
-   function batchFetch(courses: Course[]) {
-  return courses.map((course) =>
-    fetch(`/api/courses/${course.slug}`)
-      .then((res) => {
-        if (res.ok) {
-          const contentType = res.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            return res.json().then((data) => ({
-              courseId: course.id,
-              priceData: data.course,
-            }));
-          }
-        }
-        return null;
-      })
-      .catch(() => null)
-  );
-}
+    function batchFetch(courses: Course[]) {
+      return courses.map((course) =>
+        fetch(`/api/courses/${course.slug}`)
+          .then((res) => {
+            if (res.ok) {
+              const contentType = res.headers.get("content-type");
+              if (contentType && contentType.includes("application/json")) {
+                return res.json().then((data) => ({
+                  courseId: course.id,
+                  priceData: data.course,
+                }));
+              }
+            }
+            return null;
+          })
+          .catch(() => null)
+      );
+    }
     if (status !== "loading") {
       fetchData();
     }
@@ -499,23 +504,24 @@ setCoursePrices(pricesMap);
                           </CardDescription>
 
                           {/* Applied Coupons */}
-                          {priceInfo.appliedCoupons && priceInfo.appliedCoupons.length > 0 && (
-                            <div className="space-y-1 mb-2">
-                              {priceInfo.appliedCoupons.map((coupon) => (
-                                <div
-                                  key={coupon.id}
-                                  className={`inline-flex items-center gap-1 bg-gradient-to-r ${getCouponBadgeColor(
-                                    coupon.creatorType
-                                  )} text-white px-2 py-1 rounded text-xs font-medium`}
-                                >
-                                  {getCouponIcon(coupon.creatorType)}
-                                  <span>
-                                    {coupon.creatorType === "ADMIN" ? "Admin" : "Jyotishi"} Discount
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          {priceInfo.appliedCoupons &&
+                            priceInfo.appliedCoupons.length > 0 && (
+                              <div className="space-y-1 mb-2">
+                                {priceInfo.appliedCoupons.map((coupon) => (
+                                  <div
+                                    key={coupon.id}
+                                    className={`inline-flex items-center gap-1 bg-gradient-to-r ${getCouponBadgeColor(
+                                      coupon.creatorType
+                                    )} text-white px-2 py-1 rounded text-xs font-medium`}
+                                  >
+                                    {getCouponIcon(coupon.creatorType)}
+                                    <span>
+                                      Discount Applied{" "}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
 
                           {/* Price Section */}
                           <div className="space-y-2 bg-gradient-to-br from-blue-50/50 to-amber-50/30 rounded-lg p-3 border border-blue-100">

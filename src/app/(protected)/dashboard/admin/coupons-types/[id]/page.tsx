@@ -10,7 +10,6 @@ import {
   Trash2,
   Ticket,
   Users,
-  TrendingUp,
   AlertCircle,
   Hash,
   Calendar,
