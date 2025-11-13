@@ -132,20 +132,21 @@ export function CoursesCatalog() {
           };
         });
         setCoursePrices(basePrices);
-        setLoading(false);
-
-        if (userId && filteredCourses.length > 0) {
-          const [enrollData, ...priceResults] = await Promise.all([
-            fetch(`/api/user/enrollments`)
+        
+        // Fetch prices for ALL users (logged-in and logged-out)
+        if (filteredCourses.length > 0) {
+          const promises = [
+            // Only fetch enrollments if user is logged in
+            userId ? fetch(`/api/user/enrollments`)
               .then((res) => (res.ok ? res.json() : null))
-              .catch(() => null),
+              .catch(() => null) : Promise.resolve(null),
+            // ALWAYS fetch price data for all courses (for both logged-in and logged-out users)
             ...batchFetch(rawCourses),
-          ]);
+          ];
 
-          if (
-            enrollData?.enrollments &&
-            Array.isArray(enrollData.enrollments)
-          ) {
+          const [enrollData, ...priceResults] = await Promise.all(promises);
+
+          if (userId && enrollData?.enrollments && Array.isArray(enrollData.enrollments)) {
             const enrolledIds = new Set<string>(
               enrollData.enrollments
                 .filter(
@@ -178,6 +179,8 @@ export function CoursesCatalog() {
           });
           setCoursePrices(pricesMap);
         }
+        
+        setLoading(false);
       } catch (err) {
         console.error("Catalog load error:", err);
         setError(err instanceof Error ? err.message : "Failed to load courses");
@@ -203,6 +206,7 @@ export function CoursesCatalog() {
           .catch(() => null)
       );
     }
+    
     if (status !== "loading") {
       fetchData();
     }
@@ -267,11 +271,16 @@ export function CoursesCatalog() {
   const getDisplayPrice = (course: Course) => {
     const priceData = coursePrices[course.id];
 
-    if (
-      priceData &&
-      priceData.appliedCoupons &&
-      priceData.appliedCoupons.length > 0
-    ) {
+    // Check if there are any applied coupons OR if there's a discount amount
+    const hasAnyCoupons = priceData?.appliedCoupons && priceData.appliedCoupons.length > 0;
+    const hasDiscountAmount = priceData?.discountAmount && parseFloat(priceData.discountAmount) > 0;
+    const hasAdminDiscount = priceData?.adminDiscountAmount && parseFloat(priceData.adminDiscountAmount) > 0;
+    const hasJyotishiDiscount = priceData?.jyotishiDiscountAmount && parseFloat(priceData.jyotishiDiscountAmount) > 0;
+    
+    // Show discount if ANY discount exists (coupons, admin discount, jyotishi discount, or overall discount)
+    const hasAnyDiscount = hasAnyCoupons || hasDiscountAmount || hasAdminDiscount || hasJyotishiDiscount;
+    
+    if (priceData && hasAnyDiscount) {
       const originalPrice = parseFloat(priceData.originalPrice);
       const finalPrice = parseFloat(priceData.finalPrice);
       const discountAmount = parseFloat(priceData.discountAmount);
@@ -283,6 +292,7 @@ export function CoursesCatalog() {
         discountAmount: discountAmount,
         appliedCoupons: priceData.appliedCoupons,
         hasAssignedCoupon: priceData.hasAssignedCoupon,
+        hasAnyDiscount: true, // Always true if any discount exists
       };
     }
 
@@ -293,21 +303,8 @@ export function CoursesCatalog() {
       discountAmount: 0,
       appliedCoupons: undefined,
       hasAssignedCoupon: false,
+      hasAnyDiscount: false,
     };
-  };
-
-  const getCouponBadgeColor = (creatorType: "ADMIN" | "JYOTISHI") => {
-    return creatorType === "ADMIN"
-      ? "from-green-500 to-green-600"
-      : "from-blue-500 to-blue-600";
-  };
-
-  const getCouponIcon = (creatorType: "ADMIN" | "JYOTISHI") => {
-    return creatorType === "ADMIN" ? (
-      <Crown className="h-3 w-3" />
-    ) : (
-      <Users className="h-3 w-3" />
-    );
   };
 
   if (status === "loading" || loading) {
@@ -503,25 +500,15 @@ export function CoursesCatalog() {
                             {getPlainText(course.description)}
                           </CardDescription>
 
-                          {/* Applied Coupons */}
-                          {priceInfo.appliedCoupons &&
-                            priceInfo.appliedCoupons.length > 0 && (
-                              <div className="space-y-1 mb-2">
-                                {priceInfo.appliedCoupons.map((coupon) => (
-                                  <div
-                                    key={coupon.id}
-                                    className={`inline-flex items-center gap-1 bg-gradient-to-r ${getCouponBadgeColor(
-                                      coupon.creatorType
-                                    )} text-white px-2 py-1 rounded text-xs font-medium`}
-                                  >
-                                    {getCouponIcon(coupon.creatorType)}
-                                    <span>
-                                      Discount Applied{" "}
-                                    </span>
-                                  </div>
-                                ))}
+                          {/* Applied Coupons - Show only ONCE regardless of how many coupons */}
+                          {priceInfo.hasAnyDiscount && (
+                            <div className="mb-2">
+                              <div className="inline-flex items-center gap-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                <Sparkles className="h-3 w-3" />
+                                <span>Discount Applied</span>
                               </div>
-                            )}
+                            </div>
+                          )}
 
                           {/* Price Section */}
                           <div className="space-y-2 bg-gradient-to-br from-blue-50/50 to-amber-50/30 rounded-lg p-3 border border-blue-100">
