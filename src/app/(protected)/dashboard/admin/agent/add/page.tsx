@@ -9,12 +9,12 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function AddJyotishiPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  // ── Form Fields ─────────────────────────────────────────────────────
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +26,7 @@ export default function AddJyotishiPage() {
   const [panNumber, setPanNumber] = useState("");
   const [bio, setBio] = useState("");
   const [mobileError, setMobileError] = useState("");
+  const [jyotishiCode, setJyotishiCode] = useState("");
 
   const validateMobile = (phone: string) => {
     const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
@@ -64,8 +65,7 @@ export default function AddJyotishiPage() {
 
     // Validation
     if (!name || !email || !password || !commissionRate) {
-      alert("Name, Email, Password, and Commission Rate are required.");
-      setLoading(false);
+toast.error("Name, Email, Password, and Commission Rate are required.");      setLoading(false);
       return;
     }
 
@@ -74,6 +74,7 @@ export default function AddJyotishiPage() {
       email: email.trim().toLowerCase(),
       password,
       mobile: mobile.trim() || null,
+       jyotishiCode: jyotishiCode.trim().toUpperCase(), 
       commissionRate: Number(commissionRate),
       bankAccountNumber: bankAccountNumber.trim() || null,
       bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
@@ -91,15 +92,21 @@ export default function AddJyotishiPage() {
 
       const data = await res.json();
 
-      if (res.ok) {
-        alert("Jyotishi account created successfully!");
-        router.push("/dashboard/admin/jyotishis");
+       if (res.ok) {
+        toast.success("Jyotishi account created successfully!", {
+          duration: 4000,
+          position: "top-center",
+        });
+        
+        setTimeout(() => {
+          router.push("/dashboard/admin/agent");
+        }, 1500);
       } else {
-        alert(data.error || "Failed to create jyotishi");
+        toast.error(data.error || "Failed to create jyotishi"); 
       }
     } catch (err) {
       console.error("Submission error:", err);
-      alert("Unexpected error occurred");
+      toast.error("Unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -107,11 +114,12 @@ export default function AddJyotishiPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
+    <Toaster/>
       <div className="w-full mx-auto">
         {/* Header */}
         <div className="mb-8">
           <Link
-            href="/dashboard/admin/jyotishis"
+            href="/dashboard/admin/agent"
             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -219,6 +227,21 @@ export default function AddJyotishiPage() {
                   <p className="text-red-500 text-sm mt-1">{mobileError}</p>
                 )}
               </div>
+
+              <div className="space-y-2">
+  <Label htmlFor="jyotishiCode" className="text-sm text-gray-700">
+    Jyotishi Code *
+  </Label>
+  <Input
+    id="jyotishiCode"
+    type="text"
+    value={jyotishiCode}
+    onChange={(e) => setJyotishiCode(e.target.value.toUpperCase())}
+    placeholder="JYO001"
+    required
+    className="border-gray-300 focus:border-blue-500 font-mono uppercase"
+  />
+</div>
 
               <div className="space-y-2">
                 <Label
