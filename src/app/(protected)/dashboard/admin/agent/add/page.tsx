@@ -1,0 +1,266 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+
+export default function AddJyotishiPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  // ── Form Fields ─────────────────────────────────────────────────────
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [commissionRate, setCommissionRate] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankIfscCode, setBankIfscCode] = useState("");
+  const [bankAccountHolderName, setBankAccountHolderName] = useState("");
+  const [panNumber, setPanNumber] = useState("");
+  const [bio, setBio] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // Validation
+    if (!name || !email || !password || !commissionRate) {
+      alert("Name, Email, Password, and Commission Rate are required.");
+      setLoading(false);
+      return;
+    }
+
+    const payload = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      mobile: mobile.trim() || null,
+      commissionRate: Number(commissionRate),
+      bankAccountNumber: bankAccountNumber.trim() || null,
+      bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
+      bankAccountHolderName: bankAccountHolderName.trim() || null,
+      panNumber: panNumber.trim().toUpperCase() || null,
+      bio: bio.trim() || null,
+    };
+
+    try {
+      const res = await fetch("/api/admin/jyotishi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Jyotishi account created successfully!");
+        router.push("/dashboard/admin/jyotishis");
+      } else {
+        alert(data.error || "Failed to create jyotishi");
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
+      alert("Unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
+      <div className="w-full mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <Link
+            href="/dashboard/admin/jyotishis"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Jyotishi
+          </Link>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Jyotishi</h1>
+              <p className="text-gray-600">
+                Create a new astrologer account with commission and banking details.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* ── Personal Info ── */}
+          <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
+              <CardTitle className="text-xl text-gray-900">Personal Information</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm text-gray-700">Full Name *</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Pandit Rajesh Sharma"
+                  required
+                  className="border-gray-300 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm text-gray-700">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="rajesh@example.com"
+                  required
+                  className="border-gray-300 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm text-gray-700">Password *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  className="border-gray-300 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mobile" className="text-sm text-gray-700">Mobile Number</Label>
+                <Input
+                  id="mobile"
+                  type="tel"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="border-gray-300 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="commissionRate" className="text-sm text-gray-700">Commission Rate (%) *</Label>
+                <Input
+                  id="commissionRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(e.target.value)}
+                  placeholder="15"
+                  required
+                  className="border-gray-300 focus:border-amber-500"
+                />
+              </div>
+
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="bio" className="text-sm text-gray-700">Bio / Introduction</Label>
+                <Textarea
+                  id="bio"
+                  rows={3}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Brief introduction about the jyotishi, expertise, and experience..."
+                  className="border-gray-300 focus:border-blue-500"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Banking Details ── */}
+          <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50 border-b">
+              <CardTitle className="text-xl text-gray-900">Banking & Tax Details</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="bankAccountNumber" className="text-sm text-gray-700">Bank Account Number</Label>
+                <Input
+                  id="bankAccountNumber"
+                  type="text"
+                  value={bankAccountNumber}
+                  onChange={(e) => setBankAccountNumber(e.target.value)}
+                  placeholder="1234567890"
+                  className="border-gray-300 focus:border-amber-500 font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bankIfscCode" className="text-sm text-gray-700">IFSC Code</Label>
+                <Input
+                  id="bankIfscCode"
+                  type="text"
+                  value={bankIfscCode}
+                  onChange={(e) => setBankIfscCode(e.target.value)}
+                  placeholder="SBIN0001234"
+                  className="border-gray-300 focus:border-amber-500 font-mono uppercase"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bankAccountHolderName" className="text-sm text-gray-700">Account Holder Name</Label>
+                <Input
+                  id="bankAccountHolderName"
+                  type="text"
+                  value={bankAccountHolderName}
+                  onChange={(e) => setBankAccountHolderName(e.target.value)}
+                  placeholder="Rajesh Sharma"
+                  className="border-gray-300 focus:border-amber-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="panNumber" className="text-sm text-gray-700">PAN Number</Label>
+                <Input
+                  id="panNumber"
+                  type="text"
+                  value={panNumber}
+                  onChange={(e) => setPanNumber(e.target.value)}
+                  placeholder="ABCDE1234F"
+                  className="border-gray-300 focus:border-amber-500 font-mono uppercase"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Submit Buttons ── */}
+          <div className="flex gap-3 pt-6">
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+            >
+              {loading ? "Creating…" : "Create Jyotishi"}
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              asChild
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              <Link href="/dashboard/admin/jyotishis">Cancel</Link>
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

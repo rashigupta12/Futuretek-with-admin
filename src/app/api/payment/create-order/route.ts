@@ -1,10 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/app/api/payment/create-order/route.ts
 import { db } from "@/db";
-import { CouponsTable, CoursesTable, PaymentsTable } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { 
+  CouponsTable, 
+  CoursesTable, 
+  PaymentsTable, 
+  UsersTable,
+  UserCourseCouponsTable 
+} from "@/db/schema";
+import { desc, eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
+import { auth } from '@/auth';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -13,8 +19,25 @@ const razorpay = new Razorpay({
 
 export async function POST(req: NextRequest) {
   try {
-    const { courseId, couponCode, paymentType, billingAddress } = await req.json();
-    const userId = "user-id-from-session";
+    const { courseId, couponCode, paymentType = "DOMESTIC", billingAddress } = await req.json();
+    
+    const session = await auth()
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized: User not logged in" },
+        { status: 401 }
+      );
+    }
+
+    // Validate paymentType
+    if (!paymentType || !["DOMESTIC", "FOREX"].includes(paymentType)) {
+      return NextResponse.json(
+        { error: "Invalid payment type. Must be DOMESTIC or FOREX" },
+        { status: 400 }
+      );
+    }
 
     // Get course
     const [course] = await db
@@ -27,65 +50,107 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    // Calculate amount
-    const amount = paymentType === "FOREX" 
-      ? parseFloat(course.priceUSD) 
+    // Calculate base amount based on payment type
+    const baseAmount = paymentType === "FOREX" 
+      ? parseFloat(course.priceUSD || "0") 
       : parseFloat(course.priceINR);
-    
+
+    if (isNaN(baseAmount) || baseAmount <= 0) {
+      return NextResponse.json(
+        { error: "Invalid course price" },
+        { status: 400 }
+      );
+    }
+
+    let finalAmount = baseAmount;
     let gstAmount = 0;
     let discountAmount = 0;
     let couponId = null;
+    let jyotishiId = null;
+    let commissionAmount = 0;
+    let appliedCoupon = null;
 
     // Apply GST for domestic payments
     if (paymentType === "DOMESTIC") {
-      gstAmount = amount * 0.18;
+      gstAmount = baseAmount * 0.18;
+      finalAmount = baseAmount + gstAmount;
     }
 
     // Apply coupon if provided
     if (couponCode) {
       const [coupon] = await db
-        .select()
+        .select({
+          id: CouponsTable.id,
+          discountType: CouponsTable.discountType,
+          discountValue: CouponsTable.discountValue,
+          createdByJyotishiId: CouponsTable.createdByJyotishiId,
+          jyotishiRole: UsersTable.role,
+          jyotishiCommissionRate: UsersTable.commissionRate,
+        })
         .from(CouponsTable)
+        .leftJoin(
+          UsersTable,
+          eq(CouponsTable.createdByJyotishiId, UsersTable.id)
+        )
         .where(eq(CouponsTable.code, couponCode.toUpperCase()))
         .limit(1);
 
-      if (coupon && coupon.isActive) {
-        const now = new Date();
-        if (now >= coupon.validFrom && now <= coupon.validUntil) {
-          if (coupon.discountType === "PERCENTAGE") {
-            discountAmount = (amount * parseFloat(coupon.discountValue)) / 100;
-          } else {
-            discountAmount = parseFloat(coupon.discountValue);
-          }
-          couponId = coupon.id;
+      if (coupon && coupon.id) {
+        appliedCoupon = coupon;
+        
+        // Calculate discount
+        if (coupon.discountType === "PERCENTAGE") {
+          discountAmount = (baseAmount * parseFloat(coupon.discountValue)) / 100;
+        } else {
+          discountAmount = parseFloat(coupon.discountValue);
+        }
+
+        // Ensure discount doesn't exceed base amount
+        discountAmount = Math.min(discountAmount, baseAmount);
+        
+        couponId = coupon.id;
+        jyotishiId = coupon.createdByJyotishiId;
+
+        // Calculate commission ONLY if coupon creator is JYOTISHI (not ADMIN)
+        if (coupon.jyotishiRole === "JYOTISHI" && coupon.jyotishiCommissionRate) {
+          // Commission is calculated on the discounted amount (before GST)
+          const discountedBaseAmount = baseAmount - discountAmount;
+          commissionAmount = (discountedBaseAmount * parseFloat(coupon.jyotishiCommissionRate)) / 100;
         }
       }
     }
 
-    const finalAmount = amount + gstAmount - discountAmount;
+    // Recalculate final amount after discount
+    finalAmount = baseAmount - discountAmount + gstAmount;
+
+    // Ensure final amount is not negative
+    if (finalAmount < 0) {
+      finalAmount = 0;
+    }
 
     // Generate invoice number
     const year = new Date().getFullYear().toString().slice(-2);
     const nextYear = (parseInt(year) + 1).toString();
     const financialYear = `${year}${nextYear}`;
     const invoiceType = paymentType === "FOREX" ? "F" : "G";
-    
+
     // Get last invoice number
-    const lastPayment = await db
-      .select()
+    const [lastPayment] = await db
+      .select({ invoiceNumber: PaymentsTable.invoiceNumber })
       .from(PaymentsTable)
       .where(eq(PaymentsTable.paymentType, paymentType))
       .orderBy(desc(PaymentsTable.createdAt))
       .limit(1);
 
     let invoiceCounter = 1;
-    if (lastPayment.length > 0) {
-      const lastInvoice = lastPayment[0].invoiceNumber;
-      const lastCounter = parseInt(lastInvoice.slice(-5));
-      invoiceCounter = lastCounter + 1;
+    if (lastPayment?.invoiceNumber) {
+      const lastCounter = parseInt(lastPayment.invoiceNumber.slice(-5));
+      invoiceCounter = isNaN(lastCounter) ? 1 : lastCounter + 1;
     }
 
-    const invoiceNumber = `FT${financialYear}${invoiceType}${String(invoiceCounter).padStart(5, "0")}`;
+    const invoiceNumber = `FT${financialYear}${invoiceType}${String(
+      invoiceCounter
+    ).padStart(5, "0")}`;
 
     // Create Razorpay order
     const order = await razorpay.orders.create({
@@ -101,15 +166,17 @@ export async function POST(req: NextRequest) {
         userId,
         invoiceNumber,
         paymentType,
-        amount: amount.toString(),
+        amount: baseAmount.toString(),
         currency: paymentType === "FOREX" ? "USD" : "INR",
         gstAmount: gstAmount.toString(),
         discountAmount: discountAmount.toString(),
         finalAmount: finalAmount.toString(),
         couponId,
+        jyotishiId,
+        commissionAmount: commissionAmount.toString(),
         razorpayOrderId: order.id,
         status: "PENDING",
-        billingAddress,
+        billingAddress: billingAddress || null,
       })
       .returning();
 
@@ -120,6 +187,14 @@ export async function POST(req: NextRequest) {
         currency: paymentType === "FOREX" ? "USD" : "INR",
         invoiceNumber,
         paymentId: payment.id,
+        commission: commissionAmount > 0 ? commissionAmount : null,
+        discount: discountAmount,
+        appliedCoupon: appliedCoupon ? {
+          code: couponCode,
+          discountType: appliedCoupon.discountType,
+          discountValue: appliedCoupon.discountValue,
+          creatorType: appliedCoupon.jyotishiRole === "JYOTISHI" ? "JYOTISHI" : "ADMIN"
+        } : null
       },
       { status: 200 }
     );

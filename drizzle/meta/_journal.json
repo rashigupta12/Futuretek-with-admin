@@ -22,6 +22,34 @@
       "when": 1762362732649,
       "tag": "0002_glamorous_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1762595800940,
+      "tag": "0003_wild_victor_mancha",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1762751589685,
+      "tag": "0004_stale_prism",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1762852179737,
+      "tag": "0005_thin_omega_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762946580650,
+      "tag": "0006_worried_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

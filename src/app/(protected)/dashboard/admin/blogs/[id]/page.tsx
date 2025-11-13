@@ -3,15 +3,22 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Calendar,
   Edit,
   Eye,
+  Plus,
+  Save,
   Trash2,
-  User
+  User,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -34,11 +41,24 @@ type Blog = {
   updatedAt: string;
 };
 
-export default function ViewBlogPage() {
+export default function BlogDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [blog, setBlog] = useState<Blog | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Form states
+  const [formData, setFormData] = useState({
+    title: "",
+    slug: "",
+    excerpt: "",
+    content: "",
+    thumbnailUrl: "",
+    isPublished: false,
+    tags: [""] as string[],
+  });
 
   useEffect(() => {
     if (params.id) fetchBlog();
@@ -50,14 +70,78 @@ export default function ViewBlogPage() {
       if (!res.ok) throw new Error("Not found");
       const data = await res.json();
 
-      setBlog({
+      const blogData = {
         ...data.blog,
         tags: data.blog.tags || [],
+      };
+
+      setBlog(blogData);
+      
+      // Initialize form data
+      setFormData({
+        title: blogData.title,
+        slug: blogData.slug,
+        excerpt: blogData.excerpt || "",
+        content: blogData.content,
+        thumbnailUrl: blogData.thumbnailUrl || "",
+        isPublished: blogData.isPublished,
+        tags: blogData.tags.length > 0 ? blogData.tags : [""],
       });
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Reset form data when canceling edit
+      if (blog) {
+        setFormData({
+          title: blog.title,
+          slug: blog.slug,
+          excerpt: blog.excerpt || "",
+          content: blog.content,
+          thumbnailUrl: blog.thumbnailUrl || "",
+          isPublished: blog.isPublished,
+          tags: blog.tags.length > 0 ? blog.tags : [""],
+        });
+      }
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSave = async () => {
+    if (!blog) return;
+
+    setSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        tags: formData.tags.filter(tag => tag.trim() !== ""),
+      };
+
+      const res = await fetch(`/api/admin/blogs/${blog.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updatedBlog = await res.json();
+        setBlog(updatedBlog.blog);
+        setIsEditing(false);
+        alert("Blog updated successfully!");
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to update blog");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Unexpected error");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -76,22 +160,25 @@ export default function ViewBlogPage() {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500"></div>
-    </div>
-  );
+  const handleAddTag = () => {
+    setFormData(prev => ({
+      ...prev,
+      tags: [...prev.tags, ""]
+    }));
+  };
 
-  if (!blog) return (
-    <div className="container mx-auto p-8 text-center">
-      <h2 className="text-2xl font-bold text-destructive mb-4">Blog Not Found</h2>
-      <Button asChild>
-        <Link href="/dashboard/admin/blogs">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Blogs
-        </Link>
-      </Button>
-    </div>
-  );
+  const handleRemoveTag = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleTagChange = (index: number, value: string) => {
+    const newTags = [...formData.tags];
+    newTags[index] = value;
+    setFormData(prev => ({ ...prev, tags: newTags }));
+  };
 
   const formatDate = (d: string | null | undefined) => 
     d ? new Date(d).toLocaleDateString("en-IN", { 
@@ -100,41 +187,119 @@ export default function ViewBlogPage() {
       day: 'numeric' 
     }) : "Not set";
 
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+    </div>
+  );
+
+  if (!blog) return (
+    <div className="container mx-auto p-8 text-center">
+      <h2 className="text-2xl font-bold text-red-600 mb-4">Blog Not Found</h2>
+      <Button asChild className="bg-blue-600 hover:bg-blue-700">
+        <Link href="/dashboard/admin/blogs">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Blogs
+        </Link>
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/50">
-      {/* Hero Section */}
-      <div className="relative py-12 mb-8 bg-gradient-to-r from-purple-500/10 to-blue-500/10">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Header */}
+      <div className="relative py-8 mb-8 bg-gradient-to-r from-blue-50 to-amber-50 border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl">
-            <div className="flex items-center gap-4 mb-4">
-              <Link
-                href="/dashboard/admin/blogs"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Blogs
-              </Link>
-              <Badge variant="outline" className="text-xs">
-                ADMIN VIEW
-              </Badge>
+          <div className="max-w-6xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/dashboard/admin/blogs"
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Blogs
+                </Link>
+                <Badge variant="outline" className="text-xs bg-white">
+                  ADMIN VIEW
+                </Badge>
+              </div>
+
+             
             </div>
 
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-              {blog.title}
-            </h1>
-            {blog.excerpt && (
-              <p className="text-xl text-muted-foreground mb-6">{blog.excerpt}</p>
+            {isEditing ? (
+              <div className="space-y-4">
+                <Input
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Blog Title"
+                  className="text-3xl font-bold border-blue-300 focus:border-blue-500 h-16 "
+                />
+                <Textarea
+                  value={formData.excerpt}
+                  onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))}
+                  placeholder="Brief excerpt for the blog..."
+                  rows={2}
+                  className="text-lg border-blue-300 focus:border-blue-500"
+                />
+              </div>
+            ) : (
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                  {blog.title}
+                </h1>
+                {blog.excerpt && (
+                  <p className="text-lg text-gray-600 mb-6">{blog.excerpt}</p>
+                )}
+              </div>
             )}
+
             <div className="flex flex-wrap gap-2">
-              {blog.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="bg-white/10 hover:bg-white/20 transition-colors"
-                >
-                  {tag}
-                </Badge>
-              ))}
+              {isEditing ? (
+                <div className="space-y-2 w-full">
+                  <Label>Tags</Label>
+                  <div className="space-y-2">
+                    {formData.tags.map((tag, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          value={tag}
+                          onChange={(e) => handleTagChange(index, e.target.value)}
+                          placeholder="astrology"
+                          className="flex-1"
+                        />
+                        {formData.tags.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleRemoveTag(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddTag}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Tag
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                blog.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
+                  >
+                    {tag}
+                  </Badge>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -145,54 +310,59 @@ export default function ViewBlogPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Thumbnail */}
-            {blog.thumbnailUrl && (
-              <Card className="overflow-hidden">
-                <img
-                  src={blog.thumbnailUrl}
-                  alt={blog.title}
-                  className="w-full h-auto object-cover"
-                />
-              </Card>
-            )}
-
-            {/* Blog Content */}
-            <Card className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-2xl">Content</CardTitle>
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">
+                <CardTitle>Thumbnail</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div 
-                  className="prose prose-lg max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: blog.content }}
-                />
+              <CardContent className="p-6">
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="thumbnailUrl">Thumbnail URL</Label>
+                    <Input
+                      id="thumbnailUrl"
+                      value={formData.thumbnailUrl}
+                      onChange={(e) => setFormData(prev => ({ ...prev, thumbnailUrl: e.target.value }))}
+                      
+                    />
+                  </div>
+                ) : blog.thumbnailUrl ? (
+                  <img
+                    src={blog.thumbnailUrl}
+                    alt={blog.title}
+                    className="w-full h-auto object-cover rounded-lg"
+                  />
+                ) : (
+                  <div className="text-center text-gray-500 py-8">
+                    No thumbnail set
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Metadata */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Metadata</CardTitle>
+            {/* Blog Content */}
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">
+                <CardTitle>Content</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <User className="h-5 w-5 text-purple-500" />
-                  <div>
-                    <div className="font-medium">Author</div>
-                    <div className="text-sm text-muted-foreground">
-                      {blog.authorName || "Unknown"}
-                      {blog.authorEmail && ` (${blog.authorEmail})`}
-                    </div>
+              <CardContent className="p-6">
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="content">Blog Content</Label>
+                    <Textarea
+                      id="content"
+                      rows={15}
+                      value={formData.content}
+                      onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                      placeholder="Write your blog content here..."
+                      className="font-mono text-sm"
+                    />
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Eye className="h-5 w-5 text-purple-500" />
-                  <div>
-                    <div className="font-medium">Views</div>
-                    <div className="text-sm text-muted-foreground">
-                      {blog.viewCount.toLocaleString()} views
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <div 
+                    className="prose prose-lg max-w-none"
+                    dangerouslySetInnerHTML={{ __html: blog.content }}
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -200,92 +370,154 @@ export default function ViewBlogPage() {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Status Card */}
-            <Card className="lg:sticky lg:top-24 hover:shadow-lg transition-shadow duration-300 border-purple-500/20">
-              <CardHeader className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-t-lg">
-                <CardTitle className="text-2xl">Status</CardTitle>
-                <CardDescription>
-                  {blog.isPublished ? "Published" : "Draft"}
-                </CardDescription>
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50 rounded-t-lg">
+                <CardTitle className="text-xl">Status & Actions</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <Badge
-                      variant={blog.isPublished ? "default" : "secondary"}
-                      className="text-sm"
-                    >
-                      {blog.isPublished ? "Published" : "Draft"}
-                    </Badge>
+                    {isEditing ? (
+                      <div className="flex items-center gap-3">
+                        <Label htmlFor="isPublished">Publish</Label>
+                        <Switch
+                          id="isPublished"
+                          checked={formData.isPublished}
+                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublished: checked }))}
+                        />
+                      </div>
+                    ) : (
+                      <Badge
+                        className={blog.isPublished ? 
+                          "bg-green-100 text-green-800 border-green-200" : 
+                          "bg-amber-100 text-amber-800 border-amber-200"
+                        }
+                      >
+                        {blog.isPublished ? "Published" : "Draft"}
+                      </Badge>
+                    )}
                   </div>
 
                   <Separator />
 
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <Calendar className="h-4 w-4 text-gray-500" />
                       <div className="flex-1">
-                        <div className="text-muted-foreground">Published</div>
-                        <div className="font-medium">{formatDate(blog.publishedAt)}</div>
+                        <div className="text-gray-600">Published</div>
+                        <div className="font-medium text-gray-900">{formatDate(blog.publishedAt)}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <Calendar className="h-4 w-4 text-gray-500" />
                       <div className="flex-1">
-                        <div className="text-muted-foreground">Created</div>
-                        <div className="font-medium">{formatDate(blog.createdAt)}</div>
+                        <div className="text-gray-600">Created</div>
+                        <div className="font-medium text-gray-900">{formatDate(blog.createdAt)}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <Calendar className="h-4 w-4 text-gray-500" />
                       <div className="flex-1">
-                        <div className="text-muted-foreground">Updated</div>
-                        <div className="font-medium">{formatDate(blog.updatedAt)}</div>
+                        <div className="text-gray-600">Updated</div>
+                        <div className="font-medium text-gray-900">{formatDate(blog.updatedAt)}</div>
                       </div>
                     </div>
                   </div>
 
                   <Separator />
 
-                  {/* Admin Actions */}
-                  <div className="space-y-2">
-                    <Button asChild variant="outline" className="w-full justify-start">
-                      <Link href={`/blogs/${blog.slug}`} target="_blank">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Live Page
-                      </Link>
-                    </Button>
-                    <Button asChild className="w-full justify-start">
-                      <Link href={`/dashboard/admin/blogs/edit/${blog.slug}`}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Blog
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="w-full justify-start"
-                      onClick={handleDelete}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Blog
-                    </Button>
+                  {/* Stats */}
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-blue-500" />
+                      <div className="flex-1">
+                        <div className="text-gray-600">Views</div>
+                        <div className="font-medium text-gray-900">{blog.viewCount.toLocaleString()}</div>
+                      </div>
+                    </div>
+                    {blog.authorName && (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-500" />
+                        <div className="flex-1">
+                          <div className="text-gray-600">Author</div>
+                          <div className="font-medium text-gray-900">{blog.authorName}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  <Separator />
+
+                
+
+                 <div className="mt-4 flex flex-wrap gap-3">
+  {isEditing ? (
+    <>
+      <Button
+        onClick={handleSave}
+        disabled={saving}
+        className="bg-green-600 hover:bg-green-700 text-white"
+      >
+        <Save className="h-4 w-4 mr-2" />
+        {saving ? "Saving..." : "Save Changes"}
+      </Button>
+      <Button
+        onClick={handleEditToggle}
+        variant="outline"
+        disabled={saving}
+      >
+        <X className="h-4 w-4 mr-2" />
+        Cancel
+      </Button>
+    </>
+  ) : (
+    <>
+      <Button asChild variant="outline"
+      className="w-full justify-start">
+        <Link href={`/blogs/${blog.slug}`} target="_blank">
+          <Eye className="h-4 w-4 mr-2" />
+          View Live
+        </Link>
+      </Button>
+      <Button
+        onClick={handleEditToggle}
+        className="bg-blue-600 hover:bg-blue-700 text-white w-full justify-start"
+      >
+        <Edit className="h-4 w-4 mr-2" />
+        Edit Blog
+      </Button>
+
+    
+
+      <Button
+        variant="destructive"
+        onClick={handleDelete}
+        className="w-full justify-start"
+      >
+        <Trash2 className="h-4 w-4 mr-2" />
+        Delete Blog
+      </Button>
+    </>
+  )}
+</div>
+
                 </div>
               </CardContent>
             </Card>
 
             {/* Technical Info */}
-            <Card>
-              <CardHeader>
+            <Card className="border border-gray-200">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-50">
                 <CardTitle className="text-lg">Technical Details</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="p-6 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Slug</span>
-                  <code className="bg-muted px-2 py-1 rounded text-xs">{blog.slug}</code>
+                  <span className="text-gray-600">Slug</span>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-xs">{blog.slug}</code>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">ID</span>
-                  <code className="bg-muted px-2 py-1 rounded text-xs truncate max-w-[150px]">
+                  <span className="text-gray-600">ID</span>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[150px]">
                     {blog.id}
                   </code>
                 </div>

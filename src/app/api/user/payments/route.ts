@@ -3,11 +3,16 @@ import { db } from "@/db";
 import { CoursesTable, EnrollmentsTable, PaymentsTable } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from '@/auth';
 
 // app/api/user/payments/route.ts
 export async function GET(req: NextRequest) {
   try {
-    const userId = "user-id-from-session";
+    const session = await auth()
+    const userId = session?.user.id;
+    if (!userId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          }
 
     const payments = await db
       .select({

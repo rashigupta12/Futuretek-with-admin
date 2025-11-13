@@ -6,6 +6,7 @@ import { CoursesTable, CourseFeaturesTable, CourseWhyLearnTable, CourseContentTa
 import { eq } from "drizzle-orm";
 
 // GET - List all courses
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -40,9 +41,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
-
-// POST - Create new course
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -54,20 +52,32 @@ export async function POST(req: NextRequest) {
       instructor,
       duration,
       totalSessions,
-      price,        // ← incoming
-      forexPrice,   // ← incoming
+      priceINR,
+      priceUSD,
       status,
-      thumbnail,    // if any
+      thumbnailUrl,
       startDate,
       endDate,
+      registrationDeadline,
+      whyLearnIntro,
+      whatYouLearn,
+      disclaimer,
+      maxStudents,
+      currentEnrollments,
       features,
       whyLearn,
-      content,
-      topics,
-      ...rest
+      courseContent,
+      relatedTopics,
     } = body;
 
-    // Map frontend fields → DB column names
+    // Helper function to convert string to Date or null
+    const toDateOrNull = (dateStr: string | null) => {
+      if (!dateStr) return null;
+      const date = new Date(dateStr);
+      return isNaN(date.getTime()) ? null : date;
+    };
+
+    // Match the EXACT column names from your Drizzle schema (camelCase)
     const courseData = {
       slug,
       title,
@@ -76,19 +86,18 @@ export async function POST(req: NextRequest) {
       instructor: instructor || null,
       duration: duration || null,
       totalSessions: totalSessions || null,
-      price_inr: price ?? null,           // ← map 'price' → 'price_inr'
-      price_usd: forexPrice ?? null,      // ← map 'forexPrice' → 'price_usd'
+      priceINR: priceINR ?? null,
+      priceUSD: priceUSD ?? null,
       status,
-      thumbnail_url: thumbnail || null,
-      start_date: startDate || null,
-      end_date: endDate || null,
-      registration_deadline: null,
-      why_learn_intro: null,
-      what_you_learn: null,
-      disclaimer: null,
-      max_students: null,
-      current_enrollments: 0,
-      ...rest,
+      thumbnailUrl: thumbnailUrl || null,
+      startDate: toDateOrNull(startDate),
+      endDate: toDateOrNull(endDate),
+      registrationDeadline: toDateOrNull(registrationDeadline),
+      whyLearnIntro: whyLearnIntro || null,
+      whatYouLearn: whatYouLearn || null,
+      disclaimer: disclaimer || null,
+      maxStudents: maxStudents || null,
+      currentEnrollments: currentEnrollments || 0,
     };
 
     // Insert course
@@ -97,7 +106,7 @@ export async function POST(req: NextRequest) {
       .values(courseData)
       .returning();
 
-    // === Insert related data (unchanged) ===
+    // Insert related data
     if (features?.length) {
       await db.insert(CourseFeaturesTable).values(
         features.map((feature: string, index: number) => ({
@@ -119,9 +128,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (content?.length) {
+    if (courseContent?.length) {
       await db.insert(CourseContentTable).values(
-        content.map((item: string, index: number) => ({
+        courseContent.map((item: string, index: number) => ({
           courseId: course.id,
           content: item,
           sortOrder: index,
@@ -129,9 +138,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (topics?.length) {
+    if (relatedTopics?.length) {
       await db.insert(CourseTopicsTable).values(
-        topics.map((topic: string) => ({
+        relatedTopics.map((topic: string) => ({
           courseId: course.id,
           topic,
         }))
@@ -143,7 +152,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Course creation error:", error); // Log for debugging
+    console.error("Course creation error:", error);
     return NextResponse.json(
       { error: "Failed to create course", details: error.message },
       { status: 500 }

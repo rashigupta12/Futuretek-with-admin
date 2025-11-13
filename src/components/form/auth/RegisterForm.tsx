@@ -77,12 +77,12 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md border border-slate-200 shadow-lg">
         <CardHeader>
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900">Hello!</h2>
-            <p className="mt-2 text-sm text-gray-600">{text}</p>
+            <h2 className="text-3xl font-bold text-blue-800">Hello!</h2>
+            <p className="mt-2 text-sm text-slate-600">{text}</p>
           </div>
         </CardHeader>
         <CardContent>
@@ -95,11 +95,12 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                   <FormItem>
                     <FormControl>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5" />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                         <Input
                           {...field}
-                          className="h-12 pl-10 w-full rounded-lg"
+                          className="h-12 pl-10 w-full rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="Full name"
+                          disabled={isPending}
                         />
                       </div>  
                     </FormControl>
@@ -115,12 +116,13 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                   <FormItem>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5" />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 h-5 w-5" />
                         <Input
                           {...field}
-                          className="h-12 pl-10 w-full rounded-lg"
+                          className="h-12 pl-10 w-full rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="Email Address"
                           type="email"
+                          disabled={isPending}
                         />
                       </div>
                     </FormControl>
@@ -136,11 +138,12 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                   <FormItem>
                     <FormControl>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5" />
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 h-5 w-5" />
                         <Input
                           {...field}
-                          className="h-12 pl-10 w-full rounded-lg"
+                          className="h-12 pl-10 w-full rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="Phone Number"
+                          disabled={isPending}
                         />
                       </div>
                     </FormControl>
@@ -156,17 +159,19 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                   <FormItem>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5" />
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 h-5 w-5" />
                         <Input
                           {...field}
-                          className="h-12 pl-10 pr-10 w-full rounded-lg"
+                          className="h-12 pl-10 pr-10 w-full rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           type={showPassword ? "text" : "password"}
                           placeholder="Password"
+                          disabled={isPending}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
+                          disabled={isPending}
                         >
                           {showPassword ? (
                             <EyeOff className="h-5 w-5" />
@@ -186,7 +191,7 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
 
               <MainButton
                 text="Register"
-                classes="h-12 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
+                classes="h-12 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                 width="full_width"
                 isSubmitable
                 isLoading={isPending}

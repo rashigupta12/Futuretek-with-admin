@@ -1,14 +1,14 @@
-// src/components/course-form.tsx
+// src/components/courses/course-form.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, X } from "lucide-react";
 import React from "react";
+import RichTextEditor from './RichTextEditor';
 
 export const Field = ({
   label,
@@ -187,14 +187,15 @@ export const DynamicWhyLearn = ({
             />
           </Field>
           <Field label="Description">
-            <Textarea
-              rows={2}
+            <RichTextEditor
               value={it.description}
-              onChange={(e) => {
+              onChange={(val) => {
                 const copy = [...items];
-                copy[i].description = e.target.value;
+                copy[i].description = val;
                 setItems(copy);
               }}
+              placeholder="Describe this learning point..."
+              minHeight="150px"
             />
           </Field>
         </div>

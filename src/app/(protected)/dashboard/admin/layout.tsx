@@ -1,32 +1,18 @@
-// Create a NEW layout specifically for admin routes
 "use client";
-
-import React, { useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { signOut } from "next-auth/react";
 import {
   BookOpen,
-  Home,
-  Settings,
-  Users,
-  BarChart3,
-  LogOut,
-  FileText,
-  Tag,
-  CreditCard,
-  Award,
-  Globe,
   ChevronDown,
-  Plus,
+  CreditCard,
+  FileText,
+  Home,
   List,
+  Plus,
+  Tag,
+  Users
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import React, { useState } from "react";
 
 type SingleNavItem = {
   title: string;
@@ -38,7 +24,7 @@ type SingleNavItem = {
 type GroupNavItem = {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  key: "courses" | "blogs" | "coupons" | "certificates";
+  key: "courses" | "blogs" | "coupons" | "certificates" | "agent"|"users";
   subItems: {
     title: string;
     href: string;
@@ -55,19 +41,22 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  // const { data: session, status } = useSession();
 
   const [expandedMenus, setExpandedMenus] = useState<
-    Record<"courses" | "blogs" | "coupons" | "certificates", boolean>
+    Record<"courses" | "blogs" | "coupons" | "certificates" | "agent" |"users", boolean>
   >({
     courses: true,
     blogs: false,
     coupons: false,
     certificates: false,
+    agent: false,
+    users:false
   });
 
-  const handleLogout = async () => {
-    await signOut({ redirectTo: "/auth/login" });
-  };
+  // const handleLogout = async () => {
+  //   await signOut({ redirectTo: "/auth/login" });
+  // };
 
   const toggleMenu = (menu: keyof typeof expandedMenus) => {
     setExpandedMenus((prev) => ({
@@ -77,6 +66,23 @@ export default function AdminLayout({
   };
 
   const isActive = (path: string) => pathname === path;
+
+  // Get user data from session
+  // const userName = session?.user?.name || session?.user?.role;
+  // const userImage = session?.user?.image || "/images/user_alt_icon.png";
+
+  // Generate avatar fallback from name
+  // const getAvatarFallback = () => {
+  //   if (session?.user?.name) {
+  //     return session.user.name
+  //       .split(" ")
+  //       .map((n) => n[0])
+  //       .join("")
+  //       .toUpperCase()
+  //       .slice(0, 2);
+  //   }
+  //   return "AD";
+  // };
 
   const navigationItems: NavItem[] = [
     {
@@ -108,69 +114,108 @@ export default function AdminLayout({
       ],
     },
     {
-      title: "Users",
-      icon: Users,
-      href: "/dashboard/admin/users",
-      single: true,
+      title: "Agent",
+      icon: BookOpen,
+      key: "agent",
+      subItems: [
+        { title: "All Agent", href: "/dashboard/admin/agent", icon: List },
+        {
+          title: "Add agent",
+          href: "/dashboard/admin/agent/add",
+          icon: Plus,
+        },
+      ],
     },
     {
-      title: "Coupons",
+      title: "Coupons Types",
       icon: Tag,
       key: "coupons",
       subItems: [
         {
-          title: "All Coupons",
-          href: "/dashboard/admin/coupons",
+          title: "All Coupons Types",
+          href: "/dashboard/admin/coupons-types",
           icon: List,
         },
         {
+          title: "Add Coupon Type",
+          href: "/dashboard/admin/coupons-types/add",
+          icon: Plus,
+        },
+
+         {
           title: "Add Coupon",
           href: "/dashboard/admin/coupons/add",
           icon: Plus,
         },
       ],
     },
-    {
-      title: "Payments",
-      icon: CreditCard,
-      href: "/dashboard/admin/payments",
-      single: true,
-    },
-    {
-      title: "Certificates",
-      icon: Award,
-      key: "certificates",
-      subItems: [
-        {
-          title: "Requests",
-          href: "/dashboard/admin/certificates/requests",
-          icon: List,
-        },
-        {
-          title: "All Certificates",
-          href: "/dashboard/admin/certificates",
-          icon: Award,
-        },
-      ],
-    },
-    {
-      title: "Website Content",
-      icon: Globe,
-      href: "/dashboard/admin/website-content",
-      single: true,
-    },
-    {
-      title: "Analytics",
-      icon: BarChart3,
-      href: "/dashboard/admin/analytics",
-      single: true,
-    },
+
+   {
+  title: "Users & Enrollments",
+  icon: Users,
+  key: "users",
+  subItems: [
+    { title: "All Users", href: "/dashboard/admin/users", icon: List },
+    { title: "Enrollments", href: "/dashboard/admin/enrollments", icon: Users },
+    { title: "Payments", href: "/dashboard/admin/payments", icon: CreditCard },
+  ],
+},
+   
+    // {
+    //   title: "Payments",
+    //   icon: CreditCard,
+    //   href: "/dashboard/admin/payments",
+    //   single: true,
+    // },
+    // {
+    //   title: "Certificates",
+    //   icon: Award,
+    //   key: "certificates",
+    //   subItems: [
+    //     {
+    //       title: "Requests",
+    //       href: "/dashboard/admin/certificates/requests",
+    //       icon: List,
+    //     },
+    //     {
+    //       title: "All Certificates",
+    //       href: "/dashboard/admin/certificates",
+    //       icon: Award,
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Website Content",
+    //   icon: Globe,
+    //   href: "/dashboard/admin/website-content",
+    //   single: true,
+    // },
+    // {
+    //   title: "Analytics",
+    //   icon: BarChart3,
+    //   href: "/dashboard/admin/analytics",
+    //   single: true,
+    // },
   ];
+
+  // Show loading state while session is loading
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-lg">FT</span>
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
-      <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50">
+      {/* <nav className="bg-white shadow-sm border-b px-6 py-3 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
@@ -185,12 +230,14 @@ export default function AdminLayout({
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:bg-gray-50 rounded-lg p-2 transition-colors">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/images/user_alt_icon.png" alt="Admin" />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarImage src={userImage} alt={userName} />
+                  <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-gray-700">
-                  Admin User
-                </span>
+                <div className="text-left">
+                  <span className="text-sm font-medium text-gray-700 block">
+                    {userName}
+                  </span>
+                </div>
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               </button>
             </PopoverTrigger>
@@ -211,9 +258,9 @@ export default function AdminLayout({
             </PopoverContent>
           </Popover>
         </div>
-      </nav>
+      </nav> */}
 
-      <div className="flex ">
+      <div className="flex">
         {/* Sidebar */}
         <aside className="w-64 bg-white border-r min-h-[calc(100vh-64px)] p-4 fixed left-0 top-16 bottom-0 overflow-y-auto">
           <nav className="space-y-1">
@@ -276,7 +323,7 @@ export default function AdminLayout({
           </nav>
         </aside>
 
-        {/* Main Content - This is where child pages render */}
+        {/* Main Content */}
         <main className="flex-1 ml-64 p-6">
           <div className="w-full mx-auto">{children}</div>
         </main>
@@ -284,4 +331,3 @@ export default function AdminLayout({
     </div>
   );
 }
-

@@ -21,7 +21,6 @@ import { FormError } from "../form-error";
 import { LoginSchema } from "@/validaton-schema";
 
 function LoginForm() {
- 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [success, setSuccess] = useState<string | undefined>(undefined);
@@ -72,26 +71,26 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-50">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg border border-slate-200">
         {/* Logo Section */}
         <div className="flex flex-col items-center space-y-2">
           <Link href="/">
             <div className="flex items-center gap-2">
-              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow">
+              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow">
                 <span className="text-white font-bold text-xl">F</span>
               </div>
             </div>
           </Link>
-          <h1 className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-bold text-xl">
+          <h1 className="bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent font-bold text-xl">
             Futuretek
           </h1>
         </div>
 
         {/* Login Header */}
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="mt-2 text-sm text-gray-600">Please login to your account</p>
+          <h1 className="text-2xl font-bold text-slate-800">Welcome Back</h1>
+          <p className="mt-2 text-sm text-slate-600">Please login to your account</p>
         </div>
 
         {/* Login Form */}
@@ -102,12 +101,12 @@ function LoginForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <div className="text-sm font-medium text-gray-700">Email</div>
+                  <div className="text-sm font-medium text-slate-700">Email</div>
                   <FormControl>
                     <Input
                       {...field}
                       placeholder="john.snow@gmail.com"
-                      className="h-12 rounded-lg border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="h-12 rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       type="email"
                       disabled={isPending}
                     />
@@ -122,20 +121,20 @@ function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <div className="text-sm font-medium text-gray-700">Password</div>
+                  <div className="text-sm font-medium text-slate-700">Password</div>
                   <div className="relative">
                     <FormControl>
                       <Input
                         {...field}
                         placeholder="********"
-                        className="h-12 rounded-lg border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="h-12 rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         type={showPassword ? "text" : "password"}
                         disabled={isPending}
                       />
                     </FormControl>
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
                       onClick={togglePasswordVisibility}
                       disabled={isPending}
                     >
@@ -151,16 +150,16 @@ function LoginForm() {
               <label className="flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   disabled={isPending}
                 />
-                <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                <span className="ml-2 text-sm text-slate-600">Remember me</span>
               </label>
               <Button
                 asChild
                 variant="link"
                 size="sm"
-                className="px-0 text-sm text-purple-600 hover:text-purple-800"
+                className="px-0 text-sm text-blue-600 hover:text-blue-800"
               >
                 <Link href="/auth/forgot-password">Forgot password?</Link>
               </Button>
@@ -172,7 +171,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-[0.99] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-[0.99] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isPending ? (
                 <span className="flex items-center justify-center">
@@ -190,10 +189,10 @@ function LoginForm() {
             <div className="text-center">
               <Link 
                 href="/auth/register" 
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
               >
                 Don&apos;t have an account? {" "}
-                <span className="text-purple-600 hover:text-purple-800 font-medium">
+                <span className="text-blue-600 hover:text-blue-800 font-medium">
                   Register Instead
                 </span>
               </Link>

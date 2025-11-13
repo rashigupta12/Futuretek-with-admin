@@ -3,11 +3,15 @@ import { db } from "@/db";
 import { CoursesTable, EnrollmentsTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from '@/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = "user-id-from-session";
-
+    const session = await auth()
+    const userId = session?.user.id;
+if (!userId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          }
     const enrollments = await db
       .select({
         id: EnrollmentsTable.id,

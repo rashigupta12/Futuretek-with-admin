@@ -1,105 +1,149 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { 
-  ChevronDown, 
-  Menu, 
-  LogIn, 
-  UserPlus, 
-  LogOut,
-  LayoutDashboard,
-  Home,
+import {
   BookOpen,
-  Info,
   Briefcase,
+  ChevronDown,
+  Info,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
   Mail,
-  Sparkles
+  Menu,
+  UserPlus
 } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
 import { Session } from "next-auth";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { FuturetekLogo } from "./FutureTekLogo";
 import { DialogTitle } from "./ui/dialog";
-import { Separator } from "@/components/ui/separator";
+
+type Course = {
+  id: string;
+  title: string;
+  slug: string;
+};
 
 export function SiteHeader() {
   const { data: session } = useSession();
-  console.log("session",session)
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  console.log("session", session);
   const handleLogout = async () => {
     await signOut({ redirectTo: "/auth/login" });
   };
 
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch("/api/admin/courses");
+        if (response.ok) {
+          const data = await response.json();
+          setCourses(data.courses || data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
   return (
-    <header className="bg-background sticky top-0 z-20 border-b">
+    <header className="bg-white sticky top-0 z-20 border-b border-slate-200 shadow-sm">
       <div className="mx-auto flex h-16 max-w-screen-xl items-center gap-4 px-4">
         <div className="mr-10 flex items-center gap-3">
           <Sidebar session={session} handleLogout={handleLogout} />
-          <Link
-            href="/"
-            className="flex items-center gap-2 px-2 text-xl font-bold tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
-          >
-            <Sparkles className="h-6 w-6 text-purple-600" />
-            Futuretek
+          <Link href="/">
+            <FuturetekLogo width={180} height={54} />
           </Link>
         </div>
-        <nav className="text-muted-foreground hover:[&_a]:text-foreground hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
-          <Link href="/" className="hover:text-purple-600 transition-colors">Home</Link>
+        <nav className="text-slate-600 hover:[&_a]:text-slate-900 hidden items-center gap-6 text-sm font-medium md:flex [&_a]:transition-colors">
+         
           <div className="relative group">
-            <Link href="/courses" className="flex items-center gap-1 hover:text-purple-600 transition-colors">
+            <button className="flex items-center gap-1  transition-colors text-sm font-medium text-slate-600 hover:text-slate-900">
               Courses
               <ChevronDown className="h-4 w-4 transition-transform group-hover:rotate-180" />
-            </Link>
-            <div className="absolute left-0 top-full hidden group-hover:block bg-background border rounded-lg shadow-lg p-2 w-56 mt-2">
-              <Link
-                href="/courses/kp-astrology"
-                className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm"
-              >
-                KP Astrology
-              </Link>
-              <Link
-                href="/courses/financial-astrology"
-                className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm"
-              >
-                Financial Astrology
-              </Link>
-              <Link
-                href="/courses/vastu-shastra"
-                className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm"
-              >
-                Vastu Shastra
-              </Link>
-              <Link
-                href="/courses/astro-vastu"
-                className="block px-4 py-2.5 hover:bg-purple-50 rounded-md transition-colors text-sm"
-              >
-                Astro-Vastu
-              </Link>
+            </button>
+            <div className="absolute left-0 top-full hidden group-hover:block bg-white border border-slate-200 rounded-lg shadow-lg p-2 w-56 mt-2 z-50">
+              {loading ? (
+                <div className="px-4 py-2 text-sm text-slate-500">
+                  Loading...
+                </div>
+              ) : (
+                courses.map((course) => (
+                  <Link
+                    key={course.id}
+                    href={`/courses/${course.slug}`}
+                    className="block px-4 py-2.5 hover:bg-blue-50 rounded-md transition-colors text-sm text-slate-700 hover:text-blue-700"
+                  >
+                    {course.title}
+                  </Link>
+                ))
+              )}
             </div>
           </div>
-          <Link href="/about" className="hover:text-purple-600 transition-colors">About</Link>
-          <Link href="/career" className="hover:text-purple-600 transition-colors">Career</Link>
-          <Link href="/contact" className="hover:text-purple-600 transition-colors">Contact Us</Link>
+          <Link
+            href="/about"
+            className="hover:text-blue-600 transition-colors"
+          >
+            About
+          </Link>
+          <Link
+            href="/career"
+            className="hover:text-blue-600 transition-colors"
+          >
+            Career
+          </Link>
+           <Link
+            href="/blogs"
+            className="hover:text-blue-600 transition-colors"
+          >
+            Blogs
+          </Link>
+          <Link
+            href="/contact"
+            className="hover:text-blue-600 transition-colors"
+          >
+            Contact Us
+          </Link>
         </nav>
         <div className="ml-auto flex items-center gap-2">
           {session ? (
             <>
-              <span className="hidden md:inline text-sm">Welcome, {session.user.name}</span>
-              <Button asChild variant="ghost" className="hidden md:flex">
+              <span className="hidden md:inline text-sm text-slate-700">
+                Welcome, {session.user.name}
+              </span>
+              <Button asChild variant="ghost" className="hidden md:flex hover:bg-blue-50 hover:text-blue-700">
                 <Link href="/dashboard">Dashboard</Link>
               </Button>
-              <Button onClick={handleLogout} variant="outline" className="hidden md:flex">
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="hidden md:flex border-slate-300 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+              >
                 Logout
               </Button>
               {/* Mobile icons */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button asChild variant="ghost" size="icon" className="md:hidden">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden hover:bg-blue-50 hover:text-blue-700"
+                  >
                     <Link href="/dashboard">
                       <LayoutDashboard className="h-5 w-5" />
                     </Link>
@@ -109,7 +153,12 @@ export function SiteHeader() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={handleLogout} variant="ghost" size="icon" className="md:hidden">
+                  <Button
+                    onClick={handleLogout}
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden hover:bg-red-50 hover:text-red-700"
+                  >
                     <LogOut className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -118,16 +167,21 @@ export function SiteHeader() {
             </>
           ) : (
             <>
-              <Button asChild variant="ghost" className="hidden md:flex">
+              <Button asChild variant="ghost" className="hidden md:flex hover:bg-blue-50 hover:text-blue-700">
                 <Link href="/auth/login">Login</Link>
               </Button>
-              <Button asChild className="hidden md:flex">
+              <Button asChild className="hidden md:flex bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
                 <Link href="/auth/register">Sign Up</Link>
               </Button>
               {/* Mobile icons */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button asChild variant="ghost" size="icon" className="md:hidden">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden hover:bg-blue-50 hover:text-blue-700"
+                  >
                     <Link href="/auth/login">
                       <LogIn className="h-5 w-5" />
                     </Link>
@@ -137,7 +191,12 @@ export function SiteHeader() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button asChild variant="default" size="icon" className="md:hidden">
+                  <Button
+                    asChild
+                    variant="default"
+                    size="icon"
+                    className="md:hidden bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                  >
                     <Link href="/auth/register">
                       <UserPlus className="h-5 w-5" />
                     </Link>
@@ -152,27 +211,54 @@ export function SiteHeader() {
     </header>
   );
 }
-function Sidebar({ session, handleLogout }: { session: Session | null, handleLogout: () => Promise<void> }) {
+
+function Sidebar({
+  session,
+  handleLogout,
+}: {
+  session: Session | null;
+  handleLogout: () => Promise<void>;
+}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch("/api/admin/courses");
+        if (response.ok) {
+          const data = await response.json();
+          setCourses(data.courses || data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
 
   const handleLinkClick = () => {
     setIsOpen(false);
   };
 
   const menuItems = [
-    { href: "/", label: "Home", icon: Home },
+    // { href: "/", label: "Home", icon: Home },
     { href: "/courses", label: "Courses", icon: BookOpen },
     { href: "/about", label: "About", icon: Info },
     { href: "/career", label: "Career", icon: Briefcase },
     { href: "/contact", label: "Contact Us", icon: Mail },
   ];
 
-  const courseItems = [
-    { href: "/courses/kp-astrology", label: "KP Astrology" },
-    { href: "/courses/financial-astrology", label: "Financial Astrology" },
-    { href: "/courses/vastu-shastra", label: "Vastu Shastra" },
-    { href: "/courses/astro-vastu", label: "Astro-Vastu" },
-  ];
+  const courseItems = loading
+    ? [{ href: "#", label: "Loading..." }]
+    : courses.map((course) => ({
+        href: `/courses/${course.slug}`,
+        label: course.title,
+      }));
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -183,7 +269,7 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
             <Button
               variant="ghost"
               size="icon"
-              className="border-border size-9 shrink-0 border md:hidden hover:bg-purple-50"
+              className="border-slate-300 size-9 shrink-0 border md:hidden hover:bg-blue-50 hover:text-blue-700"
             >
               <Menu className="size-5" />
               <span className="sr-only">Menu</span>
@@ -191,29 +277,23 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
           </TooltipTrigger>
         </SheetTrigger>
         <TooltipContent align="start">Menu</TooltipContent>
-        <SheetContent
-          side="left"
-          className="flex w-[300px] flex-col p-0 pt-10"
-        >
+        <SheetContent side="left" className="flex w-[300px] flex-col p-0 pt-10">
           <div className="px-6 py-4">
-            <Link
-              href="/"
-              onClick={handleLinkClick}
-              className="flex items-center gap-2 text-xl font-bold tracking-tighter bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
-            >
-              <Sparkles className="h-6 w-6 text-purple-600" />
-              Futuretek
+            <Link href="/">
+              <FuturetekLogo width={180} height={54} />
             </Link>
           </div>
-          
+
           <Separator />
-          
+
           {/* User Section */}
           {session && (
             <>
-              <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-pink-50">
-                <p className="text-sm text-muted-foreground">Welcome back,</p>
-                <p className="font-semibold text-purple-900">{session.user.name}</p>
+              <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100/50">
+                <p className="text-sm text-slate-600">Welcome back,</p>
+                <p className="font-semibold text-blue-900">
+                  {session.user.name}
+                </p>
               </div>
               <Separator />
             </>
@@ -226,7 +306,7 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
                   <Button
                     asChild
                     variant="ghost"
-                    className="w-full justify-start gap-3 h-11 hover:bg-purple-50 hover:text-purple-700"
+                    className="w-full justify-start gap-3 h-11 hover:bg-blue-50 hover:text-blue-700"
                     onClick={handleLinkClick}
                   >
                     <Link href="/dashboard">
@@ -245,7 +325,7 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
                     key={item.href}
                     asChild
                     variant="ghost"
-                    className="w-full justify-start gap-3 h-11 hover:bg-purple-50 hover:text-purple-700"
+                    className="w-full justify-start gap-3 h-11 hover:bg-blue-50 hover:text-blue-700"
                     onClick={handleLinkClick}
                   >
                     <Link href={item.href}>
@@ -257,7 +337,7 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
               })}
 
               <div className="pt-2">
-                <p className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <p className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Course Categories
                 </p>
                 {courseItems.map((item) => (
@@ -265,7 +345,7 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
                     key={item.href}
                     asChild
                     variant="ghost"
-                    className="w-full justify-start pl-12 h-10 text-sm hover:bg-purple-50 hover:text-purple-700"
+                    className="w-full justify-start pl-12 h-10 text-sm hover:bg-blue-50 hover:text-blue-700"
                     onClick={handleLinkClick}
                   >
                     <Link href={item.href}>{item.label}</Link>
@@ -296,7 +376,7 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
                 <Button
                   asChild
                   variant="outline"
-                  className="w-full justify-start gap-3 h-11"
+                  className="w-full justify-start gap-3 h-11 border-slate-300 hover:bg-blue-50 hover:text-blue-700"
                   onClick={handleLinkClick}
                 >
                   <Link href="/auth/login">
@@ -306,7 +386,7 @@ function Sidebar({ session, handleLogout }: { session: Session | null, handleLog
                 </Button>
                 <Button
                   asChild
-                  className="w-full justify-start gap-3 h-11 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  className="w-full justify-start gap-3 h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                   onClick={handleLinkClick}
                 >
                   <Link href="/auth/register">

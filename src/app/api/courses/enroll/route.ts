@@ -1,3 +1,5 @@
+//src/api/courses/enroll/route.ts
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
