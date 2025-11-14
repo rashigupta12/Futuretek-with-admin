@@ -79,8 +79,48 @@ export default function AddCouponPage() {
     }
   }, [formData.couponTypeId, couponTypes]);
 
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+
+    // Special validation for discountValue
+    if (name === "discountValue" && value !== "") {
+      const selectedType = couponTypes.find(
+        (type) => type.id === formData.couponTypeId
+      );
+      
+      if (selectedType?.maxDiscountLimit) {
+        const maxValue = Number(selectedType.maxDiscountLimit);
+        const inputValue = Number(value);
+        
+        // If value exceeds max, don't update the state
+        if (inputValue > maxValue) {
+          return;
+        }
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check discount limit validation
+    const selectedType = couponTypes.find(
+      (type) => type.id === formData.couponTypeId
+    );
+    
+    if (selectedType?.maxDiscountLimit && 
+        Number(formData.discountValue) > Number(selectedType.maxDiscountLimit)) {
+      alert(`Discount value cannot exceed ${selectedType.maxDiscountLimit}`);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -114,16 +154,6 @@ export default function AddCouponPage() {
     }
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   const toggleCourseSelection = (courseId: string) => {
     setSelectedCourses((prev) =>
       prev.includes(courseId)
@@ -135,6 +165,9 @@ export default function AddCouponPage() {
   const selectedCouponType = couponTypes.find(
     (type) => type.id === formData.couponTypeId
   );
+
+  const isDiscountExceeded = selectedCouponType?.maxDiscountLimit && 
+    Number(formData.discountValue) > Number(selectedCouponType.maxDiscountLimit);
 
   return (
     <div className="space-y-6">
@@ -214,10 +247,19 @@ export default function AddCouponPage() {
                 step={formData.discountType === "PERCENTAGE" ? "1" : "0.01"}
                 min="0"
                 max={selectedCouponType?.maxDiscountLimit}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDiscountExceeded
+                    ? "border-red-500 bg-red-50"
+                    : "border-gray-300"
+                }`}
                 placeholder={formData.discountType === "PERCENTAGE" ? "10" : "50.00"}
                 required
               />
+              {isDiscountExceeded && (
+                <p className="text-red-600 text-sm mt-1">
+                  Maximum discount value is {selectedCouponType.maxDiscountLimit}
+                </p>
+              )}
             </div>
 
             <div>
@@ -337,7 +379,7 @@ export default function AddCouponPage() {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!isDiscountExceeded}
               className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Save className="h-4 w-4" />

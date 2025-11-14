@@ -91,7 +91,10 @@ const plainTextCache = new Map<string, string>();
 const getPlainText = (html: string): string => {
   if (!html) return "";
   if (plainTextCache.has(html)) return plainTextCache.get(html)!;
-  const txt = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const txt = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   plainTextCache.set(html, txt);
   return txt;
 };
@@ -99,8 +102,16 @@ const getPlainText = (html: string): string => {
 /* -------------------------------------------------------------
    Safe HTML component (unchanged)
 ------------------------------------------------------------- */
-function SafeHTML({ content, className = "" }: { content: string; className?: string }) {
-  return <div className={className} dangerouslySetInnerHTML={{ __html: content }} />;
+function SafeHTML({
+  content,
+  className = "",
+}: {
+  content: string;
+  className?: string;
+}) {
+  return (
+    <div className={className} dangerouslySetInnerHTML={{ __html: content }} />
+  );
 }
 
 /* -------------------------------------------------------------
@@ -126,7 +137,8 @@ const fetchCourse = async (slug: string): Promise<CourseData | null> => {
       );
     }
 
-    if (course.topics && !course.relatedTopics) course.relatedTopics = course.topics;
+    if (course.topics && !course.relatedTopics)
+      course.relatedTopics = course.topics;
 
     return course;
   } catch {
@@ -177,7 +189,9 @@ export default function CoursePage() {
         const [c, enrollRes] = await Promise.all([
           fetchCourse(slug),
           userId
-            ? fetch("/api/user/enrollments").then(r => (r.ok ? r.json() : null))
+            ? fetch("/api/user/enrollments").then((r) =>
+                r.ok ? r.json() : null
+              )
             : Promise.resolve(null),
         ]);
 
@@ -189,13 +203,14 @@ export default function CoursePage() {
         if (enrollRes?.enrollments) {
           const enrolled = enrollRes.enrollments.some(
             (e: any) =>
-              e.courseId === c.id && (e.status === "ACTIVE" || e.status === "COMPLETED")
+              e.courseId === c.id &&
+              (e.status === "ACTIVE" || e.status === "COMPLETED")
           );
           setIsEnrolled(enrolled);
         }
       } catch (e) {
-        if (!cancelled) setError("Failed to load course" );
-        console.log(e)
+        if (!cancelled) setError("Failed to load course");
+        console.log(e);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -215,9 +230,15 @@ export default function CoursePage() {
     const orig = parseFloat(course.originalPrice || course.priceINR || "0");
     const fin = parseFloat(course.finalPrice || course.priceINR || "0");
     const disc = parseFloat(course.discountAmount || "0");
-    const hasDiscount = (course.hasAssignedCoupon ?? false) && disc > 0;
+    // const hasDiscount = (course.hasAssignedCoupon ?? false) && disc > 0;
+    const hasDiscount = fin < orig && disc > 0;
 
-    return { originalPrice: orig, displayPrice: fin, discountAmount: disc, hasDiscount };
+    return {
+      originalPrice: orig,
+      displayPrice: fin,
+      discountAmount: disc,
+      hasDiscount,
+    };
   }, [course]);
 
   /* ---------------------------------------------------------
@@ -251,7 +272,9 @@ export default function CoursePage() {
             </div>
 
             <div className="space-y-4 mb-6">
-              <h1 className="text-3xl lg:text-4xl font-bold text-white">{course.title}</h1>
+              <h1 className="text-3xl lg:text-4xl font-bold text-white">
+                {course.title}
+              </h1>
               <p className="text-blue-100 leading-relaxed max-w-3xl">
                 {getPlainText(course.tagline || course.description)}
               </p>
@@ -288,7 +311,9 @@ export default function CoursePage() {
                     <BookOpen className="w-4 h-4 text-white" />
                     <div>
                       <div className="text-white/80 text-xs">Sessions</div>
-                      <div className="text-white font-semibold text-sm">{course.totalSessions}</div>
+                      <div className="text-white font-semibold text-sm">
+                        {course.totalSessions}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -299,7 +324,9 @@ export default function CoursePage() {
                   <Award className="w-4 h-4 text-white" />
                   <div>
                     <div className="text-white/80 text-xs">Certificate</div>
-                    <div className="text-white font-semibold text-sm">Included</div>
+                    <div className="text-white font-semibold text-sm">
+                      Included
+                    </div>
                   </div>
                 </div>
               </div>
@@ -307,11 +334,16 @@ export default function CoursePage() {
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex flex-wrap gap-2">
-                {(course.relatedTopics || course.topics || []).slice(0, 3).map(t => (
-                  <Badge key={t} className="bg-white/20 text-white border-0 px-3 py-1 text-xs">
-                    {t}
-                  </Badge>
-                ))}
+                {(course.relatedTopics || course.topics || [])
+                  .slice(0, 3)
+                  .map((t) => (
+                    <Badge
+                      key={t}
+                      className="bg-white/20 text-white border-0 px-3 py-1 text-xs"
+                    >
+                      {t}
+                    </Badge>
+                  ))}
               </div>
 
               {!isEnrolled && !isAdminOrJyotishi && (
@@ -319,7 +351,8 @@ export default function CoursePage() {
                   onClick={() => setShowCheckout(true)}
                   className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-8 py-6 rounded-lg border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  Enroll Now - ₹{priceInfo?.displayPrice.toLocaleString("en-IN")}
+                  Enroll Now - ₹
+                  {priceInfo?.displayPrice.toLocaleString("en-IN")}
                 </Button>
               )}
             </div>
@@ -334,7 +367,9 @@ export default function CoursePage() {
             {/* Overview */}
             <Card className="border border-gray-200 shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-2xl font-bold text-gray-900">Course Overview</CardTitle>
+                <CardTitle className="text-2xl font-bold text-gray-900">
+                  Course Overview
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="text-gray-700 leading-relaxed">
@@ -345,16 +380,24 @@ export default function CoursePage() {
                   <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
                     <Users className="h-5 w-5 text-blue-600" />
                     <div>
-                      <div className="font-semibold text-gray-900">Instructor</div>
-                      <div className="text-gray-600 text-sm">{course.instructor || "Expert Instructor"}</div>
+                      <div className="font-semibold text-gray-900">
+                        Instructor
+                      </div>
+                      <div className="text-gray-600 text-sm">
+                        {course.instructor || "Expert Instructor"}
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-100">
                     <Clock className="h-5 w-5 text-amber-600" />
                     <div>
-                      <div className="font-semibold text-gray-900">Duration</div>
-                      <div className="text-gray-600 text-sm">{course.duration || "Flexible Schedule"}</div>
+                      <div className="font-semibold text-gray-900">
+                        Duration
+                      </div>
+                      <div className="text-gray-600 text-sm">
+                        {course.duration || "Flexible Schedule"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -365,7 +408,9 @@ export default function CoursePage() {
             {course.features?.length ? (
               <Card className="border border-gray-200 shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-2xl font-bold text-gray-900">What&apos;s Included</CardTitle>
+                  <CardTitle className="text-2xl font-bold text-gray-900">
+                    What&apos;s Included
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 gap-3">
@@ -400,7 +445,11 @@ export default function CoursePage() {
                   )}
                 </CardHeader>
                 <CardContent>
-                  <Accordion type="single" collapsible className="w-full space-y-3">
+                  <Accordion
+                    type="single"
+                    collapsible
+                    className="w-full space-y-3"
+                  >
                     {course.whyLearn.map((item, i) => (
                       <AccordionItem
                         key={i}
@@ -410,7 +459,9 @@ export default function CoursePage() {
                         <AccordionTrigger className="hover:no-underline px-4 py-3 hover:bg-gray-50">
                           <div className="flex items-center gap-3 text-left">
                             <Target className="h-4 w-4 text-blue-600" />
-                            <span className="font-semibold text-gray-900">{item.title}</span>
+                            <span className="font-semibold text-gray-900">
+                              {item.title}
+                            </span>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="text-gray-700 px-4 pb-4 text-sm">
@@ -428,7 +479,9 @@ export default function CoursePage() {
               <Card className="border border-gray-200 shadow-sm">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl font-bold text-gray-900">
-                    {course.courseContent?.length ? "Course Curriculum" : "What You'll Learn"}
+                    {course.courseContent?.length
+                      ? "Course Curriculum"
+                      : "What You'll Learn"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -466,9 +519,13 @@ export default function CoursePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-green-800 text-sm">
-                    You have successfully enrolled in this course. Head over to your dashboard to start learning!
+                    You have successfully enrolled in this course. Head over to
+                    your dashboard to start learning!
                   </p>
-                  <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg">
+                  <Button
+                    asChild
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
+                  >
                     <Link href="/dashboard/user/courses">Go to My Courses</Link>
                   </Button>
                 </CardContent>
@@ -483,14 +540,19 @@ export default function CoursePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-amber-800 text-sm">
-                    As {userRole?.toLowerCase()}, you have full access to this course.
+                    As {userRole?.toLowerCase()}, you have full access to this
+                    course.
                   </p>
                   <Button
                     asChild
                     className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 rounded-lg"
                   >
                     <Link
-                      href={userRole === "ADMIN" ? "/dashboard/admin/courses" : "/dashboard/jyotishi/courses"}
+                      href={
+                        userRole === "ADMIN"
+                          ? "/dashboard/admin/courses"
+                          : "/dashboard/jyotishi/courses"
+                      }
                     >
                       Access Course
                     </Link>
@@ -504,35 +566,54 @@ export default function CoursePage() {
                     {course.enrollment?.title || "Enroll Now"}
                   </CardTitle>
                   <CardDescription className="text-blue-100 text-sm mt-1">
-                    {course.enrollment?.description || "Start your journey today"}
+                    {course.enrollment?.description ||
+                      "Start your journey today"}
                   </CardDescription>
                 </div>
 
                 <CardContent className="p-6">
                   <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="flex flex-col items-center gap-2 mb-3">
-                        <span className="text-3xl font-bold text-gray-900">
-                          ₹{priceInfo?.displayPrice.toLocaleString("en-IN")}
-                        </span>
-                        {priceInfo?.hasDiscount && (
-                          <>
-                            <span className="text-xl text-gray-500 line-through">
-                              ₹{priceInfo.originalPrice.toLocaleString("en-IN")}
-                            </span>
-                            <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-medium border border-amber-200">
-                              Save ₹{priceInfo.discountAmount.toLocaleString("en-IN")}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    <div className="text-center space-y-3">
+  {priceInfo?.hasDiscount ? (
+    <div className="space-y-3">
+      {/* Original & Discounted Price */}
+      <div className="flex items-end justify-center gap-3">
+        <span className="text-xl text-gray-500 line-through font-medium">
+          ₹{priceInfo.originalPrice.toLocaleString("en-IN")}
+        </span>
+        <span className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+          ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
+        </span>
+      </div>
+
+      {/* Savings Chip */}
+      <div className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold
+        bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md">
+        You Save ₹{priceInfo.discountAmount.toLocaleString("en-IN")}
+      </div>
+    </div>
+  ) : (
+    <div className="space-y-3">
+      <span className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent block">
+        ₹{priceInfo?.displayPrice.toLocaleString("en-IN")}
+      </span>
+
+      {/* Best Price Tag */}
+      <div className="inline-block text-blue-700 text-sm font-medium 
+          bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+        Best Price
+      </div>
+    </div>
+  )}
+</div>
+
 
                     <Button
                       onClick={() => setShowCheckout(true)}
                       className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border-0"
                     >
-                      Enroll Now - ₹{priceInfo?.displayPrice.toLocaleString("en-IN")}
+                      Enroll Now - ₹
+                      {priceInfo?.displayPrice.toLocaleString("en-IN")}
                     </Button>
 
                     <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
@@ -550,19 +631,26 @@ export default function CoursePage() {
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <Shield className="h-4 w-4 text-amber-600" />
                         <span className="font-semibold text-amber-900 text-sm">
-                          {course.enrollment?.offer?.guarantee || "30-Day Money-Back Guarantee"}
+                          {course.enrollment?.offer?.guarantee ||
+                            "30-Day Money-Back Guarantee"}
                         </span>
                       </div>
-                      <p className="text-amber-700 text-xs">Risk-free enrollment</p>
+                      <p className="text-amber-700 text-xs">
+                        Risk-free enrollment
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="font-bold text-blue-900 text-lg">{course.totalSessions || 10}+</div>
+                        <div className="font-bold text-blue-900 text-lg">
+                          {course.totalSessions || 10}+
+                        </div>
                         <div className="text-xs text-blue-700">Sessions</div>
                       </div>
                       <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="font-bold text-blue-900 text-lg">24/7</div>
+                        <div className="font-bold text-blue-900 text-lg">
+                          24/7
+                        </div>
                         <div className="text-xs text-blue-700">Support</div>
                       </div>
                     </div>
