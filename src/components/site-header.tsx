@@ -84,22 +84,24 @@ function CoursesDropdown({ courses, loading }: { courses: Course[]; loading: boo
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg p-2 z-50">
-          {loading ? (
-            <div className="px-4 py-2 text-sm text-slate-500">Loading...</div>
-          ) : courses.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-slate-500">No courses</div>
-          ) : (
-            courses.map((course) => (
-              <NavLink
-                key={course.id}
-                href={`/courses/${course.slug}`}
-                className="block px-4 py-2.5 hover:bg-blue-50 rounded-md text-sm text-slate-700 hover:text-blue-700"
-              >
-                {course.title}
-              </NavLink>
-            ))
-          )}
+        <div className="absolute left-0 top-full pt-1 z-50">
+          <div className="w-56 bg-white border border-slate-200 rounded-lg shadow-lg p-2">
+            {loading ? (
+              <div className="px-4 py-2 text-sm text-slate-500">Loading...</div>
+            ) : courses.length === 0 ? (
+              <div className="px-4 py-2 text-sm text-slate-500">No courses</div>
+            ) : (
+              courses.map((course) => (
+                <NavLink
+                  key={course.id}
+                  href={`/courses/${course.slug}`}
+                  className="block px-4 py-2.5 hover:bg-blue-50 rounded-md text-sm text-slate-700 hover:text-blue-700"
+                >
+                  {course.title}
+                </NavLink>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
