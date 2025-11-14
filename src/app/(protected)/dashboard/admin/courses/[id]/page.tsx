@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   BookOpen,
+  Calendar,
   CheckCircle2,
   Clock,
   Edit,
@@ -20,7 +21,9 @@ import {
   Save,
   Trash2,
   Users,
-  X
+  X,
+  Video,
+  Link as LinkIcon
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -53,6 +56,23 @@ type Course = {
   whyLearn?: { title: string; description: string }[];
   content?: { content: string }[];
   topics?: { topic: string }[];
+  sessions?: Session[];
+};
+
+type Session = {
+  id: string;
+  sessionNumber: number;
+  title: string;
+  description: string;
+  sessionDate: string;
+  sessionTime: string;
+  duration: number;
+  meetingLink: string;
+  meetingPasscode: string;
+  recordingUrl: string;
+  isCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export default function ViewCoursePage() {
@@ -62,6 +82,8 @@ export default function ViewCoursePage() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingSession, setEditingSession] = useState<string | null>(null);
+  const [editSessionData, setEditSessionData] = useState<Session | null>(null);
 
   // Editable fields
   const [editData, setEditData] = useState<Course | null>(null);
@@ -92,6 +114,7 @@ export default function ViewCoursePage() {
         whyLearn: Array.isArray(data.whyLearn) ? data.whyLearn : [],
         content: Array.isArray(data.content) ? data.content : [],
         topics: Array.isArray(data.topics) ? data.topics : [],
+        sessions: Array.isArray(data.sessions) ? data.sessions : [],
       };
 
       setCourse(courseData);
@@ -111,6 +134,8 @@ export default function ViewCoursePage() {
   const handleCancel = () => {
     setIsEditing(false);
     setEditData({ ...course! });
+    setEditingSession(null);
+    setEditSessionData(null);
   };
 
   const handleSave = async () => {
@@ -181,6 +206,108 @@ export default function ViewCoursePage() {
     }
   };
 
+  // Session Management Functions
+  const addSession = async () => {
+    if (!course) return;
+
+    const newSessionNumber = course.sessions && course.sessions.length > 0 
+      ? Math.max(...course.sessions.map(s => s.sessionNumber)) + 1 
+      : 1;
+
+    const newSession: Partial<Session> = {
+      sessionNumber: newSessionNumber,
+      title: `Session ${newSessionNumber}`,
+      description: "",
+      sessionDate: "",
+      sessionTime: "",
+      duration: 60,
+      meetingLink: "",
+      meetingPasscode: "",
+      recordingUrl: "",
+      isCompleted: false,
+    };
+
+    try {
+      const res = await fetch(`/api/admin/courses/${course.id}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSession),
+      });
+
+      if (res.ok) {
+        alert("Session added successfully!");
+        fetchCourse();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to add session");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error adding session");
+    }
+  };
+
+  const startEditingSession = (session: Session) => {
+    setEditingSession(session.id);
+    setEditSessionData({ ...session });
+  };
+
+  const cancelEditingSession = () => {
+    setEditingSession(null);
+    setEditSessionData(null);
+  };
+
+  const saveSession = async () => {
+    if (!editSessionData || !course) return;
+
+    try {
+      const res = await fetch(`/api/admin/courses/${course.id}/sessions/${editSessionData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editSessionData),
+      });
+
+      if (res.ok) {
+        alert("Session updated successfully!");
+        setEditingSession(null);
+        setEditSessionData(null);
+        fetchCourse();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to update session");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating session");
+    }
+  };
+
+  const deleteSession = async (sessionId: string) => {
+    if (!confirm("Are you sure you want to delete this session?")) return;
+    if (!course) return;
+
+    try {
+      const res = await fetch(`/api/admin/courses/${course.id}/sessions/${sessionId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        alert("Session deleted successfully!");
+        fetchCourse();
+      } else {
+        alert("Failed to delete session");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting session");
+    }
+  };
+
+  const updateEditSessionField = (field: keyof Session, value: any) => {
+    if (!editSessionData) return;
+    setEditSessionData({ ...editSessionData, [field]: value });
+  };
+
   const updateEditField = (field: string, value: any) => {
     if (!editData) return;
     setEditData({ ...editData, [field]: value });
@@ -215,6 +342,40 @@ export default function ViewCoursePage() {
     setEditData({ ...editData, [field]: newArray });
   };
 
+  // Helper functions
+  const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString("en-IN") : "Not set";
+  const formatTime = (time: string) => {
+    if (!time) return "-";
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const formattedHour = hour % 12 || 12;
+    return `${formattedHour}:${minutes} ${ampm}`;
+  };
+
+  const formatDateForInput = (d: string | null) => d ? d.split('T')[0] : '';
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      DRAFT: "bg-gray-500",
+      REGISTRATION_OPEN: "bg-green-500",
+      ONGOING: "bg-blue-500",
+      UPCOMING: "bg-yellow-500",
+      COMPLETED: "bg-purple-500",
+    };
+    return colors[status] || "bg-gray-500";
+  };
+
+  const getSessionStatus = (session: Session) => {
+    const now = new Date();
+    const sessionDateTime = new Date(`${session.sessionDate}T${session.sessionTime}`);
+    
+    if (session.isCompleted) return { text: "Completed", color: "bg-green-100 text-green-800" };
+    if (sessionDateTime < now) return { text: "Missed", color: "bg-red-100 text-red-800" };
+    if (sessionDateTime.toDateString() === now.toDateString()) return { text: "Today", color: "bg-blue-100 text-blue-800" };
+    return { text: "Upcoming", color: "bg-yellow-100 text-yellow-800" };
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
@@ -231,20 +392,6 @@ export default function ViewCoursePage() {
       </Button>
     </div>
   );
-
-  const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString("en-IN") : "Not set";
-  const formatDateForInput = (d: string | null) => d ? d.split('T')[0] : '';
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      DRAFT: "bg-gray-500",
-      REGISTRATION_OPEN: "bg-green-500",
-      ONGOING: "bg-blue-500",
-      UPCOMING: "bg-yellow-500",
-      COMPLETED: "bg-purple-500",
-    };
-    return colors[status] || "bg-gray-500";
-  };
 
   const displayData = isEditing ? editData : course;
 
@@ -267,8 +414,6 @@ export default function ViewCoursePage() {
                   ADMIN VIEW
                 </Badge>
               </div>
-
-
             </div>
 
             {isEditing ? (
@@ -352,6 +497,219 @@ export default function ViewCoursePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Live Sessions */}
+            <Card className="border border-gray-200 hover:shadow-md transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-green-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Live Sessions</CardTitle>
+                    <CardDescription>
+                      {course.sessions?.length || 0} sessions scheduled
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={addSession}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Session
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                {!course.sessions || course.sessions.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Video className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>No sessions scheduled yet.</p>
+                    <p className="text-sm mt-2">Add sessions to get started.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {course.sessions
+                      .sort((a, b) => a.sessionNumber - b.sessionNumber)
+                      .map((session) => (
+                        <Card key={session.id} className="border border-gray-200">
+                          <CardContent className="p-4">
+                            {editingSession === session.id ? (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Session Title</Label>
+                                    <Input
+                                      value={editSessionData?.title || ""}
+                                      onChange={(e) => updateEditSessionField("title", e.target.value)}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Session Date</Label>
+                                    <Input
+                                      type="date"
+                                      value={editSessionData?.sessionDate || ""}
+                                      onChange={(e) => updateEditSessionField("sessionDate", e.target.value)}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Session Time</Label>
+                                    <Input
+                                      type="time"
+                                      value={editSessionData?.sessionTime || ""}
+                                      onChange={(e) => updateEditSessionField("sessionTime", e.target.value)}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Duration (minutes)</Label>
+                                    <Input
+                                      type="number"
+                                      value={editSessionData?.duration || 60}
+                                      onChange={(e) => updateEditSessionField("duration", parseInt(e.target.value) || 60)}
+                                      min="1"
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Meeting Link</Label>
+                                    <Input
+                                      type="url"
+                                      value={editSessionData?.meetingLink || ""}
+                                      onChange={(e) => updateEditSessionField("meetingLink", e.target.value)}
+                                      placeholder="https://zoom.us/j/..."
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Passcode</Label>
+                                    <Input
+                                      value={editSessionData?.meetingPasscode || ""}
+                                      onChange={(e) => updateEditSessionField("meetingPasscode", e.target.value)}
+                                      placeholder="123456"
+                                    />
+                                  </div>
+                                  <div className="md:col-span-2 space-y-2">
+                                    <Label>Recording URL</Label>
+                                    <Input
+                                      type="url"
+                                      value={editSessionData?.recordingUrl || ""}
+                                      onChange={(e) => updateEditSessionField("recordingUrl", e.target.value)}
+                                      placeholder="https://youtube.com/..."
+                                    />
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={editSessionData?.isCompleted || false}
+                                      onChange={(e) => updateEditSessionField("isCompleted", e.target.checked)}
+                                      className="rounded border-gray-300"
+                                    />
+                                    <Label className="text-sm">Session Completed</Label>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Description</Label>
+                                  <Textarea
+                                    value={editSessionData?.description || ""}
+                                    onChange={(e) => updateEditSessionField("description", e.target.value)}
+                                    placeholder="Session details and topics covered..."
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button onClick={saveSession} className="bg-green-600 hover:bg-green-700">
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Save Session
+                                  </Button>
+                                  <Button variant="outline" onClick={cancelEditingSession}>
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-start justify-between mb-3">
+                                  <div>
+                                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                                      Session {session.sessionNumber}: {session.title}
+                                      <Badge className={getSessionStatus(session).color}>
+                                        {getSessionStatus(session).text}
+                                      </Badge>
+                                    </h3>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      <Calendar className="h-3 w-3 inline mr-1" />
+                                      {formatDate(session.sessionDate)} at {formatTime(session.sessionTime)} • {session.duration} mins
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => startEditingSession(session)}
+                                    >
+                                      <Edit className="h-3 w-3 mr-1" />
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => deleteSession(session.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-1" />
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {session.description && (
+                                  <p className="text-sm text-gray-700 mb-3">{session.description}</p>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                  {session.meetingLink && (
+                                    <div className="flex items-center gap-2">
+                                      <LinkIcon className="h-4 w-4 text-blue-600" />
+                                      <a 
+                                        href={session.meetingLink} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:underline"
+                                      >
+                                        Join Meeting
+                                      </a>
+                                    </div>
+                                  )}
+                                  {session.meetingPasscode && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">Passcode:</span>
+                                      <code className="bg-gray-100 px-2 py-1 rounded text-xs">
+                                        {session.meetingPasscode}
+                                      </code>
+                                    </div>
+                                  )}
+                                  {session.recordingUrl && (
+                                    <div className="flex items-center gap-2 md:col-span-2">
+                                      <Video className="h-4 w-4 text-green-600" />
+                                      <a 
+                                        href={session.recordingUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-green-600 hover:underline"
+                                      >
+                                        Watch Recording
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Course Overview */}
             <Card className="border border-gray-200 hover:shadow-md transition-shadow">
               <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">

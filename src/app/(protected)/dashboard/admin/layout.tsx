@@ -1,5 +1,6 @@
 "use client";
 import {
+  Award,
   BookOpen,
   ChevronDown,
   CreditCard,
