@@ -1,14 +1,23 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-"use client"
+"use client";
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import * as z from "zod";
-import { Eye, EyeOff, User, Mail, Phone, Lock, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  User,
+  Mail,
+  Phone,
+  Lock,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import {
   Form,
   FormControl,
@@ -32,9 +41,7 @@ const RegisterFormSchema = z.object({
     .string()
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must not exceed 50 characters"),
-  email: z
-    .string()
-    .email("Please enter a valid email address"),
+  email: z.string().email("Please enter a valid email address"),
   mobile: z
     .string()
     .min(10, "Phone number must be at least 10 digits")
@@ -81,7 +88,9 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
     };
   };
 
-  const passwordRequirements = checkPasswordRequirements(form.watch('password') || '');
+  const passwordRequirements = checkPasswordRequirements(
+    form.watch("password") || ""
+  );
 
   // Check if all password requirements are met
   const isPasswordValid = (password: string) => {
@@ -135,12 +144,12 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
   };
 
   // Check if form is valid and ready for submission
-  const isFormValid = 
-    form.watch('name')?.length >= 2 && 
-    form.watch('email')?.includes('@') && 
-    form.watch('mobile')?.length >= 10 &&
-    form.watch('password')?.length >= 8 &&
-    isPasswordValid(form.watch('password') || '');
+  const isFormValid =
+    form.watch("name")?.length >= 2 &&
+    form.watch("email")?.includes("@") &&
+    form.watch("mobile")?.length >= 10 &&
+    form.watch("password")?.length >= 8 &&
+    isPasswordValid(form.watch("password") || "");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -170,14 +179,14 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                         <Input
                           {...field}
                           className={`h-12 pl-10 w-full rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            form.formState.errors.name 
-                              ? 'border-red-500 bg-red-50' 
-                              : 'border-slate-300'
+                            form.formState.errors.name
+                              ? "border-red-500 bg-red-50"
+                              : "border-slate-300"
                           }`}
                           placeholder="John Doe"
                           disabled={isPending}
                         />
-                      </div>  
+                      </div>
                     </FormControl>
                     <FormMessage className="text-sm text-red-500 flex items-center gap-1">
                       {form.formState.errors.name && (
@@ -207,9 +216,9 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                         <Input
                           {...field}
                           className={`h-12 pl-10 w-full rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            form.formState.errors.email 
-                              ? 'border-red-500 bg-red-50' 
-                              : 'border-slate-300'
+                            form.formState.errors.email
+                              ? "border-red-500 bg-red-50"
+                              : "border-slate-300"
                           }`}
                           placeholder="john@example.com"
                           type="email"
@@ -244,13 +253,13 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 h-5 w-5" />
                         <Input
                           {...field}
-                          className={`h-12 pl-10 w-full rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            form.formState.errors.mobile 
-                              ? 'border-red-500 bg-red-50' 
-                              : 'border-slate-300'
-                          }`}
-                          placeholder="+1234567890"
-                          disabled={isPending}
+                          maxLength={15}
+                          onChange={(e) => {
+                            const onlyNums = e.target.value.replace(/\D/g, "");
+                            field.onChange(onlyNums);
+                          }}
+                          value={field.value}
+                          placeholder="      1234567890"
                         />
                       </div>
                     </FormControl>
@@ -282,9 +291,9 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                         <Input
                           {...field}
                           className={`h-12 pl-10 pr-10 w-full rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                            form.formState.errors.password 
-                              ? 'border-red-500 bg-red-50' 
-                              : 'border-slate-300'
+                            form.formState.errors.password
+                              ? "border-red-500 bg-red-50"
+                              : "border-slate-300"
                           }`}
                           type={showPassword ? "text" : "password"}
                           placeholder="Create a strong password"
@@ -312,31 +321,33 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                         </>
                       )}
                     </FormMessage>
-                    
+
                     {/* Password Requirements Checklist */}
-                    {form.watch('password') && (
+                    {form.watch("password") && (
                       <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <p className="text-xs font-medium text-slate-700 mb-2">Password Requirements:</p>
+                        <p className="text-xs font-medium text-slate-700 mb-2">
+                          Password Requirements:
+                        </p>
                         <div className="space-y-1">
-                          <PasswordRequirement 
-                            met={passwordRequirements.length} 
-                            text="At least 8 characters" 
+                          <PasswordRequirement
+                            met={passwordRequirements.length}
+                            text="At least 8 characters"
                           />
-                          <PasswordRequirement 
-                            met={passwordRequirements.uppercase} 
-                            text="One uppercase letter" 
+                          <PasswordRequirement
+                            met={passwordRequirements.uppercase}
+                            text="One uppercase letter"
                           />
-                          <PasswordRequirement 
-                            met={passwordRequirements.lowercase} 
-                            text="One lowercase letter" 
+                          <PasswordRequirement
+                            met={passwordRequirements.lowercase}
+                            text="One lowercase letter"
                           />
-                          <PasswordRequirement 
-                            met={passwordRequirements.number} 
-                            text="One number" 
+                          <PasswordRequirement
+                            met={passwordRequirements.number}
+                            text="One number"
                           />
-                          <PasswordRequirement 
-                            met={passwordRequirements.specialChar} 
-                            text="One special character (!@#$...)" 
+                          <PasswordRequirement
+                            met={passwordRequirements.specialChar}
+                            text="One special character (!@#$...)"
                           />
                         </div>
                       </div>
@@ -352,8 +363,8 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
                 text={isPending ? "Creating Account..." : "Register"}
                 classes={`h-12 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 ${
                   isFormValid && !isPending
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
                 width="full_width"
                 isSubmitable
@@ -362,15 +373,13 @@ const RegisterForm = ({ text, role }: RegisterFormProps) => {
               />
 
               <div className="text-center mt-4">
-                <Link 
-                  href="/auth/login" 
+                <Link
+                  href="/auth/login"
                   className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors duration-200"
                 >
                   Already have an account? Login Instead
                 </Link>
               </div>
-
-             
             </form>
           </Form>
         </CardContent>
@@ -387,9 +396,7 @@ const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
     ) : (
       <XCircle className="h-4 w-4 text-slate-400" />
     )}
-    <span className={met ? 'text-green-700' : 'text-slate-600'}>
-      {text}
-    </span>
+    <span className={met ? "text-green-700" : "text-slate-600"}>{text}</span>
   </div>
 );
 
