@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Tag } from "lucide-react";
+import Swal from 'sweetalert2';
 
 interface CouponType {
   id: string;
@@ -108,51 +109,69 @@ export default function AddCouponPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Check discount limit validation
-    const selectedType = couponTypes.find(
-      (type) => type.id === formData.couponTypeId
-    );
-    
-    if (selectedType?.maxDiscountLimit && 
-        Number(formData.discountValue) > Number(selectedType.maxDiscountLimit)) {
-      alert(`Discount value cannot exceed ${selectedType.maxDiscountLimit}`);
-      return;
-    }
+  e.preventDefault();
+  
+  // Check discount limit validation
+  const selectedType = couponTypes.find(
+    (type) => type.id === formData.couponTypeId
+  );
+  
+  if (selectedType?.maxDiscountLimit && 
+      Number(formData.discountValue) > Number(selectedType.maxDiscountLimit)) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Discount Limit Exceeded',
+      text: `Discount value cannot exceed ${selectedType.maxDiscountLimit}`,
+    });
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const payload = {
-        ...formData,
-        maxUsageCount: formData.maxUsageCount ? parseInt(formData.maxUsageCount) : undefined,
-        courseIds: formData.couponScope === "GENERAL" ? selectedCourses : undefined,
-      };
+  try {
+    const payload = {
+      ...formData,
+      maxUsageCount: formData.maxUsageCount ? parseInt(formData.maxUsageCount) : undefined,
+      courseIds: formData.couponScope === "GENERAL" ? selectedCourses : undefined,
+    };
 
-      const response = await fetch("/api/admin/coupons", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+    const response = await fetch("/api/admin/coupons", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Coupon created successfully!',
+        timer: 2000,
+        showConfirmButton: false
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert("Coupon created successfully!");
-        router.push("/dashboard/admin/coupons");
-      } else {
-        alert(data.error || "Failed to create coupon");
-      }
-    } catch (error) {
-      console.error("Error creating coupon:", error);
-      alert("Failed to create coupon");
-    } finally {
-      setLoading(false);
+      router.push("/dashboard/admin/coupons");
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: data.error || 'Failed to create coupon',
+      });
     }
-  };
+  } catch (error) {
+    console.error("Error creating coupon:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Unexpected Error',
+      text: 'Failed to create coupon',
+    });
+  } finally {
+    setLoading(false);
+  }
+};  
 
   const toggleCourseSelection = (courseId: string) => {
     setSelectedCourses((prev) =>

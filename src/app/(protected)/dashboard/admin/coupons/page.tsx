@@ -1,6 +1,7 @@
 // app/dashboard/admin/coupons/page.tsx
 "use client";
 
+import Swal from 'sweetalert2';
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -70,59 +71,98 @@ export default function AllCouponsPage() {
     }
   };
 
-  const handleDeleteCoupon = async (couponId: string) => {
-    if (!confirm("Are you sure you want to delete this coupon? This action cannot be undone.")) {
-      return;
-    }
 
-    try {
-      setDeleteLoading(couponId);
-      const response = await fetch(`/api/admin/coupons/${couponId}`, {
-        method: "DELETE",
+const handleDeleteCoupon = async (couponId: string) => {
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "You want to delete this coupon? This action cannot be undone.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    setDeleteLoading(couponId);
+    const response = await fetch(`/api/admin/coupons/${couponId}`, {
+      method: "DELETE",
+    });
+
+    if (response.ok) {
+      setCoupons(coupons.filter(coupon => coupon.id !== couponId));
+      await Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Coupon deleted successfully',
       });
-
-      if (response.ok) {
-        setCoupons(coupons.filter(coupon => coupon.id !== couponId));
-        alert("Coupon deleted successfully");
-      } else {
-        const data = await response.json();
-        alert(data.error || "Failed to delete coupon");
-      }
-    } catch (error) {
-      console.error("Error deleting coupon:", error);
-      alert("Failed to delete coupon");
-    } finally {
-      setDeleteLoading(null);
-    }
-  };
-
-  const handleToggleStatus = async (couponId: string, currentStatus: boolean) => {
-    try {
-      const response = await fetch(`/api/admin/coupons/${couponId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          isActive: !currentStatus,
-        }),
+    } else {
+      const data = await response.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: data.error || 'Failed to delete coupon',
       });
-
-      if (response.ok) {
-        setCoupons(coupons.map(coupon =>
-          coupon.id === couponId
-            ? { ...coupon, isActive: !currentStatus }
-            : coupon
-        ));
-      } else {
-        const data = await response.json();
-        alert(data.error || "Failed to update coupon status");
-      }
-    } catch (error) {
-      console.error("Error updating coupon status:", error);
-      alert("Failed to update coupon status");
     }
-  };
+  } catch (error) {
+    console.error("Error deleting coupon:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error!',
+      text: 'Failed to delete coupon',
+    });
+  } finally {
+    setDeleteLoading(null);
+  }
+};
+
+
+
+const handleToggleStatus = async (couponId: string, currentStatus: boolean) => {
+  try {
+    const response = await fetch(`/api/admin/coupons/${couponId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        isActive: !currentStatus,
+      }),
+    });
+
+    if (response.ok) {
+      setCoupons(coupons.map(coupon =>
+        coupon.id === couponId
+          ? { ...coupon, isActive: !currentStatus }
+          : coupon
+      ));
+      await Swal.fire({
+        icon: 'success',
+        title: 'Status Updated!',
+        text: `Coupon ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } else {
+      const data = await response.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: data.error || 'Failed to update coupon status',
+      });
+    }
+  } catch (error) {
+    console.error("Error updating coupon status:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error!',
+      text: 'Failed to update coupon status',
+    });
+  }
+};
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);

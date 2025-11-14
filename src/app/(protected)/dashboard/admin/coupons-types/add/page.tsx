@@ -11,6 +11,7 @@ import { useCurrentUser } from "@/hooks/auth";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Swal from 'sweetalert2';
 import React, { useEffect, useState } from "react";
 
 export default function AddCouponTypePage() {
@@ -42,39 +43,53 @@ export default function AddCouponTypePage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    const payload = {
-      typeCode,
-      typeName,
-      description,
-      discountType,
-      maxDiscountLimit,
-      adminId
-    };
-
-    try {
-      const res = await fetch("/api/admin/coupon-types", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        alert("Coupon type created successfully!");
-        router.push("/dashboard/admin/coupons-types");
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed to create coupon type");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Unexpected error");
-    } finally {
-      setLoading(false);
-    }
+  const payload = {
+    typeCode,
+    typeName,
+    description,
+    discountType,
+    maxDiscountLimit,
+    adminId
   };
+
+  try {
+    const res = await fetch("/api/admin/coupon-types", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Coupon type created successfully!',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      router.push("/dashboard/admin/coupons-types");
+    } else {
+      const err = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.error || 'Failed to create coupon type',
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Unexpected Error',
+      text: 'An unexpected error occurred',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

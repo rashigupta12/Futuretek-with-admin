@@ -3,6 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Swal from 'sweetalert2';
 import {
   Popover,
   PopoverContent,
@@ -41,64 +42,103 @@ export default function JyotishisPage() {
   }, [activeFilter]);
 
   const fetchJyotishis = async () => {
-    try {
-      setLoading(true);
-      const url =
-        activeFilter === "ALL"
-          ? "/api/admin/jyotishi"
-          : `/api/admin/jyotishi?isActive=${activeFilter}`;
+  try {
+    setLoading(true);
+    const url =
+      activeFilter === "ALL"
+        ? "/api/admin/jyotishi"
+        : `/api/admin/jyotishi?isActive=${activeFilter}`;
 
-      const res = await fetch(url);
-      const data = await res.json();
-
-      const mapped: Jyotishi[] = (data.jyotishis || []).map((j: any) => ({
-        id: j.id,
-        name: j.name,
-        email: j.email,
-        mobile: j.mobile,
-        commissionRate: Number(j.commissionRate || 0),
-        isActive: j.isActive,
-        createdAt: j.createdAt,
-        stats: {
-          totalCommission: j.stats?.totalCommission || 0,
-          pendingCommission: j.stats?.pendingCommission || 0,
-          paidCommission: j.stats?.paidCommission || 0,
-          totalSales: j.stats?.totalSales || 0,
-        },
-      }));
-
-      setJyotishis(mapped);
-    } catch (err) {
-      console.error("Failed to fetch jyotishis:", err);
-    } finally {
-      setLoading(false);
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      throw new Error('Failed to fetch jyotishis');
     }
-  };
+    
+    const data = await res.json();
+
+    const mapped: Jyotishi[] = (data.jyotishis || []).map((j: any) => ({
+      id: j.id,
+      name: j.name,
+      email: j.email,
+      mobile: j.mobile,
+      commissionRate: Number(j.commissionRate || 0),
+      isActive: j.isActive,
+      createdAt: j.createdAt,
+      stats: {
+        totalCommission: j.stats?.totalCommission || 0,
+        pendingCommission: j.stats?.pendingCommission || 0,
+        paidCommission: j.stats?.paidCommission || 0,
+        totalSales: j.stats?.totalSales || 0,
+      },
+    }));
+
+    setJyotishis(mapped);
+  } catch (err) {
+    console.error("Failed to fetch jyotishis:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Load Failed',
+      text: 'Failed to load jyotishis. Please refresh the page.',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Toggle Active Status
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
-    if (!confirm(`Are you sure you want to ${currentStatus ? "deactivate" : "activate"} this jyotishi?`)) return;
+  const jyotishiToUpdate = jyotishis.find(j => j.id === id);
+  const action = currentStatus ? "deactivate" : "activate";
+  
+  const result = await Swal.fire({
+    title: `Are you sure?`,
+    html: `You are about to ${action} <strong>"${jyotishiToUpdate?.name}"</strong>.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: currentStatus ? '#d33' : '#3085d6',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: `Yes, ${action} it!`,
+    cancelButtonText: 'Cancel',
+    reverseButtons: true
+  });
 
-    try {
-      const res = await fetch(`/api/admin/jyotishi/${id}/toggle`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !currentStatus }),
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/admin/jyotishi/${id}/toggle`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !currentStatus }),
+    });
+
+    if (res.ok) {
+      setJyotishis((prev) =>
+        prev.map((j) => (j.id === id ? { ...j, isActive: !currentStatus } : j))
+      );
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: `Jyotishi ${!currentStatus ? "activated" : "deactivated"} successfully`,
+        timer: 2000,
+        showConfirmButton: false
       });
-
-      if (res.ok) {
-        setJyotishis((prev) =>
-          prev.map((j) => (j.id === id ? { ...j, isActive: !currentStatus } : j))
-        );
-        alert(`Jyotishi ${!currentStatus ? "activated" : "deactivated"} successfully`);
-      } else {
-        alert("Failed to update status");
-      }
-    } catch (err) {
-      console.error("Toggle error:", err);
-      alert("Error updating jyotishi status");
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: 'Failed to update jyotishi status',
+      });
     }
-  };
+  } catch (err) {
+    console.error("Toggle error:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'An error occurred while updating the status',
+    });
+  }
+};
 
   // Search filter
   const filteredJyotishis = jyotishis.filter((j) => {

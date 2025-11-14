@@ -100,7 +100,7 @@ export default function UserDetailPage() {
             course: {
               id: e.courseId,
               title: e.course?.title || `Course #${e.courseId.slice(0, 8)}`, // fallback title
-              slug: e.courseId,
+              slug: e.course?.slug ,
             },
             status: e.status,
             enrolledAt: e.enrolledAt,
@@ -293,7 +293,7 @@ export default function UserDetailPage() {
                         <tr key={e.id} className="hover:bg-muted/50">
                           <td className="px-4 py-3">
                             <Link
-                              href={`/courses/${e.course.slug}`}
+                              href={`/dashboard/admin/courses/${e.course.slug}`}
                               className="font-medium hover:underline"
                             >
                               {e.course.title}

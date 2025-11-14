@@ -12,6 +12,7 @@ import {
   AlertCircle,
   X,
 } from "lucide-react";
+import Swal from "sweetalert2"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -90,32 +91,51 @@ export default function PayoutsPage() {
   };
 
   const handleSubmit = async () => {
-    if (error || !amount || Number(amount) > available) return;
+  if (error || !amount || Number(amount) > available) return;
 
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/jyotishi/payouts/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Number(amount) }),
+  setSubmitting(true);
+  try {
+    const res = await fetch("/api/jyotishi/payouts/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: Number(amount) }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      setError(err.error || "Failed");
+      Swal.fire({
+        icon: 'error',
+        title: 'Request Failed',
+        text: err.error || 'Failed to submit payout request',
+        confirmButtonColor: '#d33',
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        setError(err.error || "Failed");
-        return;
-      }
-
-      setShowSidebar(false);
-      setAmount("");
-      mutatePayouts(); // Refresh payouts
-      alert("Payout requested!");
-    } catch {
-      setError("Network error");
-    } finally {
-      setSubmitting(false);
+      return;
     }
-  };
+
+    setShowSidebar(false);
+    setAmount("");
+    mutatePayouts(); // Refresh payouts
+    
+    await Swal.fire({
+      icon: 'success',
+      title: 'Payout Requested!',
+      text: `₹${Number(amount).toLocaleString()} payout request submitted successfully.`,
+      timer: 3000,
+      showConfirmButton: false
+    });
+  } catch {
+    setError("Network error");
+    Swal.fire({
+      icon: 'error',
+      title: 'Network Error',
+      text: 'Failed to submit payout request. Please check your connection.',
+      confirmButtonColor: '#d33',
+    });
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const getStatusIcon = (status: Payout["status"]) => {
     switch (status) {

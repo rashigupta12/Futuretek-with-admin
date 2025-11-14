@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
+import Swal from 'sweetalert2';
 import { useEffect, useState } from "react";
 
 type Jyotishi = {
@@ -41,79 +42,117 @@ export default function EditJyotishiPage() {
     }
   }, [id]);
 
-  const fetchJyotishi = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(`/api/admin/jyotishi/${id}`);
+ const fetchJyotishi = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    const res = await fetch(`/api/admin/jyotishi/${id}`);
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to fetch Jyotishi");
-      }
-
-      const data = await res.json();
-      setJyotishi(data.jyotishi);
-    } catch (err: any) {
-      console.error("Failed to fetch jyotishi:", err);
-      setError(err.message || "Jyotishi not found");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!jyotishi) return;
-
-    // Basic validation
-    if (!jyotishi.name.trim()) {
-      alert("Name is required");
-      return;
-    }
-    if (!jyotishi.mobile.trim()) {
-      alert("Mobile is required");
-      return;
-    }
-    if (jyotishi.commissionRate < 0 || jyotishi.commissionRate > 100) {
-      alert("Commission rate must be between 0 and 100");
-      return;
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to fetch Jyotishi");
     }
 
-    try {
-      setSaving(true);
-      setError(null);
+    const data = await res.json();
+    setJyotishi(data.jyotishi);
+  } catch (err: any) {
+    console.error("Failed to fetch jyotishi:", err);
+    setError(err.message || "Jyotishi not found");
+    Swal.fire({
+      icon: 'error',
+      title: 'Load Failed',
+      text: err.message || 'Failed to load jyotishi details',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-      const res = await fetch(`/api/admin/jyotishi/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: jyotishi.name.trim(),
-          mobile: jyotishi.mobile.trim(),
-          commissionRate: Number(jyotishi.commissionRate),
-          bankAccountNumber: jyotishi.bankAccountNumber?.trim() || null,
-          bankIfscCode: jyotishi.bankIfscCode?.trim().toUpperCase() || null,
-          bankAccountHolderName: jyotishi.bankAccountHolderName?.trim() || null,
-          panNumber: jyotishi.panNumber?.trim().toUpperCase() || null,
-          isActive: jyotishi.isActive,
-        }),
+ const handleSave = async () => {
+  if (!jyotishi) return;
+
+  // Basic validation with SweetAlert
+  if (!jyotishi.name.trim()) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Name',
+      text: 'Name is required',
+    });
+    return;
+  }
+  if (!jyotishi.mobile.trim()) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Mobile',
+      text: 'Mobile number is required',
+    });
+    return;
+  }
+  if (jyotishi.commissionRate < 0 || jyotishi.commissionRate > 100) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Invalid Commission Rate',
+      text: 'Commission rate must be between 0 and 100',
+    });
+    return;
+  }
+
+  // Mobile number validation
+  const mobileRegex = /^[6-9]\d{9}$/;
+  if (!mobileRegex.test(jyotishi.mobile.replace(/[\s\-\(\)]/g, ""))) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Invalid Mobile Number',
+      text: 'Please enter a valid 10-digit mobile number starting with 6-9',
+    });
+    return;
+  }
+
+  try {
+    setSaving(true);
+    setError(null);
+
+    const res = await fetch(`/api/admin/jyotishi/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: jyotishi.name.trim(),
+        mobile: jyotishi.mobile.trim(),
+        commissionRate: Number(jyotishi.commissionRate),
+        bankAccountNumber: jyotishi.bankAccountNumber?.trim() || null,
+        bankIfscCode: jyotishi.bankIfscCode?.trim().toUpperCase() || null,
+        bankAccountHolderName: jyotishi.bankAccountHolderName?.trim() || null,
+        panNumber: jyotishi.panNumber?.trim().toUpperCase() || null,
+        isActive: jyotishi.isActive,
+      }),
+    });
+
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Jyotishi updated successfully!',
+        timer: 2000,
+        showConfirmButton: false
       });
-
-      if (res.ok) {
-        alert("Jyotishi updated successfully!");
-        router.push("/dashboard/admin/agent");
-      } else {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to update Jyotishi");
-      }
-    } catch (err: any) {
-      console.error("Update error:", err);
-      setError(err.message);
-    } finally {
-      setSaving(false);
+      router.push("/dashboard/admin/agent");
+    } else {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to update Jyotishi");
     }
-  };
+  } catch (err: any) {
+    console.error("Update error:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: err.message || 'An error occurred while updating the jyotishi',
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) {
     return (

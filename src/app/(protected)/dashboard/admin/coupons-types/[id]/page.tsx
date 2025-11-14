@@ -3,6 +3,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import Swal from 'sweetalert2';
 import {
   Card,
   CardContent,
@@ -60,42 +61,72 @@ export default function ViewCouponTypePage() {
     if (params.id) fetchCouponType();
   }, [params.id]);
 
-  const fetchCouponType = async () => {
-    try {
-      const res = await fetch(`/api/admin/coupon-types/${params.id}`);
-      if (!res.ok) throw new Error("Not found");
-      const json: ApiResponse = await res.json();
-      setData(json);
-    } catch (err) {
-      console.error("Fetch error:", err);
-      alert("Failed to load coupon type");
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchCouponType = async () => {
+  try {
+    const res = await fetch(`/api/admin/coupon-types/${params.id}`);
+    if (!res.ok) throw new Error("Not found");
+    const json: ApiResponse = await res.json();
+    setData(json);
+  } catch (err) {
+    console.error("Fetch error:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error!',
+      text: 'Failed to load coupon type',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleDeactivate = async () => {
-    if (!data?.couponType) return;
-    if (!confirm("Are you sure you want to deactivate this coupon type?")) return;
 
-    try {
-      const res = await fetch(`/api/admin/coupon-types/${data.couponType.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: false }),
+ const handleDeactivate = async () => {
+  if (!data?.couponType) return;
+
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "You want to deactivate this coupon type?",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, deactivate!',
+    cancelButtonText: 'Cancel'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/admin/coupon-types/${data.couponType.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: false }),
+    });
+
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Deactivated!',
+        text: 'Coupon type deactivated successfully',
       });
-
-      if (res.ok) {
-        alert("Coupon type deactivated successfully");
-        router.push("/dashboard/admin/coupons-types");
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed to deactivate");
-      }
-    } catch {
-      alert("Error deactivating coupon type");
+      router.push("/dashboard/admin/coupons-types");
+    } else {
+      const err = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: err.error || 'Failed to deactivate coupon type',
+      });
     }
-  };
+  } catch {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error!',
+      text: 'Error deactivating coupon type',
+    });
+  }
+};
+
 
   if (loading) {
     return (
