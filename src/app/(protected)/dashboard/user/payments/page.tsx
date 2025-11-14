@@ -85,6 +85,23 @@ export default function PaymentsPage() {
     );
   };
 
+const downloadInvoice = async (paymentId: string) => {
+  try {
+    const res = await fetch(`/api/user/invoice/${paymentId}`);
+    if (!res.ok) throw new Error("Failed");
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice_${payments.find((p) => p.id === paymentId)?.invoiceNumber}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert("Failed to download invoice");
+  }
+};
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -238,15 +255,16 @@ export default function PaymentsPage() {
                   </p>
                 </div>
                 
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                  disabled
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Invoice
-                </Button>
+               
+<Button
+  variant="outline"
+  size="sm"
+  className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+  onClick={() => downloadInvoice(payment.id)}
+>
+  <Download className="h-4 w-4 mr-2" />
+  Invoice
+</Button>
               </div>
             </CardContent>
           </Card>

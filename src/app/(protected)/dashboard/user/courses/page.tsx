@@ -1,4 +1,4 @@
-// src/app/(protected)/dashboard/user/courses/page.tsx
+// app/(protected)/dashboard/user/courses/page.tsx
 "use client";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,9 @@ import {
   BookOpen,
   CheckCircle2,
   Download,
-  Loader2
+  Loader2,
+  Award,
+  FileText
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -32,7 +34,8 @@ interface RawEnrollment {
   certificateIssued: boolean;
   certificateUrl?: string | null;
   courseThumbnail?: string | null;
-  // progress is **not** in the payload – we'll calculate a fake one
+  certificateRequested?: boolean;
+  certificateRequestStatus?: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 export default function MyCoursesPage() {
@@ -42,10 +45,9 @@ export default function MyCoursesPage() {
   const [enrollments, setEnrollments] = useState<RawEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [requestingCertificate, setRequestingCertificate] = useState<string | null>(null);
+  const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
 
-  /* -------------------------------------------------------------
-     1. Fetch enrollments (same endpoint you already use)
-     ------------------------------------------------------------- */
   useEffect(() => {
     async function fetchEnrollments() {
       if (!userId) return;
@@ -56,7 +58,6 @@ export default function MyCoursesPage() {
         if (!res.ok) throw new Error("Failed to load courses");
 
         const data = await res.json();
-        // The API returns `enrollments: [...]` – flatten it
         setEnrollments(data.enrollments ?? []);
         
       } catch (err) {
@@ -69,9 +70,116 @@ export default function MyCoursesPage() {
     fetchEnrollments();
   }, [userId]);
 
-  /* -------------------------------------------------------------
-     2. Helpers
-     ------------------------------------------------------------- */
+  const requestCertificate = async (enrollmentId: string) => {
+    if (!userId) return;
+
+    try {
+      setRequestingCertificate(enrollmentId);
+      
+      const response = await fetch('/api/user/certificate-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enrollmentId,
+          userId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to request certificate');
+      }
+
+      setEnrollments(prev => prev.map(enrollment => 
+        enrollment.id === enrollmentId 
+          ? { 
+              ...enrollment, 
+              certificateRequested: true, 
+              certificateRequestStatus: 'PENDING' 
+            }
+          : enrollment
+      ));
+
+    } catch (err) {
+      console.error('Error requesting certificate:', err);
+      alert(err instanceof Error ? err.message : 'Failed to request certificate');
+    } finally {
+      setRequestingCertificate(null);
+    }
+  };
+
+  const downloadCertificate = async (enrollmentId: string, certificateUrl: string, studentName: string, courseName: string) => {
+    try {
+      setDownloadingCertificate(enrollmentId);
+      
+      // If it's a blob URL, we need to handle it differently
+      if (certificateUrl.startsWith('blob:')) {
+        // Create a temporary link to download the blob
+        const response = await fetch(certificateUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${studentName}_${courseName.replace(/\s+/g, '_')}_certificate.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the blob URL
+        window.URL.revokeObjectURL(url);
+      } else {
+        // For regular URLs, use the standard download approach
+        const link = document.createElement('a');
+        link.href = certificateUrl;
+        link.download = `${studentName}_${courseName.replace(/\s+/g, '_')}_certificate.pdf`;
+        link.target = '_blank'; // Open in new tab for regular URLs
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      alert('Failed to download certificate. Please try again.');
+    } finally {
+      setDownloadingCertificate(null);
+    }
+  };
+
+  const viewCertificate = (certificateUrl: string) => {
+    if (certificateUrl.startsWith('blob:')) {
+      // For blob URLs, open in new tab
+      window.open(certificateUrl, '_blank');
+    } else {
+      // For regular URLs, open in new tab
+      window.open(certificateUrl, '_blank');
+    }
+  };
+
+  const checkCertificateStatus = async (enrollmentId: string) => {
+    try {
+      const response = await fetch(`/api/user/certificate-status?enrollmentId=${enrollmentId}`);
+      if (response.ok) {
+        const data = await response.json();
+        
+        setEnrollments(prev => prev.map(enrollment => 
+          enrollment.id === enrollmentId 
+            ? { 
+                ...enrollment, 
+                certificateIssued: data.certificateIssued,
+                certificateUrl: data.certificateUrl,
+                certificateRequestStatus: data.certificateRequestStatus
+              }
+            : enrollment
+        ));
+      }
+    } catch (err) {
+      console.error('Error checking certificate status:', err);
+    }
+  };
+
   const getStatusBadge = (status: RawEnrollment["status"]) => {
     const cfg = {
       ACTIVE: { label: "In Progress", color: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -82,11 +190,50 @@ export default function MyCoursesPage() {
     return <Badge className={`${color} border`}>{label}</Badge>;
   };
 
-  // Fake progress – you can replace with real data later
+  const getCertificateBadge = (enrollment: RawEnrollment) => {
+    if (enrollment.certificateIssued && enrollment.certificateUrl) {
+      return (
+        <Badge className="bg-green-100 text-green-700 border-green-200">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          Certificate Ready
+        </Badge>
+      );
+    }
+
+    if (enrollment.certificateRequestStatus === "APPROVED") {
+      return (
+        <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+          <Award className="h-3 w-3 mr-1" />
+          Processing Certificate
+        </Badge>
+      );
+    }
+
+    if (enrollment.certificateRequestStatus === "PENDING") {
+      return (
+        <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">
+          <FileText className="h-3 w-3 mr-1" />
+          Request Pending
+        </Badge>
+      );
+    }
+
+    if (enrollment.certificateRequestStatus === "REJECTED") {
+      return (
+        <Badge className="bg-red-100 text-red-700 border-red-200">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Request Rejected
+        </Badge>
+      );
+    }
+
+    return null;
+  };
+
   const fakeProgress = (status: string) => {
     if (status === "COMPLETED") return 100;
     if (status === "PENDING") return 0;
-    return Math.floor(Math.random() * 70) + 15; // 15-85%
+    return Math.floor(Math.random() * 70) + 15;
   };
 
   const formatDate = (iso: string) =>
@@ -96,9 +243,12 @@ export default function MyCoursesPage() {
       year: "numeric",
     });
 
-  /* -------------------------------------------------------------
-     3. Render states
-     ------------------------------------------------------------- */
+  const canRequestCertificate = (enrollment: RawEnrollment) => {
+    return !enrollment.certificateIssued && 
+           enrollment.certificateRequestStatus !== "PENDING" &&
+           enrollment.certificateRequestStatus !== "APPROVED";
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -152,12 +302,8 @@ export default function MyCoursesPage() {
     );
   }
 
-  /* -------------------------------------------------------------
-     4. Main UI
-     ------------------------------------------------------------- */
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="relative">
         <div className="absolute -left-1 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-600 to-yellow-500 rounded-full"></div>
         <div className="pl-4">
@@ -170,24 +316,22 @@ export default function MyCoursesPage() {
         </div>
       </div>
 
-      {/* Courses Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {enrollments.map((enrollment) => {
           const isCompleted = enrollment.status === "COMPLETED";
           const progress = fakeProgress(enrollment.status);
           const hasCertificate = enrollment.certificateIssued && enrollment.certificateUrl;
+          const canRequest = canRequestCertificate(enrollment);
 
           return (
             <Card
               key={enrollment.id}
               className="border border-blue-100 bg-white hover:shadow-lg hover:border-blue-200 transition-all duration-300 flex flex-col relative overflow-hidden group"
             >
-              {/* Golden top accent for completed courses */}
               {isCompleted && (
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
               )}
 
-              {/* Thumbnail */}
               {enrollment.courseThumbnail ? (
                 <div className="h-40 overflow-hidden bg-slate-100">
                   <img
@@ -213,10 +357,11 @@ export default function MyCoursesPage() {
                 <CardDescription className="mt-2 text-sm text-slate-600">
                   Enrolled on {formatDate(enrollment.enrolledAt)}
                 </CardDescription>
+
+                {getCertificateBadge(enrollment)}
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Progress */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-600">Progress</span>
@@ -234,49 +379,134 @@ export default function MyCoursesPage() {
                   </div>
                 </div>
 
-                {/* Certificate info */}
-                {isCompleted && (
-                  <div className="flex items-center gap-2 text-sm pt-2">
-                    {hasCertificate ? (
-                      <>
-                        <div className="p-1 bg-yellow-100 rounded">
-                          <CheckCircle2 className="h-4 w-4 text-yellow-600" />
-                        </div>
-                        <span className="text-yellow-700 font-medium">
-                          Certificate Issued
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="p-1 bg-orange-100 rounded">
-                          <AlertCircle className="h-4 w-4 text-orange-600" />
-                        </div>
-                        <span className="text-orange-700 font-medium">
-                          Certificate pending
-                        </span>
-                      </>
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center gap-2 text-sm pt-2">
+                  {hasCertificate ? (
+                    <>
+                      <div className="p-1 bg-green-100 rounded">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      </div>
+                      <span className="text-green-700 font-medium">
+                        Certificate Issued
+                      </span>
+                    </>
+                  ) : enrollment.certificateRequestStatus === "PENDING" ? (
+                    <>
+                      <div className="p-1 bg-yellow-100 rounded">
+                        <FileText className="h-4 w-4 text-yellow-600" />
+                      </div>
+                      <span className="text-yellow-700 font-medium">
+                        Certificate request pending
+                      </span>
+                    </>
+                  ) : enrollment.certificateRequestStatus === "REJECTED" ? (
+                    <>
+                      <div className="p-1 bg-red-100 rounded">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      </div>
+                      <span className="text-red-700 font-medium">
+                        Certificate request rejected
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-1 bg-orange-100 rounded">
+                        <Award className="h-4 w-4 text-orange-600" />
+                      </div>
+                      <span className="text-orange-700 font-medium">
+                        {isCompleted ? "Certificate available" : "Request certificate anytime"}
+                      </span>
+                    </>
+                  )}
+                </div>
               </CardContent>
 
               <CardFooter className="pt-4 border-t border-blue-50 bg-gradient-to-r from-blue-50/50 to-transparent flex gap-2">
-                {/* Certificate download (only if issued) */}
                 {hasCertificate && (
-                  <Button 
-                    asChild 
-                    variant="outline" 
-                    size="icon"
-                    className="border-yellow-200 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 hover:text-yellow-800"
-                  >
-                    <a
-                      href={enrollment.certificateUrl!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Download Certificate"
+                  <>
+                    <Button 
+                      onClick={() => viewCertificate(enrollment.certificateUrl!)}
+                      variant="outline" 
+                      size="sm"
+                      className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800"
                     >
-                      <Download className="h-4 w-4" />
-                    </a>
+                      <FileText className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
+                    <Button 
+                      onClick={() => downloadCertificate(enrollment.id, enrollment.certificateUrl!, enrollment.courseTitle, enrollment.courseTitle)}
+                      disabled={downloadingCertificate === enrollment.id}
+                      variant="outline" 
+                      size="sm"
+                      className="border-green-200 bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800"
+                    >
+                      {downloadingCertificate === enrollment.id ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+
+                {canRequest && (
+                  <Button
+                    onClick={() => requestCertificate(enrollment.id)}
+                    disabled={requestingCertificate === enrollment.id}
+                    className={`${
+                      isCompleted 
+                        ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700' 
+                        : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+                    } text-white`}
+                  >
+                    {requestingCertificate === enrollment.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Requesting...
+                      </>
+                    ) : (
+                      <>
+                        <Award className="h-4 w-4 mr-2" />
+                        Request Certificate
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {enrollment.certificateRequestStatus === "PENDING" && (
+                  <Button
+                    onClick={() => checkCertificateStatus(enrollment.id)}
+                    variant="outline"
+                    className="border-yellow-200 text-yellow-700 hover:bg-yellow-50"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Check Status
+                  </Button>
+                )}
+
+                {enrollment.certificateRequestStatus === "REJECTED" && (
+                  <Button
+                    onClick={() => requestCertificate(enrollment.id)}
+                    disabled={requestingCertificate === enrollment.id}
+                    variant="outline"
+                    className="border-red-200 text-red-700 hover:bg-red-50"
+                  >
+                    {requestingCertificate === enrollment.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Retrying...
+                      </>
+                    ) : (
+                      <>
+                        <Award className="h-4 w-4 mr-2" />
+                        Retry Request
+                      </>
+                    )}
                   </Button>
                 )}
               </CardFooter>

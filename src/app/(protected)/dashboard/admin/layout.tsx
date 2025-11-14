@@ -168,23 +168,23 @@ export default function AdminLayout({
     //   href: "/dashboard/admin/payments",
     //   single: true,
     // },
-    // {
-    //   title: "Certificates",
-    //   icon: Award,
-    //   key: "certificates",
-    //   subItems: [
-    //     {
-    //       title: "Requests",
-    //       href: "/dashboard/admin/certificates/requests",
-    //       icon: List,
-    //     },
-    //     {
-    //       title: "All Certificates",
-    //       href: "/dashboard/admin/certificates",
-    //       icon: Award,
-    //     },
-    //   ],
-    // },
+    {
+      title: "Certificates",
+      icon: Award,
+      key: "certificates",
+      subItems: [
+        {
+          title: "Requests",
+          href: "/dashboard/admin/certificates/requests",
+          icon: List,
+        },
+        {
+          title: "All Certificates",
+          href: "/dashboard/admin/certificates",
+          icon: Award,
+        },
+      ],
+    },
     // {
     //   title: "Website Content",
     //   icon: Globe,
