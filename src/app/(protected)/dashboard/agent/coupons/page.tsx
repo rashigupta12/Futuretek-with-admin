@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format } from "date-fns";
 import { AlertCircle, Calendar as CalendarIcon, Copy, Filter, Plus, Search, X } from "lucide-react";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { useDebouncedCallback } from "use-debounce";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -64,11 +64,18 @@ export default function MyCouponsPage() {
   const [creatingCoupon, setCreatingCoupon] = useState(false);
   const [maxUsageError, setMaxUsageError] = useState("");
 
-  // SWR for coupons
+  // Get the API URL with current filters
+  const couponsApiUrl = `/api/jyotishi/coupons?page=${page}&limit=${limit}&status=${statusFilter}`;
+
+  // SWR for coupons with enhanced configuration
   const { data: couponsData, isLoading, mutate } = useSWR(
-    `/api/jyotishi/coupons?page=${page}&limit=${limit}&status=${statusFilter}`,
+    couponsApiUrl,
     fetcher,
-    { revalidateOnFocus: false }
+    { 
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000 // Reduce deduping interval for faster updates
+    }
   );
 
   // SWR for coupon types (cached)
@@ -170,102 +177,107 @@ export default function MyCouponsPage() {
   }, [selectedType, discountValue, debouncedPreview]);
 
   const handleCreateCoupon = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!selectedType || !discountValue || !validFrom || !validUntil) return;
+    e.preventDefault();
+    if (!selectedType || !discountValue || !validFrom || !validUntil) return;
 
-  // Validate max usage
-  if (maxUsageCount && Number(maxUsageCount) < 1) {
-    setMaxUsageError("Max usage must be at least 1");
-    return;
-  }
-
-  const selectedTypeObj = types.find((t) => t.id === selectedType);
-  if (selectedTypeObj?.maxDiscountLimit) {
-    const max = Number(selectedTypeObj.maxDiscountLimit);
-    const entered = Number(discountValue);
-    if (entered > max) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Discount Limit Exceeded',
-        text: `Maximum allowed discount: ${max}${selectedTypeObj.discountType === "PERCENTAGE" ? "%" : "₹"}`,
-        confirmButtonColor: '#3085d6',
-      });
+    // Validate max usage
+    if (maxUsageCount && Number(maxUsageCount) < 1) {
+      setMaxUsageError("Max usage must be at least 1");
       return;
     }
-  }
 
-  setCreatingCoupon(true);
-  try {
-    const res = await fetch("/api/jyotishi/coupons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        couponTypeId: selectedType,
-        discountValue: Number(discountValue),
-        maxUsageCount: maxUsageCount ? Number(maxUsageCount) : null,
-        validFrom: validFrom.toISOString(),
-        validUntil: validUntil.toISOString(),
-      }),
-    });
+    const selectedTypeObj = types.find((t) => t.id === selectedType);
+    if (selectedTypeObj?.maxDiscountLimit) {
+      const max = Number(selectedTypeObj.maxDiscountLimit);
+      const entered = Number(discountValue);
+      if (entered > max) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Discount Limit Exceeded',
+          text: `Maximum allowed discount: ${max}${selectedTypeObj.discountType === "PERCENTAGE" ? "%" : "₹"}`,
+          confirmButtonColor: '#3085d6',
+        });
+        return;
+      }
+    }
 
-    if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Coupon Created!',
-        text: 'Your coupon has been created successfully',
-        timer: 3000,
-        showConfirmButton: false
+    setCreatingCoupon(true);
+    try {
+      const res = await fetch("/api/jyotishi/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          couponTypeId: selectedType,
+          discountValue: Number(discountValue),
+          maxUsageCount: maxUsageCount ? Number(maxUsageCount) : null,
+          validFrom: validFrom.toISOString(),
+          validUntil: validUntil.toISOString(),
+        }),
       });
-      
-      setShowSidebar(false);
-      mutate(); // Refresh list
-      // Reset form
-      setSelectedType("");
-      setDiscountValue("");
-      setMaxUsageCount("");
-      setValidFrom(undefined);
-      setValidUntil(undefined);
-      setPreviewCode("");
-      setMaxUsageError("");
-    } else {
-      const err = await res.json();
+
+      if (res.ok) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Coupon Created!',
+          text: 'Your coupon has been created successfully',
+          timer: 3000,
+          showConfirmButton: false
+        });
+        
+        setShowSidebar(false);
+        
+        // Enhanced revalidation - multiple approaches
+        await mutate(); // Revalidate current data
+        await globalMutate(couponsApiUrl); // Force re-fetch
+        await globalMutate(/^\/api\/jyotishi\/coupons/); // Revalidate all coupon-related endpoints
+        
+        // Reset form
+        setSelectedType("");
+        setDiscountValue("");
+        setMaxUsageCount("");
+        setValidFrom(undefined);
+        setValidUntil(undefined);
+        setPreviewCode("");
+        setMaxUsageError("");
+      } else {
+        const err = await res.json();
+        Swal.fire({
+          icon: 'error',
+          title: 'Creation Failed',
+          text: err.error || 'Failed to create coupon',
+          confirmButtonColor: '#d33',
+        });
+      }
+    } catch {
       Swal.fire({
         icon: 'error',
-        title: 'Creation Failed',
-        text: err.error || 'Failed to create coupon',
+        title: 'Network Error',
+        text: 'Failed to create coupon. Please try again.',
+        confirmButtonColor: '#d33',
+      });
+    } finally {
+      setCreatingCoupon(false);
+    }
+  };
+
+  const copyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Copied!',
+        text: `Coupon code copied to clipboard`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Copy Failed',
+        text: 'Failed to copy coupon code',
         confirmButtonColor: '#d33',
       });
     }
-  } catch {
-    Swal.fire({
-      icon: 'error',
-      title: 'Network Error',
-      text: 'Failed to create coupon. Please try again.',
-      confirmButtonColor: '#d33',
-    });
-  } finally {
-    setCreatingCoupon(false);
-  }
-};
-
-
-
-  // const handleDelete = async (id: string) => {
-  //   if (!confirm("Delete this coupon?")) return;
-  //   try {
-  //     const res = await fetch(`/api/jyotishi/coupons/${id}`, { method: "DELETE" });
-  //     if (res.ok) {
-  //       mutate();
-  //       alert("Deleted");
-  //     }
-  //   } catch {
-  //     alert("Error");
-  //   }
-  // };
-
-  const copyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    alert(`Copied: ${code}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -502,7 +514,7 @@ export default function MyCouponsPage() {
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4">
                       <div className="flex justify-between mb-2">
                         <span className="text-sm font-medium">Preview Code</span>
-                        <Button type="button" size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(previewCode); alert("Copied!"); }}>
+                        <Button type="button" size="sm" variant="outline" onClick={() => copyCode(previewCode)}>
                           <Copy className="h-3 w-3 mr-1" /> Copy
                         </Button>
                       </div>

@@ -46,7 +46,7 @@ export default function EditCouponTypePage() {
     }
     
     const data = await res.json();
-    setCouponType(data);
+    setCouponType(data.couponType);
   } catch (error) {
     console.error("Failed to fetch coupon type:", error);
     Swal.fire({

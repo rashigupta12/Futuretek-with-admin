@@ -129,7 +129,7 @@ export default function AdminLayout({
       ],
     },
     {
-      title: "Coupons Types",
+      title: "Coupons",
       icon: Tag,
       key: "coupons",
       subItems: [
@@ -143,7 +143,11 @@ export default function AdminLayout({
           href: "/dashboard/admin/coupons-types/add",
           icon: Plus,
         },
-
+{
+          title: "All Coupons",
+          href: "/dashboard/admin/coupons",
+          icon: List,
+        },
          {
           title: "Add Coupon",
           href: "/dashboard/admin/coupons/add",

@@ -2,8 +2,8 @@
 // app/(protected)/dashboard/agent/assign-coupons/page.tsx
 "use client";
 
-import { AlertCircle, Book, Calendar, Clock, Search, Tag, Users, X, Plus, ShieldAlert } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { AlertCircle, Book, Calendar, Clock, Search, Tag, Users, X, Plus, ShieldAlert, RefreshCw } from "lucide-react";
+import React, { useEffect, useState, useCallback } from "react";
 import Swal from "sweetalert2"
 
 interface Student {
@@ -57,13 +57,28 @@ export default function AssignCouponsPage() {
   const [selectedCoupon, setSelectedCoupon] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [enrollmentChecks, setEnrollmentChecks] = useState<EnrollmentCheck[]>([]);
-  const [showSidebar, setShowSidebar] = useState(false);
   console.log(enrollmentChecks)
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch all data
+  const fetchAllData = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      await Promise.all([
+        fetchData(),
+        fetchRecentAssignments()
+      ]);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchData();
-    fetchRecentAssignments();
-  }, []);
+    fetchAllData();
+  }, [fetchAllData]);
 
   useEffect(() => {
     if (selectedCourse && students.length > 0) {
@@ -73,21 +88,23 @@ export default function AssignCouponsPage() {
 
   const fetchData = async () => {
     try {
-      const studentsRes = await fetch("/api/jyotishi/students");
+      const [studentsRes, coursesRes, couponsRes] = await Promise.all([
+        fetch("/api/jyotishi/students"),
+        fetch("/api/courses"),
+        fetch("/api/jyotishi/coupons")
+      ]);
+
+      // Process students
       const studentsData = await studentsRes.json();
-      
       const transformedStudents: Student[] = studentsData.students?.map((student: any) => ({
         id: student.studentId,
         name: student.studentName || "Unknown Student",
         email: student.studentEmail || "No email"
       })) || [];
-      
       setStudents(transformedStudents);
 
-      const coursesRes = await fetch("/api/courses");
+      // Process courses
       const coursesData = await coursesRes.json();
-      
-      let transformedCourses: Course[] = [];
       const courseArray = Array.isArray(coursesData) ? coursesData : coursesData.courses || [];
       
       const courseDetailsPromises = courseArray.map(async (course: any) => {
@@ -119,12 +136,11 @@ export default function AssignCouponsPage() {
         }
       });
       
-      transformedCourses = await Promise.all(courseDetailsPromises);
+      const transformedCourses = await Promise.all(courseDetailsPromises);
       setCourses(transformedCourses);
 
-      const couponsRes = await fetch("/api/jyotishi/coupons");
+      // Process coupons
       const couponsData = await couponsRes.json();
-      
       const transformedCoupons: Coupon[] = couponsData.coupons?.map((coupon: any) => ({
         id: coupon.id,
         code: coupon.code,
@@ -132,23 +148,34 @@ export default function AssignCouponsPage() {
         discountType: coupon.discountType,
         validUntil: coupon.validUntil
       })) || [];
-      
       setCoupons(transformedCoupons);
+
     } catch (error) {
       console.error("Error fetching data:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Data Load Failed',
+        text: 'Failed to load required data',
+        confirmButtonColor: '#d33',
+      });
     }
   };
 
   const fetchRecentAssignments = async () => {
     try {
+      console.log('Fetching recent assignments...');
       const response = await fetch("/api/jyotishi/recent-assignments");
       const data = await response.json();
+      console.log('Recent assignments received:', data.assignments);
       
       if (data.assignments) {
         setRecentAssignments(data.assignments);
+      } else {
+        setRecentAssignments([]);
       }
     } catch (error) {
       console.error("Error fetching recent assignments:", error);
+      setRecentAssignments([]);
     }
   };
 
@@ -175,93 +202,106 @@ export default function AssignCouponsPage() {
   };
 
   const handleAssignCoupon = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (!selectedStudent || !selectedCourse || !selectedCoupon) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Information',
-      text: 'Please select all fields',
-      confirmButtonColor: '#3085d6',
-    });
-    return;
-  }
-
-  const selectedCourseData = courses.find(c => c.id === selectedCourse);
-  if (selectedCourseData?.hasAdminDiscount) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Admin Discount Applied',
-      text: 'Cannot assign coupon to this course as it already has an admin discount applied.',
-      confirmButtonColor: '#3085d6',
-    });
-    return;
-  }
-
-  const selectedStudentData = students.find(s => s.id === selectedStudent);
-  if (selectedStudentData?.isEnrolled) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Student Already Enrolled',
-      text: 'This student is already enrolled in the selected course. Cannot assign coupon.',
-      confirmButtonColor: '#3085d6',
-    });
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const response = await fetch("/api/jyotishi/assign-coupon", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        studentId: selectedStudent,
-        courseId: selectedCourse,
-        couponId: selectedCoupon,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Coupon assigned successfully!',
-        timer: 2000,
-        showConfirmButton: false
+    e.preventDefault();
+    
+    if (!selectedStudent || !selectedCourse || !selectedCoupon) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Information',
+        text: 'Please select all fields',
+        confirmButtonColor: '#3085d6',
       });
-      
-      setSelectedStudent("");
-      setSelectedCourse("");
-      setSelectedCoupon("");
-      setSearchTerm("");
-      setEnrollmentChecks([]);
-      setShowSidebar(false);
-      
-      await fetchRecentAssignments();
-    } else {
+      return;
+    }
+
+    const selectedCourseData = courses.find(c => c.id === selectedCourse);
+    if (selectedCourseData?.hasAdminDiscount) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Admin Discount Applied',
+        text: 'Cannot assign coupon to this course as it already has an admin discount applied.',
+        confirmButtonColor: '#3085d6',
+      });
+      return;
+    }
+
+    const selectedStudentData = students.find(s => s.id === selectedStudent);
+    if (selectedStudentData?.isEnrolled) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Student Already Enrolled',
+        text: 'This student is already enrolled in the selected course. Cannot assign coupon.',
+        confirmButtonColor: '#3085d6',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/jyotishi/assign-coupon", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          studentId: selectedStudent,
+          courseId: selectedCourse,
+          couponId: selectedCoupon,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Show success message
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Coupon assigned successfully!',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        
+        // Reset form first
+        setSelectedStudent("");
+        setSelectedCourse("");
+        setSelectedCoupon("");
+        setSearchTerm("");
+        setEnrollmentChecks([]);
+        setShowSidebar(false);
+        
+        // Force complete data refresh with a small delay to ensure API has processed
+        setTimeout(async () => {
+          await fetchAllData();
+        }, 500);
+        
+      } else {
+        throw new Error(result.error || 'Failed to assign coupon');
+      }
+    } catch (error) {
+      console.error("Error assigning coupon:", error);
       Swal.fire({
         icon: 'error',
-        title: 'Error',
-        text: result.error || 'Failed to assign coupon',
+        title: 'Assignment Failed',
+        text: error instanceof Error ? error.message : 'Failed to assign coupon',
         confirmButtonColor: '#d33',
       });
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error assigning coupon:", error);
+  };
+
+  // Manual refresh function
+  const handleManualRefresh = async () => {
+    await fetchAllData();
     Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Failed to assign coupon',
-      confirmButtonColor: '#d33',
+      icon: 'success',
+      title: 'Refreshed!',
+      text: 'Data has been refreshed',
+      timer: 1500,
+      showConfirmButton: false
     });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const filteredStudents = students.filter(student =>
     (student.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -296,20 +336,30 @@ export default function AssignCouponsPage() {
           <h1 className="text-3xl font-bold text-blue-700">Assign Coupons to Students</h1>
           <p className="text-gray-600 mt-1">Manage coupon assignments for your students</p>
         </div>
-        <button
-          onClick={() => setShowSidebar(true)}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm"
-        >
-          <Plus className="h-4 w-4" />
-          Add Coupon to Student
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-sm disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button
+            onClick={() => setShowSidebar(true)}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all duration-200 shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Add Coupon to Student
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Assignments - Main Content */}
         <div className="lg:col-span-4">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
                 <h2 className="text-lg font-semibold text-gray-900">Recent Assignments</h2>
@@ -317,9 +367,17 @@ export default function AssignCouponsPage() {
                   {recentAssignments.length}
                 </span>
               </div>
+              <div className="text-sm text-gray-500">
+                Last updated: {new Date().toLocaleTimeString()}
+              </div>
             </div>
             
-            {recentAssignments.length === 0 ? (
+            {refreshing ? (
+              <div className="text-center py-12">
+                <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+                <p className="text-gray-600">Refreshing data...</p>
+              </div>
+            ) : recentAssignments.length === 0 ? (
               <div className="text-center text-gray-500 py-12">
                 <Tag className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                 <p className="text-gray-600">No recent assignments</p>
@@ -405,44 +463,6 @@ export default function AssignCouponsPage() {
             )}
           </div>
         </div>
-
-        {/* Quick Stats Sidebar */}
-        {/* <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Overview</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total Students</span>
-                <span className="font-semibold text-gray-900">{students.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Available Courses</span>
-                <span className="font-semibold text-blue-600">{courses.filter(c => !c.hasAdminDiscount).length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Available Coupons</span>
-                <span className="font-semibold text-amber-600">{coupons.filter(c => new Date(c.validUntil) > new Date()).length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Recent Assignments</span>
-                <span className="font-semibold text-blue-600">{recentAssignments.length}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-2">Need Help?</h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Assign coupons to students who haven&apos;t enrolled in courses yet.
-            </p>
-            <button
-              onClick={() => setShowSidebar(true)}
-              className="w-full bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
-            >
-              Assign Coupon
-            </button>
-          </div>
-        </div> */}
       </div>
 
       {/* Assignment Sidebar */}

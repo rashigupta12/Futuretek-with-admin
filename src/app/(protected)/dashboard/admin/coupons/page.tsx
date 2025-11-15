@@ -1,24 +1,25 @@
+/*eslint-disable @typescript-eslint/no-unused-vars */
 // app/dashboard/admin/coupons/page.tsx
 "use client";
 
-import Swal from 'sweetalert2';
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Edit,
-  Trash2,
-  Tag,
-  Filter,
-  Search,
-  Plus,
-  Copy,
-  Eye,
-  Users,
   Calendar,
-  Percent,
+  Copy,
+  Filter,
   IndianRupee,
+  Percent,
+  Plus,
+  Power,
+  PowerOff,
+  Search,
+  Tag,
+  Trash2,
+  Users
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Swal from 'sweetalert2';
 
 interface Coupon {
   id: string;
@@ -47,6 +48,7 @@ export default function AllCouponsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null);
 
   // Fetch coupons on component mount
   useEffect(() => {
@@ -63,110 +65,148 @@ export default function AllCouponsPage() {
         setCoupons(data.coupons || []);
       } else {
         console.error("Failed to fetch coupons");
+        await Swal.fire({
+          icon: 'error',
+          title: 'Load Failed',
+          text: 'Failed to load coupons',
+          confirmButtonColor: '#d33',
+        });
       }
     } catch (error) {
       console.error("Error fetching coupons:", error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Load Failed',
+        text: 'Failed to load coupons',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-
-const handleDeleteCoupon = async (couponId: string) => {
-  const result = await Swal.fire({
-    title: 'Are you sure?',
-    text: "You want to delete this coupon? This action cannot be undone.",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Yes, delete it!',
-    cancelButtonText: 'Cancel'
-  });
-
-  if (!result.isConfirmed) return;
-
-  try {
-    setDeleteLoading(couponId);
-    const response = await fetch(`/api/admin/coupons/${couponId}`, {
-      method: "DELETE",
+  const handleDeleteCoupon = async (couponId: string) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You want to delete this coupon? This action cannot be undone.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
     });
 
-    if (response.ok) {
-      setCoupons(coupons.filter(coupon => coupon.id !== couponId));
-      await Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Coupon deleted successfully',
+    if (!result.isConfirmed) return;
+
+    try {
+      setDeleteLoading(couponId);
+      const response = await fetch(`/api/admin/coupons/${couponId}`, {
+        method: "DELETE",
       });
-    } else {
-      const data = await response.json();
-      Swal.fire({
+
+      if (response.ok) {
+        setCoupons(coupons.filter(coupon => coupon.id !== couponId));
+        await Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Coupon deleted successfully',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete coupon');
+      }
+    } catch (error) {
+      console.error("Error deleting coupon:", error);
+      await Swal.fire({
         icon: 'error',
-        title: 'Error!',
-        text: data.error || 'Failed to delete coupon',
+        title: 'Delete Failed',
+        text: error instanceof Error ? error.message : 'Failed to delete coupon',
+        confirmButtonColor: '#d33',
       });
+    } finally {
+      setDeleteLoading(null);
     }
-  } catch (error) {
-    console.error("Error deleting coupon:", error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error!',
-      text: 'Failed to delete coupon',
-    });
-  } finally {
-    setDeleteLoading(null);
-  }
-};
+  };
 
-
-
-const handleToggleStatus = async (couponId: string, currentStatus: boolean) => {
-  try {
-    const response = await fetch(`/api/admin/coupons/${couponId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        isActive: !currentStatus,
-      }),
+  const handleToggleStatus = async (couponId: string, currentStatus: boolean) => {
+    const action = currentStatus ? 'deactivate' : 'activate';
+    const result = await Swal.fire({
+      title: `Are you sure?`,
+      text: `You want to ${action} this coupon?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: currentStatus ? '#f59e0b' : '#10b981',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Yes, ${action} it!`,
+      cancelButtonText: 'Cancel'
     });
 
-    if (response.ok) {
-      setCoupons(coupons.map(coupon =>
-        coupon.id === couponId
-          ? { ...coupon, isActive: !currentStatus }
-          : coupon
-      ));
+    if (!result.isConfirmed) return;
+
+    try {
+      setToggleLoading(couponId);
+      const response = await fetch(`/api/admin/coupons/${couponId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          isActive: !currentStatus,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCoupons(coupons.map(coupon =>
+          coupon.id === couponId
+            ? { ...coupon, isActive: !currentStatus }
+            : coupon
+        ));
+        await Swal.fire({
+          icon: 'success',
+          title: 'Status Updated!',
+          text: data.message || `Coupon ${action}d successfully`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || `Failed to ${action} coupon`);
+      }
+    } catch (error) {
+      console.error("Error updating coupon status:", error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: error instanceof Error ? error.message : `Failed to ${action} coupon`,
+        confirmButtonColor: '#d33',
+      });
+    } finally {
+      setToggleLoading(null);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
       await Swal.fire({
         icon: 'success',
-        title: 'Status Updated!',
-        text: `Coupon ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+        title: 'Copied!',
+        text: 'Coupon code copied to clipboard',
         timer: 1500,
         showConfirmButton: false
       });
-    } else {
-      const data = await response.json();
-      Swal.fire({
+    } catch (error) {
+      await Swal.fire({
         icon: 'error',
-        title: 'Error!',
-        text: data.error || 'Failed to update coupon status',
+        title: 'Copy Failed',
+        text: 'Failed to copy coupon code',
+        confirmButtonColor: '#d33',
       });
     }
-  } catch (error) {
-    console.error("Error updating coupon status:", error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error!',
-      text: 'Failed to update coupon status',
-    });
-  }
-};
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("Coupon code copied to clipboard!");
   };
 
   const getStatusBadge = (isActive: boolean, validUntil: string) => {
@@ -255,109 +295,82 @@ const handleToggleStatus = async (couponId: string, currentStatus: boolean) => {
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg border p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Tag className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Coupons</p>
-              <p className="text-2xl font-bold text-gray-900">{coupons.length}</p>
-            </div>
-          </div>
-        </div>
+     <div className="flex flex-col gap-6">
 
-        <div className="bg-white rounded-lg border p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Users className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Active Coupons</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {coupons.filter(c => c.isActive && new Date(c.validUntil) > new Date()).length}
-              </p>
-            </div>
-          </div>
-        </div>
+  {/* Row: Stats Cards + Filters */}
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
 
-        <div className="bg-white rounded-lg border p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Percent className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">General Coupons</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {coupons.filter(c => c.couponScope === "GENERAL").length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg border p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Users className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Personal Coupons</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {coupons.filter(c => c.couponScope === "PERSONAL").length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters and Search */}
+    {/* Stats Cards */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
       <div className="bg-white rounded-lg border p-6">
-        <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-          <div className="flex flex-col md:flex-row gap-4 md:items-center">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search coupons..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full md:w-64"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="expired">Expired</option>
-            </select>
-
-            {/* Scope Filter */}
-            <select
-              value={scopeFilter}
-              onChange={(e) => setScopeFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Scopes</option>
-              <option value="GENERAL">General</option>
-              <option value="PERSONAL">Personal</option>
-            </select>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Tag className="h-6 w-6 text-blue-600" />
           </div>
-
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Filter className="h-4 w-4" />
-            <span>{filteredCoupons.length} coupons found</span>
+          <div>
+            <p className="text-sm text-gray-600">Total Coupons</p>
+            <p className="text-2xl font-bold">{coupons.length}</p>
           </div>
         </div>
       </div>
+
+      <div className="bg-white rounded-lg border p-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-100 rounded-lg">
+            <Users className="h-6 w-6 text-green-600" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Active Coupons</p>
+            <p className="text-2xl font-bold">
+              {coupons.filter(c => c.isActive && new Date(c.validUntil) > new Date()).length}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Add other stat cards here (if any) */}
+    </div>
+
+    {/* Filters (Right Side) */}
+    <div className="bg-white rounded-lg border p-6 md:w-auto">
+      <div className="flex items-center gap-4">
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search coupons..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-48 md:w-64"
+          />
+        </div>
+
+        {/* Status Filter */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="expired">Expired</option>
+        </select>
+
+        {/* Count */}
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Filter className="h-4 w-4" />
+          <span>{filteredCoupons.length} found</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
 
       {/* Coupons Table */}
       <div className="bg-white rounded-lg border overflow-hidden">
@@ -427,7 +440,7 @@ const handleToggleStatus = async (couponId: string, currentStatus: boolean) => {
                           </div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm text-gray-600">{coupon.typeName}</span>
-                            {getScopeBadge(coupon.couponScope)}
+                            {/* {getScopeBadge(coupon.couponScope)} */}
                           </div>
                           {coupon.description && (
                             <p className="text-sm text-gray-500 line-clamp-1">
@@ -496,30 +509,37 @@ const handleToggleStatus = async (couponId: string, currentStatus: boolean) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button
+                        {/* <button
                           onClick={() => router.push(`/dashboard/admin/coupons/${coupon.id}`)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="View details"
                         >
                           <Eye className="h-4 w-4" />
-                        </button>
-                        <button
+                        </button> */}
+                        {/* <button
                           onClick={() => router.push(`/dashboard/admin/coupons/${coupon.id}/edit`)}
                           className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                           title="Edit coupon"
                         >
                           <Edit className="h-4 w-4" />
-                        </button>
+                        </button> */}
                         <button
                           onClick={() => handleToggleStatus(coupon.id, coupon.isActive)}
+                          disabled={toggleLoading === coupon.id}
                           className={`p-2 rounded-lg transition-colors ${
                             coupon.isActive
                               ? "text-orange-600 hover:bg-orange-50"
                               : "text-green-600 hover:bg-green-50"
-                          }`}
+                          } disabled:opacity-50`}
                           title={coupon.isActive ? "Deactivate" : "Activate"}
                         >
-                          {coupon.isActive ? "Deactivate" : "Activate"}
+                          {toggleLoading === coupon.id ? (
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          ) : coupon.isActive ? (
+                            <PowerOff className="h-4 w-4" />
+                          ) : (
+                            <Power className="h-4 w-4" />
+                          )}
                         </button>
                         <button
                           onClick={() => handleDeleteCoupon(coupon.id)}

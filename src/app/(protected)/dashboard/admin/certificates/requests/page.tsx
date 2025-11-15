@@ -7,6 +7,7 @@ import { Award, Clock, CheckCircle, XCircle, Search, User, Mail, BookOpen } from
 import CertificateTemplate from "@/components/certificate-template";
 import { generateCertificatePDF } from "@/hooks/generate-certificate-pdf";
 import { useCurrentUser } from "@/hooks/auth";
+import Swal from "sweetalert2";
 
 interface CertificateRequest {
   id: string;
@@ -55,12 +56,31 @@ export default function CertificateRequestsPage() {
       setRequests(data.requests || []);
     } catch (error) {
       console.error("Error fetching requests:", error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Load Failed',
+        text: 'Failed to load certificate requests',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = async (requestId: string, requestData: CertificateRequest) => {
+    const result = await Swal.fire({
+      title: 'Approve Certificate?',
+      text: `Approve certificate request for ${requestData.user.name} - ${requestData.enrollment.course.title}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Approve!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       setProcessingRequest(requestId);
       
@@ -96,7 +116,13 @@ export default function CertificateRequestsPage() {
       if (response.ok) {
         console.log('Certificate approved successfully');
         await fetchRequests();
-        alert('Certificate request approved successfully!');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Approved!',
+          text: 'Certificate request approved successfully!',
+          timer: 3000,
+          showConfirmButton: false
+        });
       } else {
         const errorData = await response.json();
         console.error('Approval failed:', errorData);
@@ -104,7 +130,12 @@ export default function CertificateRequestsPage() {
       }
     } catch (error) {
       console.error('Error approving certificate:', error);
-      alert(`Failed to approve certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Approval Failed',
+        text: error instanceof Error ? error.message : 'Failed to approve certificate',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setProcessingRequest(null);
     }
@@ -116,6 +147,16 @@ export default function CertificateRequestsPage() {
     
     try {
       setProcessingRequest(requestData.id);
+      
+      // Show loading alert
+      Swal.fire({
+        title: 'Generating Certificate...',
+        text: 'Please wait while we prepare your certificate',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
       
       // Fetch the stored certificate data from the database
       console.log('Fetching certificate data for enrollment:', requestData.enrollmentId);
@@ -164,6 +205,9 @@ export default function CertificateRequestsPage() {
 
       console.log('Starting PDF generation...');
 
+      // Close the loading alert
+      Swal.close();
+
       // Generate and download PDF
       await generateCertificatePDF(
         certificateRef.current, 
@@ -173,13 +217,29 @@ export default function CertificateRequestsPage() {
       console.log('=== PDF GENERATED SUCCESSFULLY ===');
       
       setCurrentCertificateData(null);
+      
+      await Swal.fire({
+        icon: 'success',
+        title: 'Download Complete!',
+        text: 'Certificate downloaded successfully!',
+        timer: 3000,
+        showConfirmButton: false
+      });
     } catch (error) {
       console.error('=== ERROR IN CERTIFICATE DOWNLOAD ===');
       console.error('Error object:', error);
       console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
       
-      alert(`Failed to download certificate: ${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck console for details.`);
+      // Close any open alerts first
+      Swal.close();
+      
+      await Swal.fire({
+        icon: 'error',
+        title: 'Download Failed',
+        html: `Failed to download certificate: <br/><strong>${error instanceof Error ? error.message : 'Unknown error'}</strong><br/><br/>Check console for details.`,
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setProcessingRequest(null);
       console.log('=== END CERTIFICATE DOWNLOAD ===');
@@ -187,6 +247,19 @@ export default function CertificateRequestsPage() {
   };
 
   const handleReject = async (requestId: string) => {
+    const result = await Swal.fire({
+      title: 'Reject Certificate?',
+      text: 'Are you sure you want to reject this certificate request?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Reject!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       const response = await fetch(`/api/admin/certificates/requests/${requestId}`, {
         method: "PUT",
@@ -202,11 +275,24 @@ export default function CertificateRequestsPage() {
 
       if (response.ok) {
         await fetchRequests();
-        alert('Certificate request rejected');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Rejected!',
+          text: 'Certificate request rejected successfully',
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } else {
+        throw new Error('Failed to reject request');
       }
     } catch (error) {
       console.error("Error rejecting certificate:", error);
-      alert('Failed to reject certificate request');
+      await Swal.fire({
+        icon: 'error',
+        title: 'Rejection Failed',
+        text: 'Failed to reject certificate request',
+        confirmButtonColor: '#d33',
+      });
     }
   };
 

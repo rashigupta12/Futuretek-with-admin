@@ -26,6 +26,7 @@ import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import CertificateTemplate from "@/components/certificate-template";
 import { generateCertificatePDF } from "@/hooks/generate-certificate-pdf";
+import Swal from "sweetalert2";
 
 interface RawEnrollment {
   id: string;
@@ -42,6 +43,7 @@ interface RawEnrollment {
   courseInstructor?: string;
   courseStartDate?: string;
   courseEndDate?: string;
+  progress?: number; // Added real progress field
 }
 
 export default function MyCoursesPage() {
@@ -110,10 +112,21 @@ export default function MyCoursesPage() {
           : enrollment
       ));
 
-      alert('Certificate request submitted successfully!');
+      await Swal.fire({
+        icon: 'success',
+        title: 'Request Submitted!',
+        text: 'Certificate request submitted successfully!',
+        timer: 3000,
+        showConfirmButton: false
+      });
     } catch (err) {
       console.error('Error requesting certificate:', err);
-      alert(err instanceof Error ? err.message : 'Failed to request certificate');
+      await Swal.fire({
+        icon: 'error',
+        title: 'Request Failed',
+        text: err instanceof Error ? err.message : 'Failed to request certificate',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setRequestingCertificate(null);
     }
@@ -150,9 +163,22 @@ export default function MyCoursesPage() {
       );
       
       setCurrentCertificateData(null);
+      
+      await Swal.fire({
+        icon: 'success',
+        title: 'Download Complete!',
+        text: 'Certificate downloaded successfully!',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (error) {
       console.error('Error downloading certificate:', error);
-      alert('Failed to download certificate. Please try again.');
+      await Swal.fire({
+        icon: 'error',
+        title: 'Download Failed',
+        text: 'Failed to download certificate. Please try again.',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setDownloadingCertificate(null);
     }
@@ -176,14 +202,29 @@ export default function MyCoursesPage() {
         ));
         
         if (data.certificateIssued) {
-          alert('Your certificate is ready to download!');
+          await Swal.fire({
+            icon: 'success',
+            title: 'Certificate Ready!',
+            text: 'Your certificate is ready to download!',
+            confirmButtonColor: '#3085d6',
+          });
         } else {
-          alert('Certificate is still being processed. Please check back later.');
+          await Swal.fire({
+            icon: 'info',
+            title: 'Still Processing',
+            text: 'Certificate is still being processed. Please check back later.',
+            confirmButtonColor: '#3085d6',
+          });
         }
       }
     } catch (err) {
       console.error('Error checking certificate status:', err);
-      alert('Failed to check certificate status');
+      await Swal.fire({
+        icon: 'error',
+        title: 'Check Failed',
+        text: 'Failed to check certificate status',
+        confirmButtonColor: '#d33',
+      });
     }
   };
 
@@ -237,10 +278,15 @@ export default function MyCoursesPage() {
     return null;
   };
 
-  const fakeProgress = (status: string) => {
-    if (status === "COMPLETED") return 100;
-    if (status === "PENDING") return 0;
-    return Math.floor(Math.random() * 70) + 15;
+  const getProgress = (enrollment: RawEnrollment) => {
+    // Use real progress if available, otherwise fallback based on status
+    if (enrollment.progress !== undefined) {
+      return enrollment.progress;
+    }
+    
+    if (enrollment.status === "COMPLETED") return 100;
+    if (enrollment.status === "PENDING") return 0;
+    return 0; // Default for ACTIVE status when no progress data
   };
 
   const formatDate = (iso: string) =>
@@ -310,7 +356,7 @@ export default function MyCoursesPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="">
       {/* Hidden certificate template for PDF generation */}
       <div className="fixed -left-[9999px] -top-[9999px]">
         <div ref={certificateRef}>
@@ -335,7 +381,7 @@ export default function MyCoursesPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {enrollments.map((enrollment) => {
           const isCompleted = enrollment.status === "COMPLETED";
-          const progress = fakeProgress(enrollment.status);
+          const progress = getProgress(enrollment);
           const hasCertificate = enrollment.certificateIssued;
           const canRequest = canRequestCertificate(enrollment);
 
