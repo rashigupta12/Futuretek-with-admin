@@ -1,3 +1,4 @@
+// app/dashboard/user/payments/page.tsx (Updated with invoice download)
 "use client";
 
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchPayments() {
@@ -53,6 +55,34 @@ export default function PaymentsPage() {
 
     fetchPayments();
   }, [userId]);
+
+  const handleDownloadInvoice = async (invoiceNumber: string) => {
+    setDownloadingInvoice(invoiceNumber);
+    try {
+      const response = await fetch("/api/invoice/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceNumber }),
+      });
+
+      if (!response.ok) throw new Error("Failed to download invoice");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Invoice-${invoiceNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download error:", error);
+      alert("Failed to download invoice. Please try again.");
+    } finally {
+      setDownloadingInvoice(null);
+    }
+  };
 
   const getStatusBadge = (status: Payment["status"]) => {
     const config = {
@@ -151,51 +181,47 @@ export default function PaymentsPage() {
         </p>
       </div>
 
-      {/* Summary Stats - Improved Styling */}
-     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-  {/* Total Payments */}
-  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5 text-blue-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
-    <div className="text-center">
-      <p className="text-3xl font-bold">{payments.length}</p>
-      <p className="text-sm font-medium text-blue-500 mt-1">Total Payments</p>
-    </div>
-  </div>
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5 text-blue-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
+          <div className="text-center">
+            <p className="text-3xl font-bold">{payments.length}</p>
+            <p className="text-sm font-medium text-blue-500 mt-1">Total Payments</p>
+          </div>
+        </div>
 
-  {/* Completed */}
-  <div className="bg-gradient-to-br from-amber-50 to-yellow-100 border border-yellow-200 rounded-2xl p-5 text-yellow-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
-    <div className="text-center">
-      <p className="text-3xl font-bold">
-        {payments.filter(p => p.status === "COMPLETED").length}
-      </p>
-      <p className="text-sm font-medium text-yellow-600 mt-1">Completed</p>
-    </div>
-  </div>
+        <div className="bg-gradient-to-br from-amber-50 to-yellow-100 border border-yellow-200 rounded-2xl p-5 text-yellow-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
+          <div className="text-center">
+            <p className="text-3xl font-bold">
+              {payments.filter(p => p.status === "COMPLETED").length}
+            </p>
+            <p className="text-sm font-medium text-yellow-600 mt-1">Completed</p>
+          </div>
+        </div>
 
-  {/* Pending */}
-  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5 text-blue-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
-    <div className="text-center">
-      <p className="text-3xl font-bold">
-        {payments.filter(p => p.status === "PENDING").length}
-      </p>
-      <p className="text-sm font-medium text-blue-600 mt-1">Failed</p>
-    </div>
-  </div>
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5 text-blue-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
+          <div className="text-center">
+            <p className="text-3xl font-bold">
+              {payments.filter(p => p.status === "PENDING").length}
+            </p>
+            <p className="text-sm font-medium text-blue-600 mt-1">Failed</p>
+          </div>
+        </div>
 
-  {/* Total Spent */}
-  <div className="bg-gradient-to-br from-yellow-50 to-amber-100 border border-amber-200 rounded-2xl p-5 text-amber-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
-    <div className="text-center">
-      <p className="text-3xl font-bold">
-        ₹{payments
-          .filter(p => p.status === "COMPLETED")
-          .reduce((sum, p) => sum + Number(p.finalAmount), 0)
-          .toLocaleString("en-IN")}
-      </p>
-      <p className="text-sm font-medium text-amber-600 mt-1">Total Spent</p>
-    </div>
-  </div>
-</div>
+        <div className="bg-gradient-to-br from-yellow-50 to-amber-100 border border-amber-200 rounded-2xl p-5 text-amber-800 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
+          <div className="text-center">
+            <p className="text-3xl font-bold">
+              ₹{payments
+                .filter(p => p.status === "COMPLETED")
+                .reduce((sum, p) => sum + Number(p.finalAmount), 0)
+                .toLocaleString("en-IN")}
+            </p>
+            <p className="text-sm font-medium text-amber-600 mt-1">Total Spent</p>
+          </div>
+        </div>
+      </div>
 
-
+      {/* Payment Cards */}
       <div className="space-y-4">
         {payments.map((payment) => (
           <Card 
@@ -230,23 +256,30 @@ export default function PaymentsPage() {
                   <p className="text-2xl font-bold text-gray-900 flex items-center gap-1">
                     <IndianRupee className="h-5 w-5 text-amber-600" />
                     {Number(payment.finalAmount).toLocaleString("en-IN")}
-                    {/* {payment.amount !== payment.finalAmount && (
-                      <span className="text-sm text-gray-500 line-through ml-2">
-                        ₹{Number(payment.amount).toLocaleString("en-IN")}
-                      </span>
-                    )} */}
                   </p>
                 </div>
                 
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                  disabled
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Invoice
-                </Button>
+                {payment.status === "COMPLETED" && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                    onClick={() => handleDownloadInvoice(payment.invoiceNumber)}
+                    disabled={downloadingInvoice === payment.invoiceNumber}
+                  >
+                    {downloadingInvoice === payment.invoiceNumber ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Invoice
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
