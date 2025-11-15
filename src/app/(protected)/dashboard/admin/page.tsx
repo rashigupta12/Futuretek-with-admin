@@ -1,6 +1,106 @@
 // src/app/(protected)/dashboard/admin/page.tsx
-// Admin dashboard home page with blue and golden theme
+"use client";
+
+import { useEffect, useState } from "react";
+
+interface DashboardStats {
+  totalUsers: {
+    count: number;
+    growth: number;
+    newThisMonth: number;
+  };
+  activeCourses: {
+    count: number;
+    total: number;
+    newThisMonth: number;
+  };
+  revenue: {
+    total: number;
+    growth: number;
+    thisMonth: number;
+  };
+  pendingCertificates: {
+    count: number;
+  };
+  enrollments: {
+    total: number;
+    active: number;
+  };
+}
+
+interface Activity {
+  id: string;
+  action: string;
+  time: string;
+  type: "enrollment" | "certificate" | "blog" | "payment";
+  color: "blue" | "amber" | "indigo" | "emerald";
+  metadata?: {
+    userName?: string;
+    courseName?: string;
+    amount?: number;
+    blogTitle?: string;
+  };
+}
+
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        setLoading(true);
+        const response = await fetch("/api/admin/dashboard-stats");
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        } else {
+          console.error("Failed to fetch dashboard stats");
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function fetchRecentActivity() {
+      try {
+        setActivitiesLoading(true);
+        const response = await fetch("/api/admin/recent-activity");
+        if (response.ok) {
+          const data = await response.json();
+          setActivities(data);
+        } else {
+          console.error("Failed to fetch recent activity");
+        }
+      } catch (error) {
+        console.error("Failed to fetch recent activity:", error);
+      } finally {
+        setActivitiesLoading(false);
+      }
+    }
+
+    fetchDashboardData();
+    fetchRecentActivity();
+  }, []);
+
+  const formatCurrency = (amount: number) => {
+    return `₹${amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  };
+
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case "enrollment": return "📝";
+      case "certificate": return "🎓";
+      case "blog": return "✍️";
+      case "payment": return "💳";
+      default: return "📌";
+    }
+  };
+
   return (
     <>
       {/* Dashboard Overview */}
@@ -13,153 +113,195 @@ export default function AdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {[
-          {
-            title: "Total Users",
-            value: "1,234",
-            change: "+12%",
-            icon: "👥",
-            gradient: "from-blue-500 to-blue-600",
-          },
-          {
-            title: "Active Courses",
-            value: "24",
-            change: "+3",
-            icon: "📚",
-            gradient: "from-amber-500 to-amber-600",
-          },
-          {
-            title: "Total Revenue",
-            value: "₹12,345",
-            change: "-3%",
-            icon: "💰",
-            gradient: "from-blue-600 to-indigo-600",
-          },
-          {
-            title: "Pending Certificates",
-            value: "18",
-            change: null,
-            icon: "🏆",
-            gradient: "from-yellow-500 to-amber-600",
-          },
-        ].map((card) => (
-          <div
-            key={card.title}
-            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${card.gradient} flex items-center justify-center text-2xl shadow-sm`}>
-                {card.icon}
-              </div>
+        {/* Total Users */}
+        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-2xl shadow-sm">
+              👥
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">
-              {card.title}
-            </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-2">{card.value}</p>
-            {card.change !== null && (
+          </div>
+          <h3 className="text-sm font-medium text-gray-600 mb-1">Total Users</h3>
+          {loading ? (
+            <div className="space-y-2">
+              <div className="h-9 w-24 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ) : (
+            <>
+              <p className="text-3xl font-bold text-gray-900 mb-2">
+                {stats?.totalUsers.count.toLocaleString()}
+              </p>
               <div className="flex items-center">
-                <span
-                  className={`text-sm font-medium ${
-                    card.change.startsWith("+")
-                      ? "text-emerald-600"
-                      : "text-rose-600"
-                  }`}
-                >
-                  {card.change}
+                <span className={`text-sm font-medium ${
+                  stats && stats.totalUsers.growth >= 0 ? "text-emerald-600" : "text-rose-600"
+                }`}>
+                  {stats && stats.totalUsers.growth >= 0 ? "+" : ""}
+                  {stats?.totalUsers.growth.toFixed(1)}%
                 </span>
                 <span className="text-sm text-gray-500 ml-1">from last month</span>
               </div>
-            )}
+            </>
+          )}
+        </div>
+
+        {/* Active Courses */}
+        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl shadow-sm">
+              📚
+            </div>
           </div>
-        ))}
+          <h3 className="text-sm font-medium text-gray-600 mb-1">Active Courses</h3>
+          {loading ? (
+            <div className="space-y-2">
+              <div className="h-9 w-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-5 w-24 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ) : (
+            <>
+              <p className="text-3xl font-bold text-gray-900 mb-2">
+                {stats?.activeCourses.count}
+              </p>
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-emerald-600">
+                  +{stats?.activeCourses.newThisMonth}
+                </span>
+                <span className="text-sm text-gray-500 ml-1">new this month</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Total Revenue */}
+        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-2xl shadow-sm">
+              💰
+            </div>
+          </div>
+          <h3 className="text-sm font-medium text-gray-600 mb-1">Total Revenue</h3>
+          {loading ? (
+            <div className="space-y-2">
+              <div className="h-9 w-32 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-5 w-36 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ) : (
+            <>
+              <p className="text-3xl font-bold text-gray-900 mb-2">
+                {formatCurrency(stats?.revenue.total || 0)}
+              </p>
+              <div className="flex items-center">
+                <span className={`text-sm font-medium ${
+                  stats && stats.revenue.growth >= 0 ? "text-emerald-600" : "text-rose-600"
+                }`}>
+                  {stats && stats.revenue.growth >= 0 ? "+" : ""}
+                  {stats?.revenue.growth.toFixed(1)}%
+                </span>
+                <span className="text-sm text-gray-500 ml-1">from last month</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Pending Certificates */}
+        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center text-2xl shadow-sm">
+              🏆
+            </div>
+          </div>
+          <h3 className="text-sm font-medium text-gray-600 mb-1">Pending Certificates</h3>
+          {loading ? (
+            <div className="space-y-2">
+              <div className="h-9 w-16 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-5 w-28 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ) : (
+            <>
+              <p className="text-3xl font-bold text-gray-900 mb-2">
+                {stats?.pendingCertificates.count}
+              </p>
+              <div className="flex items-center">
+                <span className="text-sm text-gray-500">
+                  Awaiting approval
+                </span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Recent Activity */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Recent Activity
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
           <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
             View All
           </button>
         </div>
-        <div className="space-y-3">
-          {[
-            {
-              action: "New enrollment in KP Astrology Course",
-              time: "5 minutes ago",
-              type: "enrollment",
-              color: "blue",
-            },
-            {
-              action: "Certificate request submitted",
-              time: "1 hour ago",
-              type: "certificate",
-              color: "amber",
-            },
-            {
-              action: "New blog post published",
-              time: "2 hours ago",
-              type: "blog",
-              color: "indigo",
-            },
-            {
-              action: "Payment received - ₹4,999",
-              time: "3 hours ago",
-              type: "payment",
-              color: "emerald",
-            },
-          ].map((act, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between py-4 px-4 rounded-lg hover:bg-gray-50 transition-colors duration-200 border border-gray-100"
-            >
-              <div className="flex items-center space-x-4">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
+        
+        {activitiesLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center justify-between py-4 px-4 rounded-lg border border-gray-100">
+                <div className="flex items-center space-x-4 flex-1">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-3 w-1/4 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+                <div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+        ) : activities.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No recent activity</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {activities.map((act) => (
+              <div
+                key={act.id}
+                className="flex items-center justify-between py-4 px-4 rounded-lg hover:bg-gray-50 transition-colors duration-200 border border-gray-100"
+              >
+                <div className="flex items-center space-x-4">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      act.color === "blue"
+                        ? "bg-blue-100"
+                        : act.color === "amber"
+                        ? "bg-amber-100"
+                        : act.color === "indigo"
+                        ? "bg-indigo-100"
+                        : "bg-emerald-100"
+                    }`}
+                  >
+                    <span className="text-lg">{getIconForType(act.type)}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{act.action}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{act.time}</p>
+                  </div>
+                </div>
+                <span
+                  className={`text-xs font-medium px-3 py-1.5 rounded-full ${
                     act.color === "blue"
-                      ? "bg-blue-100"
+                      ? "bg-blue-50 text-blue-700 border border-blue-200"
                       : act.color === "amber"
-                      ? "bg-amber-100"
+                      ? "bg-amber-50 text-amber-700 border border-amber-200"
                       : act.color === "indigo"
-                      ? "bg-indigo-100"
-                      : "bg-emerald-100"
+                      ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                      : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                   }`}
                 >
-                  <span className="text-lg">
-                    {act.type === "enrollment"
-                      ? "📝"
-                      : act.type === "certificate"
-                      ? "🎓"
-                      : act.type === "blog"
-                      ? "✍️"
-                      : "💳"}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {act.action}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">{act.time}</p>
-                </div>
+                  {act.type}
+                </span>
               </div>
-              <span
-                className={`text-xs font-medium px-3 py-1.5 rounded-full ${
-                  act.color === "blue"
-                    ? "bg-blue-50 text-blue-700 border border-blue-200"
-                    : act.color === "amber"
-                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                    : act.color === "indigo"
-                    ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                }`}
-              >
-                {act.type}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
