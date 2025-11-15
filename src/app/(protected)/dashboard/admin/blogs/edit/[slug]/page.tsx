@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Swal from "sweetalert2"
 
 type Blog = {
   id: string;
@@ -73,36 +74,60 @@ export default function EditBlogPage() {
     setTags(newTags);
   };
 
-  const handleSave = async () => {
-    if (!blog) return;
+const handleSave = async () => {
+  if (!blog) return;
 
-    try {
-      setSaving(true);
-      const res = await fetch(`/api/admin/blogs/${blog.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...blog,
-          tags: tags.filter((t) => t.trim()),
-        }),
+  // Validation
+  if (!blog.title.trim() || !blog.slug.trim() || !blog.content.trim()) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Fields',
+      text: 'Please fill in all required fields (Title, Slug, and Content)',
+    });
+    return;
+  }
+
+  try {
+    setSaving(true);
+    const res = await fetch(`/api/admin/blogs/${blog.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...blog,
+        tags: tags.filter((t) => t.trim()),
+      }),
+    });
+
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Blog updated successfully!',
+        timer: 2000,
+        showConfirmButton: false
       });
-
-      if (res.ok) {
-        alert("Blog updated successfully!");
-        router.push("/dashboard/admin/blogs");
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed to update blog");
-      }
-    } catch (error) {
-      console.error("Update error:", error);
-      alert("Error updating blog");
-    } finally {
-      setSaving(false);
+      router.push("/dashboard/admin/blogs");
+    } else {
+      const err = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: err.error || 'Failed to update blog post',
+      });
     }
-  };
+  } catch (error) {
+    console.error("Update error:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Unexpected Error',
+      text: 'An error occurred while updating the blog',
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) {
     return (

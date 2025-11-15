@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Search, Edit, Trash2, Eye, Filter, MoreVertical } from "lucide-react";
+import { Plus, Search, Edit, Eye, Filter, MoreVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,22 +78,22 @@ export default function CouponTypesPage() {
   };
 
   // Delete handler
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this coupon type?")) return;
+  // const handleDelete = async (id: string) => {
+  //   if (!confirm("Are you sure you want to delete this coupon type?")) return;
 
-    try {
-      const res = await fetch(`/api/admin/coupon-types/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setCouponTypes((prev) => prev.filter((ct) => ct.id !== id));
-        alert("Coupon type deleted successfully");
-      } else {
-        alert("Failed to delete coupon type");
-      }
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert("Error deleting coupon type");
-    }
-  };
+  //   try {
+  //     const res = await fetch(`/api/admin/coupon-types/${id}`, { method: "DELETE" });
+  //     if (res.ok) {
+  //       setCouponTypes((prev) => prev.filter((ct) => ct.id !== id));
+  //       alert("Coupon type deleted successfully");
+  //     } else {
+  //       alert("Failed to delete coupon type");
+  //     }
+  //   } catch (err) {
+  //     console.error("Delete error:", err);
+  //     alert("Error deleting coupon type");
+  //   }
+  // };
 
   // Filter by search
   const filteredCouponTypes = couponTypes.filter((ct) =>
@@ -277,7 +277,7 @@ export default function CouponTypesPage() {
                                 Edit
                               </Button>
                             </Link>
-                            <Button
+                            {/* <Button
                               variant="ghost"
                               size="sm"
                               className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10 rounded-none"
@@ -285,7 +285,7 @@ export default function CouponTypesPage() {
                             >
                               <Trash2 className="h-4 w-4" />
                               Delete
-                            </Button>
+                            </Button> */}
                           </div>
                         </PopoverContent>
                       </Popover>

@@ -7,6 +7,7 @@ import {
   FormField,
   FormItem,
   FormMessage,
+  FormLabel,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,13 +19,47 @@ import { Button } from "../../ui/button";
 import { loginUser } from "@/actions/loginUser";
 import { FormSuccess } from "../form-success";
 import { FormError } from "../form-error";
-import { LoginSchema } from "@/validaton-schema";
+
+// Enhanced validation schema
+const LoginSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address")
+    .refine(
+      (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      },
+      {
+        message: "Please enter a valid email address (e.g., john.snow@gmail.com)",
+      }
+    ),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .min(8, "Password must be at least 8 characters")
+    .refine(
+      (password) => {
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumbers = /\d/.test(password);
+        const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+        
+        return hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
+      },
+      {
+        message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+      }
+    ),
+});
 
 function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [success, setSuccess] = useState<string | undefined>(undefined);
   const [isPending, startTransition] = useTransition();
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const form = useForm<z.infer<typeof LoginSchema>>({
     resolver: zodResolver(LoginSchema),
@@ -32,15 +67,59 @@ function LoginForm() {
       email: "",
       password: "",
     },
+    mode: "onChange", // Validate on change for real-time feedback
   });
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
+  // Real-time validation
+  const handleInputChange = (field: string) => {
+    setValidationErrors(prev => ({ ...prev, [field]: "" }));
+  };
+
+  // Custom validation before submission
+  const validateForm = (data: z.infer<typeof LoginSchema>) => {
+    const errors: Record<string, string> = {};
+
+    // Email validation
+    if (!data.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    // Password validation
+    if (!data.password) {
+      errors.password = "Password is required";
+    } else if (data.password.length < 8) {
+      errors.password = "Password must be at least 8 characters";
+    } else {
+      const hasUpperCase = /[A-Z]/.test(data.password);
+      const hasLowerCase = /[a-z]/.test(data.password);
+      const hasNumbers = /\d/.test(data.password);
+      const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(data.password);
+      
+      if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+        errors.password = "Password must contain uppercase, lowercase, number, and special character";
+      }
+    }
+
+    return errors;
+  };
+
   async function onSubmit(data: z.infer<typeof LoginSchema>) {
     setError(undefined);
     setSuccess(undefined);
+    setValidationErrors({});
+
+    // Manual validation before submission
+    const errors = validateForm(data);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -65,10 +144,15 @@ function LoginForm() {
         }
       } catch (e) {
         console.error("Login error:", e);
-        setError("An unexpected error occurred.");
+        setError("An unexpected error occurred. Please try again.");
       }
     });
   }
+
+  // Get field errors for real-time display
+  const getFieldError = (fieldName: keyof z.infer<typeof LoginSchema>) => {
+    return form.formState.errors[fieldName]?.message || validationErrors[fieldName];
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-50">
@@ -101,17 +185,35 @@ function LoginForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <div className="text-sm font-medium text-slate-700">Email</div>
+                  <FormLabel className="text-sm font-medium text-slate-700">
+                    Email
+                    <span className="text-red-500 ml-1">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       placeholder="john.snow@gmail.com"
-                      className="h-12 rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`h-12 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        getFieldError('email') 
+                          ? 'border-red-500 bg-red-50' 
+                          : 'border-slate-300'
+                      }`}
                       type="email"
                       disabled={isPending}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleInputChange('email');
+                      }}
                     />
                   </FormControl>
-                  <FormMessage className="text-sm text-red-500" />
+                  <FormMessage className="text-sm text-red-500 flex items-center gap-1">
+                    {getFieldError('email') && (
+                      <>
+                        <span>⚠️</span>
+                        {getFieldError('email')}
+                      </>
+                    )}
+                  </FormMessage>
                 </FormItem>
               )}
             />
@@ -121,15 +223,26 @@ function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <div className="text-sm font-medium text-slate-700">Password</div>
+                  <FormLabel className="text-sm font-medium text-slate-700">
+                    Password
+                    <span className="text-red-500 ml-1">*</span>
+                  </FormLabel>
                   <div className="relative">
                     <FormControl>
                       <Input
                         {...field}
                         placeholder="********"
-                        className="h-12 rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`h-12 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          getFieldError('password') 
+                            ? 'border-red-500 bg-red-50' 
+                            : 'border-slate-300'
+                        }`}
                         type={showPassword ? "text" : "password"}
                         disabled={isPending}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleInputChange('password');
+                        }}
                       />
                     </FormControl>
                     <button
@@ -141,7 +254,14 @@ function LoginForm() {
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
-                  <FormMessage className="text-sm text-red-500" />
+                  <FormMessage className="text-sm text-red-500 flex items-center gap-1">
+                    {getFieldError('password') && (
+                      <>
+                        <span>⚠️</span>
+                        {getFieldError('password')}
+                      </>
+                    )}
+                  </FormMessage>
                 </FormItem>
               )}
             />
@@ -170,7 +290,7 @@ function LoginForm() {
 
             <button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || !form.watch('email') || !form.watch('password')}
               className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-[0.99] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isPending ? (

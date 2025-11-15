@@ -2,11 +2,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { CoursesTable, CourseFeaturesTable, CourseWhyLearnTable, CourseContentTable, CourseTopicsTable } from "@/db/schema";
+import { 
+  CoursesTable, 
+  CourseFeaturesTable, 
+  CourseWhyLearnTable, 
+  CourseContentTable, 
+  CourseTopicsTable,
+  CourseSessionsTable 
+} from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 // GET - List all courses
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -41,6 +47,7 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -68,6 +75,7 @@ export async function POST(req: NextRequest) {
       whyLearn,
       courseContent,
       relatedTopics,
+      sessions,
     } = body;
 
     // Helper function to convert string to Date or null
@@ -143,6 +151,25 @@ export async function POST(req: NextRequest) {
         relatedTopics.map((topic: string) => ({
           courseId: course.id,
           topic,
+        }))
+      );
+    }
+
+    // Insert sessions if provided
+    if (sessions?.length) {
+      await db.insert(CourseSessionsTable).values(
+        sessions.map((session: any) => ({
+          courseId: course.id,
+          sessionNumber: session.sessionNumber,
+          title: session.title,
+          description: session.description || null,
+          sessionDate: session.sessionDate ? new Date(session.sessionDate) : null,
+          sessionTime: session.sessionTime || null,
+          duration: session.duration || 60,
+          meetingLink: session.meetingLink || null,
+          meetingPasscode: session.meetingPasscode || null,
+          recordingUrl: session.recordingUrl || null,
+          isCompleted: session.isCompleted || false,
         }))
       );
     }

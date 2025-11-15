@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import Swal from "sweetalert2"
 import {
   DateInput,
   DynamicStringList,
@@ -184,20 +185,34 @@ export default function EditCoursePage() {
         body: JSON.stringify(payload),
       });
 
-      if (res.ok) {
-        alert("Course updated successfully!");
-        router.push("/dashboard/admin/courses");
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed to update course");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Unexpected error");
-    } finally {
-      setSaving(false);
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Course updated successfully!',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      router.push("/dashboard/admin/courses");
+    } else {
+      const err = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.error || 'Failed to update course',
+      });
     }
-  };
+  } catch (err) {
+    console.error(err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Unexpected Error',
+      text: 'An unexpected error occurred',
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) {
     return (

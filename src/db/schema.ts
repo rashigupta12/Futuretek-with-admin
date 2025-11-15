@@ -427,6 +427,7 @@ export const EnrollmentsTable = pgTable(
     certificateIssued: boolean("certificate_issued").default(false).notNull(),
     certificateIssuedAt: timestamp("certificate_issued_at", { mode: "date" }),
     certificateUrl: text("certificate_url"),
+    certificateData: jsonb("certificate_data"), // ADD THIS LINE - stores certificate metadata
   },
   (table) => [
     index("enrollments_user_id_idx").on(table.userId),

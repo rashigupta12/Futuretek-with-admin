@@ -1,4 +1,3 @@
-// src/app/(protected)/dashboard/admin/courses/add/page.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 "use client";
@@ -12,6 +11,9 @@ import {
   TextInput,
 } from "@/components/courses/course-form";
 import RichTextEditor from "@/components/courses/RichTextEditor";
+import SessionManager, { Session } from "@/components/SessionManager";
+
+import Swal from 'sweetalert2';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
@@ -52,6 +54,9 @@ export default function AddCoursePage() {
   const [courseContent, setCourseContent] = useState<string[]>([""]);
   const [relatedTopics, setRelatedTopics] = useState<string[]>([""]);
 
+  // ── Sessions ─────────────────────────────────────────────────────
+  const [sessions, setSessions] = useState<Session[]>([]);
+
   const [dateErrors, setDateErrors] = useState({
     registrationDeadline: "",
     startDate: "",
@@ -82,16 +87,68 @@ export default function AddCoursePage() {
     return Object.values(errors).every((error) => !error);
   };
 
+  // // Validate sessions
+  // const validateSessions = () => {
+  //   if (sessions.length === 0) return true;
+    
+  //   for (const session of sessions) {
+  //     if (!session.title.trim()) {
+  //       alert(`Session ${session.sessionNumber} must have a title`);
+  //       return false;
+  //     }
+  //     if (!session.sessionDate) {
+  //       alert(`Session ${session.sessionNumber} must have a date`);
+  //       return false;
+  //     }
+  //     if (!session.sessionTime) {
+  //       alert(`Session ${session.sessionNumber} must have a time`);
+  //       return false;
+  //     }
+  //   }
+  //   return true;
+  // };
+
   // Call validateDates when dates change
   useEffect(() => {
     validateDates();
   }, [registrationDeadline, startDate, endDate]);
 
+  // Auto-generate sessions when totalSessions changes
+  useEffect(() => {
+    if (totalSessions && sessions.length === 0) {
+      const total = parseInt(totalSessions);
+      if (total > 0) {
+        const newSessions: Session[] = [];
+        for (let i = 1; i <= total; i++) {
+          newSessions.push({
+            id: `temp-${Date.now()}-${i}`,
+            sessionNumber: i,
+            title: `Session ${i}`,
+            description: "",
+            sessionDate: "",
+            sessionTime: "",
+            duration: 60,
+            meetingLink: "",
+            meetingPasscode: "",
+            recordingUrl: "",
+            isCompleted: false,
+          });
+        }
+        setSessions(newSessions);
+      }
+    }
+  }, [totalSessions]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!validateDates()) {
-      alert("Please fix the date validation errors before submitting");
-      return;
+// Replace: alert("Please fix the date validation errors before submitting");
+Swal.fire({
+  icon: 'warning',
+  title: 'Validation Error',
+  text: 'Please fix the date validation errors before submitting',
+});      return;
     }
     setLoading(true);
 
@@ -120,6 +177,12 @@ export default function AddCoursePage() {
       whyLearn: whyLearn.filter((w) => w.title.trim() && w.description.trim()),
       courseContent: courseContent.filter((c) => c.trim()),
       relatedTopics: relatedTopics.filter((t) => t.trim()),
+      sessions: sessions.map(session => ({
+        ...session,
+        duration: Number(session.duration),
+        // Remove temporary ID for new sessions
+        id: session.id.startsWith('temp-') ? undefined : session.id,
+      })),
     };
 
     try {
@@ -130,12 +193,31 @@ export default function AddCoursePage() {
       });
 
       if (res.ok) {
-        alert("Course created successfully!");
-        router.push("/dashboard/admin/courses");
+        // Replace: alert("Course created successfully!");
+Swal.fire({
+  icon: 'success',
+  title: 'Course Created!',
+  text: 'Course has been created successfully',
+  timer: 2000,
+  showConfirmButton: false
+}).then(() => {
+  router.push("/dashboard/admin/courses");
+});
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to create course");
-      }
+// Replace: alert(err.error || "Failed to create course");
+Swal.fire({
+  icon: 'error',
+  title: 'Error',
+  text: err.error || 'Failed to create course',
+});
+
+// Replace: alert("Unexpected error");
+Swal.fire({
+  icon: 'error',
+  title: 'Error',
+  text: 'An unexpected error occurred',
+});      }
     } catch (err) {
       console.error(err);
       alert("Unexpected error");
@@ -299,6 +381,13 @@ export default function AddCoursePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ── Sessions Management ── */}
+          <SessionManager
+            sessions={sessions}
+            setSessions={setSessions}
+            totalSessions={parseInt(totalSessions) || 0}
+          />
 
           {/* ── Long Texts ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">

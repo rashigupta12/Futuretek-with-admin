@@ -8,6 +8,7 @@ import { DollarSign, AlertCircle, Wallet, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Swal from "sweetalert2"
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 // import { useToast } from "@/components/ui/use-toast";
@@ -54,42 +55,48 @@ export default function RequestPayoutPage() {
     fetchBalance();
   }, []);
 
-  const onSubmit = async (data: FormData) => {
-    if (data.amount > available) {
-      // toast({
-      //   title: "Insufficient balance",
-      //   description: `You only have ₹${available.toLocaleString()} available for payout.`,
-      //   variant: "destructive",
-      // });
-      return;
-    }
+const onSubmit = async (data: FormData) => {
+  if (data.amount > available) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Insufficient Balance',
+      text: `You only have ₹${available.toLocaleString()} available for payout.`,
+      confirmButtonColor: '#3085d6',
+    });
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const res = await fetch("/api/jyotishi/payouts/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: data.amount }),
-      });
+  setLoading(true);
+  try {
+    const res = await fetch("/api/jyotishi/payouts/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: data.amount }),
+    });
 
-      if (!res.ok) throw new Error("Failed to create payout request");
+    if (!res.ok) throw new Error("Failed to create payout request");
 
-      // toast({
-      //   title: "Payout requested",
-      //   description: `₹${data.amount.toLocaleString()} request submitted successfully.`,
-      // });
-      reset();
-    } catch (err) {
-      console.error("Payout request failed:", err);
-      // toast({
-      //   title: "Error",
-      //   description: "Could not submit payout request. Try again later.",
-      //   variant: "destructive",
-      // });
-    } finally {
-      setLoading(false);
-    }
-  };
+    await Swal.fire({
+      icon: 'success',
+      title: 'Payout Requested!',
+      text: `₹${data.amount.toLocaleString()} request submitted successfully.`,
+      timer: 3000,
+      showConfirmButton: false
+    });
+    
+    reset();
+  } catch (err) {
+    console.error("Payout request failed:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Request Failed',
+      text: 'Could not submit payout request. Please try again later.',
+      confirmButtonColor: '#d33',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="w-full mx-auto space-y-6 p-4">

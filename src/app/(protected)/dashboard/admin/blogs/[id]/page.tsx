@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import Swal from "sweetalert2"
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
@@ -64,101 +65,201 @@ export default function BlogDetailPage() {
     if (params.id) fetchBlog();
   }, [params.id]);
 
-  const fetchBlog = async () => {
-    try {
-      const res = await fetch(`/api/admin/blogs/${params.id}`);
-      if (!res.ok) throw new Error("Not found");
-      const data = await res.json();
+ const fetchBlog = async () => {
+  try {
+    const res = await fetch(`/api/admin/blogs/${params.id}`);
+    if (!res.ok) throw new Error("Not found");
+    const data = await res.json();
 
-      const blogData = {
-        ...data.blog,
-        tags: data.blog.tags || [],
-      };
+    const blogData = {
+      ...data.blog,
+      tags: data.blog.tags || [],
+    };
 
-      setBlog(blogData);
-      
-      // Initialize form data
-      setFormData({
-        title: blogData.title,
-        slug: blogData.slug,
-        excerpt: blogData.excerpt || "",
-        content: blogData.content,
-        thumbnailUrl: blogData.thumbnailUrl || "",
-        isPublished: blogData.isPublished,
-        tags: blogData.tags.length > 0 ? blogData.tags : [""],
+    setBlog(blogData);
+    
+    // Initialize form data
+    setFormData({
+      title: blogData.title,
+      slug: blogData.slug,
+      excerpt: blogData.excerpt || "",
+      content: blogData.content,
+      thumbnailUrl: blogData.thumbnailUrl || "",
+      isPublished: blogData.isPublished,
+      tags: blogData.tags.length > 0 ? blogData.tags : [""],
+    });
+  } catch (err) {
+    console.error(err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Blog Not Found',
+      text: 'The requested blog post could not be found.',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleEditToggle = () => {
+  if (isEditing) {
+    // Check if there are unsaved changes
+    const hasChanges = 
+      formData.title !== blog?.title ||
+      formData.slug !== blog?.slug ||
+      formData.excerpt !== (blog?.excerpt || "") ||
+      formData.content !== blog?.content ||
+      formData.thumbnailUrl !== (blog?.thumbnailUrl || "") ||
+      formData.isPublished !== blog?.isPublished ||
+      JSON.stringify(formData.tags) !== JSON.stringify(blog?.tags || [""]);
+
+    if (hasChanges) {
+      Swal.fire({
+        title: 'Discard Changes?',
+        text: 'You have unsaved changes. Are you sure you want to cancel?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, discard changes',
+        cancelButtonText: 'Continue editing',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Reset form data when canceling edit
+          if (blog) {
+            setFormData({
+              title: blog.title,
+              slug: blog.slug,
+              excerpt: blog.excerpt || "",
+              content: blog.content,
+              thumbnailUrl: blog.thumbnailUrl || "",
+              isPublished: blog.isPublished,
+              tags: blog.tags.length > 0 ? blog.tags : [""],
+            });
+          }
+          setIsEditing(false);
+        }
       });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+  }
+  setIsEditing(!isEditing);
+};
 
-  const handleEditToggle = () => {
-    if (isEditing) {
-      // Reset form data when canceling edit
-      if (blog) {
-        setFormData({
-          title: blog.title,
-          slug: blog.slug,
-          excerpt: blog.excerpt || "",
-          content: blog.content,
-          thumbnailUrl: blog.thumbnailUrl || "",
-          isPublished: blog.isPublished,
-          tags: blog.tags.length > 0 ? blog.tags : [""],
-        });
-      }
-    }
-    setIsEditing(!isEditing);
-  };
+const handleSave = async () => {
+  if (!blog) return;
 
-  const handleSave = async () => {
-    if (!blog) return;
+  // Validation
+  if (!formData.title.trim()) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Title',
+      text: 'Please enter a blog title',
+    });
+    return;
+  }
 
-    setSaving(true);
-    try {
-      const payload = {
-        ...formData,
-        tags: formData.tags.filter(tag => tag.trim() !== ""),
-      };
+  if (!formData.slug.trim()) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Slug',
+      text: 'Please enter a blog slug',
+    });
+    return;
+  }
 
-      const res = await fetch(`/api/admin/blogs/${blog.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+  if (!formData.content.trim()) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Content',
+      text: 'Please enter blog content',
+    });
+    return;
+  }
+
+  setSaving(true);
+  try {
+    const payload = {
+      ...formData,
+      tags: formData.tags.filter(tag => tag.trim() !== ""),
+    };
+
+    const res = await fetch(`/api/admin/blogs/${blog.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const updatedBlog = await res.json();
+      setBlog(updatedBlog.blog);
+      setIsEditing(false);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Blog updated successfully!',
+        timer: 2000,
+        showConfirmButton: false
       });
-
-      if (res.ok) {
-        const updatedBlog = await res.json();
-        setBlog(updatedBlog.blog);
-        setIsEditing(false);
-        alert("Blog updated successfully!");
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed to update blog");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Unexpected error");
-    } finally {
-      setSaving(false);
+    } else {
+      const err = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: err.error || 'Failed to update blog',
+      });
     }
-  };
+  } catch (err) {
+    console.error(err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Unexpected Error',
+      text: 'An unexpected error occurred',
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this blog?")) return;
-    try {
-      const res = await fetch(`/api/admin/blogs/${blog?.id}`, { method: "DELETE" });
-      if (res.ok) {
-        alert("Blog deleted successfully");
-        router.push("/dashboard/admin/blogs");
-      } else {
-        alert("Delete failed");
-      }
-    } catch {
-      alert("Error deleting blog");
+ const handleDelete = async () => {
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    html: `You are about to delete <strong>"${blog?.title}"</strong>.<br>This action cannot be undone.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/admin/blogs/${blog?.id}`, { method: "DELETE" });
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Blog deleted successfully',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      router.push("/dashboard/admin/blogs");
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: 'Failed to delete blog',
+      });
     }
-  };
+  } catch {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error deleting blog',
+    });
+  }
+};
 
   const handleAddTag = () => {
     setFormData(prev => ({

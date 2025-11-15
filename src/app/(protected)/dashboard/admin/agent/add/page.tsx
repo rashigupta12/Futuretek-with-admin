@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Swal from 'sweetalert2';
 import React, { useState } from "react";
 // import toast, { Toaster } from "react-hot-toast";
 
@@ -52,65 +53,81 @@ export default function AddJyotishiPage() {
     return "";
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const mobileValidationError = validateMobile(mobile);
-    if (mobileValidationError) {
-      setMobileError(mobileValidationError);
-      setLoading(false);
-      return;
-    }
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // Validate required fields
+  if (!name || !email || !password || !commissionRate || !jyotishiCode) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Missing Fields',
+      text: 'Name, Email, Password, Commission Rate, and Jyotishi Code are required.',
+    });
+    return;
+  }
 
-    setLoading(true);
+  const mobileValidationError = validateMobile(mobile);
+  if (mobileValidationError) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Invalid Mobile',
+      text: mobileValidationError,
+    });
+    setLoading(false);
+    return;
+  }
 
-    //     // Validation
-    //     if (!name || !email || !password || !commissionRate) {
-    // toast.error("Name, Email, Password, and Commission Rate are required.");      setLoading(false);
-    //       return;
-    // }
+  setLoading(true);
 
-    const payload = {
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      password,
-      mobile: mobile.trim() || null,
-      jyotishiCode: jyotishiCode.trim().toUpperCase(),
-      commissionRate: Number(commissionRate),
-      bankAccountNumber: bankAccountNumber.trim() || null,
-      bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
-      bankAccountHolderName: bankAccountHolderName.trim() || null,
-      panNumber: panNumber.trim().toUpperCase() || null,
-      bio: bio.trim() || null,
-    };
-
-    try {
-      const res = await fetch("/api/admin/jyotishi", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      // const data = await res.json();
-
-      if (res.ok) {
-        // toast.success("Jyotishi account created successfully!", {
-        //   duration: 4000,
-        //   position: "top-center",
-        // });
-
-        setTimeout(() => {
-          router.push("/dashboard/admin/agent");
-        }, 1500);
-      } else {
-        // toast.error(data.error || "Failed to create jyotishi");
-      }
-    } catch (err) {
-      console.error("Submission error:", err);
-      // toast.error("Unexpected error occurred");
-    } finally {
-      setLoading(false);
-    }
+  const payload = {
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    password,
+    mobile: mobile.trim() || null,
+    jyotishiCode: jyotishiCode.trim().toUpperCase(),
+    commissionRate: parseFloat(Number(commissionRate).toFixed(2)),
+    bankAccountNumber: bankAccountNumber.trim() || null,
+    bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
+    bankAccountHolderName: bankAccountHolderName.trim() || null,
+    panNumber: panNumber.trim().toUpperCase() || null,
+    bio: bio.trim() || null,
   };
+
+  try {
+    const res = await fetch("/api/admin/jyotishi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Jyotishi account created successfully!',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      router.push("/dashboard/admin/agent");
+    } else {
+      const err = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.error || 'Failed to create jyotishi account',
+      });
+    }
+  } catch (err) {
+    console.error("Submission error:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Unexpected Error',
+      text: 'An unexpected error occurred while creating the account',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">

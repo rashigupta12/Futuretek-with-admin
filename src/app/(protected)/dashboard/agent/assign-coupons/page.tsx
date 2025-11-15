@@ -4,6 +4,7 @@
 
 import { AlertCircle, Book, Calendar, Clock, Search, Tag, Users, X, Plus, ShieldAlert } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import Swal from "sweetalert2"
 
 interface Student {
   id: string;
@@ -174,61 +175,93 @@ export default function AssignCouponsPage() {
   };
 
   const handleAssignCoupon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedStudent || !selectedCourse || !selectedCoupon) {
-      alert("Please select all fields");
-      return;
-    }
+  e.preventDefault();
+  
+  if (!selectedStudent || !selectedCourse || !selectedCoupon) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Missing Information',
+      text: 'Please select all fields',
+      confirmButtonColor: '#3085d6',
+    });
+    return;
+  }
 
-    const selectedCourseData = courses.find(c => c.id === selectedCourse);
-    if (selectedCourseData?.hasAdminDiscount) {
-      alert("Cannot assign coupon to this course as it already has an admin discount applied.");
-      return;
-    }
+  const selectedCourseData = courses.find(c => c.id === selectedCourse);
+  if (selectedCourseData?.hasAdminDiscount) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Admin Discount Applied',
+      text: 'Cannot assign coupon to this course as it already has an admin discount applied.',
+      confirmButtonColor: '#3085d6',
+    });
+    return;
+  }
 
-    const selectedStudentData = students.find(s => s.id === selectedStudent);
-    if (selectedStudentData?.isEnrolled) {
-      alert("This student is already enrolled in the selected course. Cannot assign coupon.");
-      return;
-    }
+  const selectedStudentData = students.find(s => s.id === selectedStudent);
+  if (selectedStudentData?.isEnrolled) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Student Already Enrolled',
+      text: 'This student is already enrolled in the selected course. Cannot assign coupon.',
+      confirmButtonColor: '#3085d6',
+    });
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const response = await fetch("/api/jyotishi/assign-coupon", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          studentId: selectedStudent,
-          courseId: selectedCourse,
-          couponId: selectedCoupon,
-        }),
+  setLoading(true);
+  try {
+    const response = await fetch("/api/jyotishi/assign-coupon", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        studentId: selectedStudent,
+        courseId: selectedCourse,
+        couponId: selectedCoupon,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Coupon assigned successfully!',
+        timer: 2000,
+        showConfirmButton: false
       });
-
-      const result = await response.json();
-
-      if (result.success) {
-        alert("Coupon assigned successfully!");
-        setSelectedStudent("");
-        setSelectedCourse("");
-        setSelectedCoupon("");
-        setSearchTerm("");
-        setEnrollmentChecks([]);
-        setShowSidebar(false);
-        
-        await fetchRecentAssignments();
-      } else {
-        alert(`Error: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error assigning coupon:", error);
-      alert("Failed to assign coupon");
-    } finally {
-      setLoading(false);
+      
+      setSelectedStudent("");
+      setSelectedCourse("");
+      setSelectedCoupon("");
+      setSearchTerm("");
+      setEnrollmentChecks([]);
+      setShowSidebar(false);
+      
+      await fetchRecentAssignments();
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: result.error || 'Failed to assign coupon',
+        confirmButtonColor: '#d33',
+      });
     }
-  };
+  } catch (error) {
+    console.error("Error assigning coupon:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to assign coupon',
+      confirmButtonColor: '#d33',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const filteredStudents = students.filter(student =>
     (student.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||

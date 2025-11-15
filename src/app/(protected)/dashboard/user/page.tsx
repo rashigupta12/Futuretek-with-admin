@@ -107,10 +107,10 @@ export default function UserDashboardHome() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                  {/* <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-600">Progress</span>
                     <span className="font-semibold text-blue-900">{course.progress}%</span>
-                  </div>
+                  </div> */}
                   <div className="w-full bg-blue-50 rounded-full h-2.5 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-500 group-hover:from-blue-600 group-hover:to-blue-700"
