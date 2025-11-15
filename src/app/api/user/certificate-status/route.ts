@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { CertificateRequestsTable, EnrollmentsTable } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const enrollment = await db
       .select({
         certificateIssued: EnrollmentsTable.certificateIssued,
-        certificateUrl: EnrollmentsTable.certificateUrl,
+        certificateData: EnrollmentsTable.certificateData,
       })
       .from(EnrollmentsTable)
       .where(eq(EnrollmentsTable.id, enrollmentId))
@@ -43,9 +43,21 @@ export async function GET(request: Request) {
       .orderBy(desc(CertificateRequestsTable.requestedAt))
       .limit(1);
 
+    // Parse certificate data
+    let certificateData = null;
+    if (enrollment[0].certificateData) {
+      try {
+        certificateData = typeof enrollment[0].certificateData === 'string' 
+          ? JSON.parse(enrollment[0].certificateData) 
+          : enrollment[0].certificateData;
+      } catch (e) {
+        console.error('Error parsing certificate data:', e);
+      }
+    }
+
     return NextResponse.json({
       certificateIssued: enrollment[0].certificateIssued,
-      certificateUrl: enrollment[0].certificateUrl,
+      certificateData,
       certificateRequestStatus: certificateRequest[0]?.status || null,
     });
   } catch (error) {

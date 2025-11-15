@@ -1,3 +1,4 @@
+/*eslint-disable @typescript-eslint/no-explicit-any */
 // app/(protected)/dashboard/user/courses/page.tsx
 "use client";
 
@@ -22,7 +23,9 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import CertificateTemplate from "@/components/certificate-template";
+import { generateCertificatePDF } from "@/hooks/generate-certificate-pdf";
 
 interface RawEnrollment {
   id: string;
@@ -32,10 +35,13 @@ interface RawEnrollment {
   enrolledAt: string;
   completedAt?: string | null;
   certificateIssued: boolean;
-  certificateUrl?: string | null;
+  certificateData?: any;
   courseThumbnail?: string | null;
   certificateRequested?: boolean;
   certificateRequestStatus?: "PENDING" | "APPROVED" | "REJECTED";
+  courseInstructor?: string;
+  courseStartDate?: string;
+  courseEndDate?: string;
 }
 
 export default function MyCoursesPage() {
@@ -47,6 +53,8 @@ export default function MyCoursesPage() {
   const [error, setError] = useState<string | null>(null);
   const [requestingCertificate, setRequestingCertificate] = useState<string | null>(null);
   const [downloadingCertificate, setDownloadingCertificate] = useState<string | null>(null);
+  const certificateRef = useRef<HTMLDivElement>(null);
+  const [currentCertificateData, setCurrentCertificateData] = useState<any>(null);
 
   useEffect(() => {
     async function fetchEnrollments() {
@@ -102,6 +110,7 @@ export default function MyCoursesPage() {
           : enrollment
       ));
 
+      alert('Certificate request submitted successfully!');
     } catch (err) {
       console.error('Error requesting certificate:', err);
       alert(err instanceof Error ? err.message : 'Failed to request certificate');
@@ -110,51 +119,42 @@ export default function MyCoursesPage() {
     }
   };
 
-  const downloadCertificate = async (enrollmentId: string, certificateUrl: string, studentName: string, courseName: string) => {
+  const downloadCertificate = async (enrollment: RawEnrollment) => {
     try {
-      setDownloadingCertificate(enrollmentId);
+      setDownloadingCertificate(enrollment.id);
       
-      // If it's a blob URL, we need to handle it differently
-      if (certificateUrl.startsWith('blob:')) {
-        // Create a temporary link to download the blob
-        const response = await fetch(certificateUrl);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${studentName}_${courseName.replace(/\s+/g, '_')}_certificate.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Clean up the blob URL
-        window.URL.revokeObjectURL(url);
-      } else {
-        // For regular URLs, use the standard download approach
-        const link = document.createElement('a');
-        link.href = certificateUrl;
-        link.download = `${studentName}_${courseName.replace(/\s+/g, '_')}_certificate.pdf`;
-        link.target = '_blank'; // Open in new tab for regular URLs
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      // Generate certificate data
+      const certificateData = enrollment.certificateData || {
+        studentName: session?.user?.name || 'Student',
+        courseName: enrollment.courseTitle,
+        startDate: enrollment.courseStartDate || new Date().toISOString(),
+        endDate: enrollment.courseEndDate || new Date().toISOString(),
+        instructor: enrollment.courseInstructor || 'Instructor',
+        certificateId: `FT-${enrollment.id.slice(0, 8).toUpperCase()}`,
+        issueDate: new Date().toISOString()
+      };
+
+      setCurrentCertificateData(certificateData);
+
+      // Wait for certificate to render
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (!certificateRef.current) {
+        throw new Error('Certificate element not found');
       }
+
+      // Generate and download PDF
+      await generateCertificatePDF(
+        certificateRef.current, 
+        `${certificateData.studentName}_${certificateData.courseName.replace(/\s+/g, '_')}_certificate`
+      );
+      
+      setCurrentCertificateData(null);
     } catch (error) {
       console.error('Error downloading certificate:', error);
       alert('Failed to download certificate. Please try again.');
     } finally {
       setDownloadingCertificate(null);
-    }
-  };
-
-  const viewCertificate = (certificateUrl: string) => {
-    if (certificateUrl.startsWith('blob:')) {
-      // For blob URLs, open in new tab
-      window.open(certificateUrl, '_blank');
-    } else {
-      // For regular URLs, open in new tab
-      window.open(certificateUrl, '_blank');
     }
   };
 
@@ -169,14 +169,21 @@ export default function MyCoursesPage() {
             ? { 
                 ...enrollment, 
                 certificateIssued: data.certificateIssued,
-                certificateUrl: data.certificateUrl,
+                certificateData: data.certificateData,
                 certificateRequestStatus: data.certificateRequestStatus
               }
             : enrollment
         ));
+        
+        if (data.certificateIssued) {
+          alert('Your certificate is ready to download!');
+        } else {
+          alert('Certificate is still being processed. Please check back later.');
+        }
       }
     } catch (err) {
       console.error('Error checking certificate status:', err);
+      alert('Failed to check certificate status');
     }
   };
 
@@ -191,7 +198,7 @@ export default function MyCoursesPage() {
   };
 
   const getCertificateBadge = (enrollment: RawEnrollment) => {
-    if (enrollment.certificateIssued && enrollment.certificateUrl) {
+    if (enrollment.certificateIssued) {
       return (
         <Badge className="bg-green-100 text-green-700 border-green-200">
           <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -304,6 +311,15 @@ export default function MyCoursesPage() {
 
   return (
     <div className="space-y-8">
+      {/* Hidden certificate template for PDF generation */}
+      <div className="fixed -left-[9999px] -top-[9999px]">
+        <div ref={certificateRef}>
+          {currentCertificateData && (
+            <CertificateTemplate data={currentCertificateData} />
+          )}
+        </div>
+      </div>
+
       <div className="relative">
         <div className="absolute -left-1 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-600 to-yellow-500 rounded-full"></div>
         <div className="pl-4">
@@ -320,7 +336,7 @@ export default function MyCoursesPage() {
         {enrollments.map((enrollment) => {
           const isCompleted = enrollment.status === "COMPLETED";
           const progress = fakeProgress(enrollment.status);
-          const hasCertificate = enrollment.certificateIssued && enrollment.certificateUrl;
+          const hasCertificate = enrollment.certificateIssued;
           const canRequest = canRequestCertificate(enrollment);
 
           return (
@@ -386,7 +402,7 @@ export default function MyCoursesPage() {
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
                       </div>
                       <span className="text-green-700 font-medium">
-                        Certificate Issued
+                        Certificate Available
                       </span>
                     </>
                   ) : enrollment.certificateRequestStatus === "PENDING" ? (
@@ -413,7 +429,7 @@ export default function MyCoursesPage() {
                         <Award className="h-4 w-4 text-orange-600" />
                       </div>
                       <span className="text-orange-700 font-medium">
-                        {isCompleted ? "Certificate available" : "Request certificate anytime"}
+                        Request certificate anytime
                       </span>
                     </>
                   )}
@@ -422,36 +438,23 @@ export default function MyCoursesPage() {
 
               <CardFooter className="pt-4 border-t border-blue-50 bg-gradient-to-r from-blue-50/50 to-transparent flex gap-2">
                 {hasCertificate && (
-                  <>
-                    <Button 
-                      onClick={() => viewCertificate(enrollment.certificateUrl!)}
-                      variant="outline" 
-                      size="sm"
-                      className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800"
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
-                    <Button 
-                      onClick={() => downloadCertificate(enrollment.id, enrollment.certificateUrl!, enrollment.courseTitle, enrollment.courseTitle)}
-                      disabled={downloadingCertificate === enrollment.id}
-                      variant="outline" 
-                      size="sm"
-                      className="border-green-200 bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800"
-                    >
-                      {downloadingCertificate === enrollment.id ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Downloading...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </>
-                      )}
-                    </Button>
-                  </>
+                  <Button 
+                    onClick={() => downloadCertificate(enrollment)}
+                    disabled={downloadingCertificate === enrollment.id}
+                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+                  >
+                    {downloadingCertificate === enrollment.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Certificate
+                      </>
+                    )}
+                  </Button>
                 )}
 
                 {canRequest && (

@@ -66,7 +66,7 @@ export async function GET() {
 // app/api/admin/certificates/route.ts (Updated POST method)
 export async function POST(request: Request) {
   try {
-    const { requestId, adminId, certificateData } = await request.json();
+    const { requestId, adminId } = await request.json();
 
     // Generate a permanent file path for the certificate
     const fileName = `certificate_${requestId}_${Date.now()}.pdf`;

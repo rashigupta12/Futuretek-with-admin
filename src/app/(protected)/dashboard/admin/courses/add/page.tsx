@@ -87,26 +87,26 @@ export default function AddCoursePage() {
     return Object.values(errors).every((error) => !error);
   };
 
-  // Validate sessions
-  const validateSessions = () => {
-    if (sessions.length === 0) return true;
+  // // Validate sessions
+  // const validateSessions = () => {
+  //   if (sessions.length === 0) return true;
     
-    for (const session of sessions) {
-      if (!session.title.trim()) {
-        alert(`Session ${session.sessionNumber} must have a title`);
-        return false;
-      }
-      if (!session.sessionDate) {
-        alert(`Session ${session.sessionNumber} must have a date`);
-        return false;
-      }
-      if (!session.sessionTime) {
-        alert(`Session ${session.sessionNumber} must have a time`);
-        return false;
-      }
-    }
-    return true;
-  };
+  //   for (const session of sessions) {
+  //     if (!session.title.trim()) {
+  //       alert(`Session ${session.sessionNumber} must have a title`);
+  //       return false;
+  //     }
+  //     if (!session.sessionDate) {
+  //       alert(`Session ${session.sessionNumber} must have a date`);
+  //       return false;
+  //     }
+  //     if (!session.sessionTime) {
+  //       alert(`Session ${session.sessionNumber} must have a time`);
+  //       return false;
+  //     }
+  //   }
+  //   return true;
+  // };
 
   // Call validateDates when dates change
   useEffect(() => {

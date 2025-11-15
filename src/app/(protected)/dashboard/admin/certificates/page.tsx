@@ -1,8 +1,8 @@
 // app/dashboard/admin/certificates/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { Award, Download, Eye, Search, Filter, Calendar, User, Mail, BookOpen } from "lucide-react";
+import { Award, BookOpen, Calendar, Eye, Mail, Search, User } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Certificate {
   id: string;
@@ -56,12 +56,12 @@ export default function AllCertificatesPage() {
     return matchesSearch && matchesDate;
   });
 
-  const handleDownload = (certificateUrl: string, userName: string, courseName: string) => {
-    const link = document.createElement('a');
-    link.href = certificateUrl;
-    link.download = `${userName}_${courseName.replace(/\s+/g, '_')}_certificate.pdf`;
-    link.click();
-  };
+  // const handleDownload = (certificateUrl: string, userName: string, courseName: string) => {
+  //   const link = document.createElement('a');
+  //   link.href = certificateUrl;
+  //   link.download = `${userName}_${courseName.replace(/\s+/g, '_')}_certificate.pdf`;
+  //   link.click();
+  // };
 
   const handleView = (certificateUrl: string) => {
     window.open(certificateUrl, '_blank');
@@ -199,13 +199,13 @@ export default function AllCertificatesPage() {
                       <Eye className="w-4 h-4 mr-1" />
                       View
                     </button>
-                    <button
+                    {/* <button
                       onClick={() => handleDownload(certificate.certificateUrl, certificate.user.name, certificate.course.title)}
                       className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                     >
                       <Download className="w-4 h-4 mr-1" />
                       Download
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>

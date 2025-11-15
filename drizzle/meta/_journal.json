@@ -50,6 +50,13 @@
       "when": 1762946580650,
       "tag": "0006_worried_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1763178828750,
+      "tag": "0007_real_big_bertha",
+      "breakpoints": true
     }
   ]
 }

@@ -1,11 +1,12 @@
+/*eslint-disable @typescript-eslint/no-explicit-any */
 // app/dashboard/admin/certificates/requests/page.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Award, Clock, CheckCircle, XCircle, Search, Filter, User, Mail, BookOpen, Download } from "lucide-react";
+import { Award, Clock, CheckCircle, XCircle, Search, User, Mail, BookOpen } from "lucide-react";
 import CertificateTemplate from "@/components/certificate-template";
 import { generateCertificatePDF } from "@/hooks/generate-certificate-pdf";
-import { useCurrentRole, useCurrentUser } from "@/hooks/auth";
+import { useCurrentUser } from "@/hooks/auth";
 
 interface CertificateRequest {
   id: string;
@@ -38,10 +39,10 @@ export default function CertificateRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [generatingCertificate, setGeneratingCertificate] = useState<string | null>(null);
+  const [processingRequest, setProcessingRequest] = useState<string | null>(null);
   const certificateRef = useRef<HTMLDivElement>(null);
   const [currentCertificateData, setCurrentCertificateData] = useState<any>(null);
-  const user = useCurrentUser()
+  const user = useCurrentUser();
 
   useEffect(() => {
     fetchRequests();
@@ -59,59 +60,129 @@ export default function CertificateRequestsPage() {
     }
   };
 
-  const handleApproveAndGenerate = async (requestId: string, enrollmentId: string, requestData: CertificateRequest) => {
+  const handleApprove = async (requestId: string, requestData: CertificateRequest) => {
     try {
-      setGeneratingCertificate(requestId);
+      setProcessingRequest(requestId);
       
-      // Generate certificate data
+      // Generate certificate ID
+      const certificateId = `FT-${requestId.slice(0, 8).toUpperCase()}`;
+      
+      // Create certificate metadata
       const certificateData = {
         studentName: requestData.user.name,
         courseName: requestData.enrollment.course.title,
         startDate: requestData.enrollment.course.startDate,
         endDate: requestData.enrollment.course.endDate,
         instructor: requestData.enrollment.course.instructor,
-        certificateId: `FT-${requestId.slice(0, 8).toUpperCase()}`,
+        certificateId,
         issueDate: new Date().toISOString()
       };
 
-      setCurrentCertificateData(certificateData);
+      console.log('Approving certificate with data:', certificateData);
 
-      // Wait for certificate to render
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (!certificateRef.current) {
-        throw new Error('Certificate element not found');
-      }
-
-      // Generate PDF
-      const pdfUrl = await generateCertificatePDF(certificateRef.current, `${certificateData.studentName}_certificate`);
-      
-      // Send approval request with certificate URL
-      const response = await fetch("/api/admin/certificates", {
+      // Approve the request with certificate metadata
+      const response = await fetch("/api/admin/certificates/approve", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           requestId,
-          adminId:user?.id,
-          certificateUrl: pdfUrl,
+          adminId: user?.id,
           certificateData
         }),
       });
 
       if (response.ok) {
-        fetchRequests(); // Refresh the list
-        alert('Certificate generated successfully!');
+        console.log('Certificate approved successfully');
+        await fetchRequests();
+        alert('Certificate request approved successfully!');
       } else {
-        throw new Error('Failed to approve certificate');
+        const errorData = await response.json();
+        console.error('Approval failed:', errorData);
+        throw new Error(errorData.error || 'Failed to approve certificate');
       }
     } catch (error) {
-      console.error('Error generating certificate:', error);
-      alert('Failed to generate certificate');
+      console.error('Error approving certificate:', error);
+      alert(`Failed to approve certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setGeneratingCertificate(null);
+      setProcessingRequest(null);
+    }
+  };
+
+  const handleDownloadCertificate = async (requestData: CertificateRequest) => {
+    console.log('=== START CERTIFICATE DOWNLOAD ===');
+    console.log('Request data:', requestData);
+    
+    try {
+      setProcessingRequest(requestData.id);
+      
+      // Fetch the stored certificate data from the database
+      console.log('Fetching certificate data for enrollment:', requestData.enrollmentId);
+      const response = await fetch(`/api/admin/certificates/data?enrollmentId=${requestData.enrollmentId}`);
+      
+      console.log('API Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        throw new Error(`Failed to fetch certificate data: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Certificate data received:', data);
+      
+      // Use stored data or generate new data as fallback
+      const certificateData = data.certificateData || {
+        studentName: requestData.user.name,
+        courseName: requestData.enrollment.course.title,
+        startDate: requestData.enrollment.course.startDate,
+        endDate: requestData.enrollment.course.endDate,
+        instructor: requestData.enrollment.course.instructor,
+        certificateId: `FT-${requestData.id.slice(0, 8).toUpperCase()}`,
+        issueDate: new Date().toISOString()
+      };
+
+      console.log('Final certificate data to use:', certificateData);
+
+      setCurrentCertificateData(certificateData);
+      console.log('State updated, waiting for render...');
+
+      // Wait for certificate to render
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log('Certificate ref:', certificateRef.current);
+      console.log('Ref has element:', !!certificateRef.current);
+      
+      if (!certificateRef.current) {
+        console.error('Certificate ref is null!');
+        throw new Error('Certificate element not found - template may not be rendering');
+      }
+
+      console.log('Certificate element found, children count:', certificateRef.current.children.length);
+      console.log('Certificate HTML preview:', certificateRef.current.innerHTML.substring(0, 200));
+
+      console.log('Starting PDF generation...');
+
+      // Generate and download PDF
+      await generateCertificatePDF(
+        certificateRef.current, 
+        `${certificateData.studentName.replace(/\s+/g, '_')}_${certificateData.courseName.replace(/\s+/g, '_')}_certificate`
+      );
+      
+      console.log('=== PDF GENERATED SUCCESSFULLY ===');
+      
       setCurrentCertificateData(null);
+    } catch (error) {
+      console.error('=== ERROR IN CERTIFICATE DOWNLOAD ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+      
+      alert(`Failed to download certificate: ${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck console for details.`);
+    } finally {
+      setProcessingRequest(null);
+      console.log('=== END CERTIFICATE DOWNLOAD ===');
     }
   };
 
@@ -130,11 +201,8 @@ export default function CertificateRequestsPage() {
       });
 
       if (response.ok) {
-        fetchRequests();
+        await fetchRequests();
         alert('Certificate request rejected');
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to reject certificate:", errorData.error);
       }
     } catch (error) {
       console.error("Error rejecting certificate:", error);
@@ -192,13 +260,22 @@ export default function CertificateRequestsPage() {
   return (
     <div className="space-y-6">
       {/* Hidden certificate template for PDF generation */}
-      <div className="fixed -left-[9999px] -top-[9999px]">
-        <div ref={certificateRef}>
+      <div className="fixed -left-[9999px] -top-[9999px]" style={{ width: '1200px', minHeight: '800px' }}>
+        <div ref={certificateRef} className="bg-white" style={{ width: '1200px', minHeight: '800px' }}>
           {currentCertificateData && (
             <CertificateTemplate data={currentCertificateData} />
           )}
         </div>
       </div>
+
+      {/* Debug info - Remove in production */}
+      {currentCertificateData && (
+        <div className="fixed bottom-4 right-4 bg-yellow-100 border border-yellow-400 p-4 rounded-lg shadow-lg max-w-sm">
+          <p className="text-xs font-semibold mb-2">Debug: Certificate Rendering</p>
+          <p className="text-xs">Data: {JSON.stringify(currentCertificateData).substring(0, 100)}...</p>
+          <p className="text-xs">Ref: {certificateRef.current ? 'Found' : 'Not Found'}</p>
+        </div>
+      )}
 
       <div className="flex justify-between items-center">
         <div>
@@ -302,12 +379,6 @@ export default function CertificateRequestsPage() {
                           minute: '2-digit'
                         })}
                       </div>
-                      {request.enrollment.completedAt && (
-                        <div>
-                          <span className="font-medium">Completed:</span>{" "}
-                          {new Date(request.enrollment.completedAt).toLocaleDateString()}
-                        </div>
-                      )}
                       {request.processedAt && (
                         <div>
                           <span className="font-medium">Processed:</span>{" "}
@@ -325,34 +396,56 @@ export default function CertificateRequestsPage() {
                     )}
                   </div>
 
-                  {request.status === "PENDING" && (
-                    <div className="flex flex-col gap-2 ml-4">
+                  <div className="flex flex-col gap-2 ml-4">
+                    {request.status === "PENDING" && (
+                      <>
+                        <button
+                          onClick={() => handleApprove(request.id, request)}
+                          disabled={processingRequest === request.id}
+                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50"
+                        >
+                          {processingRequest === request.id ? (
+                            <>
+                              <Clock className="w-4 h-4 mr-1 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Approve
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleReject(request.id)}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                        >
+                          <XCircle className="w-4 h-4 mr-1" />
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    
+                    {request.status === "APPROVED" && (
                       <button
-                        onClick={() => handleApproveAndGenerate(request.id, request.enrollmentId, request)}
-                        disabled={generatingCertificate === request.id}
-                        className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50"
+                        onClick={() => handleDownloadCertificate(request)}
+                        disabled={processingRequest === request.id}
+                        className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
                       >
-                        {generatingCertificate === request.id ? (
+                        {processingRequest === request.id ? (
                           <>
-                            <Award className="w-4 h-4 mr-1 animate-spin" />
+                            <Clock className="w-4 h-4 mr-1 animate-spin" />
                             Generating...
                           </>
                         ) : (
                           <>
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Approve & Generate
+                            <Award className="w-4 h-4 mr-1" />
+                            Download Certificate
                           </>
                         )}
                       </button>
-                      <button
-                        onClick={() => handleReject(request.id)}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                      >
-                        <XCircle className="w-4 h-4 mr-1" />
-                        Reject
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
