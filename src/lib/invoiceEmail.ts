@@ -1,7 +1,6 @@
 /*eslint-disable  @typescript-eslint/no-explicit-any*/
-// lib/email/invoiceEmail.ts
+// lib/invoiceEmail.ts
 import nodemailer from 'nodemailer';
-import puppeteer from 'puppeteer';
 
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
@@ -83,26 +82,26 @@ export async function createInvoiceEmailHTML(data: InvoiceEmailData) {
               </div>
               <div class="detail-row">
                 <span class="detail-label">Original Price</span>
-                <span class="detail-value">₹${parseFloat(payment.amount).toLocaleString('en-IN')}</span>
+                <span class="detail-value">Rs. ${parseFloat(payment.amount).toLocaleString('en-IN')}</span>
               </div>
               ${parseFloat(payment.discountAmount || '0') > 0 ? `
               <div class="detail-row" style="color: #059669;">
                 <span class="detail-label">Discount</span>
-                <span class="detail-value">-₹${parseFloat(payment.discountAmount).toLocaleString('en-IN')}</span>
+                <span class="detail-value">-Rs. ${parseFloat(payment.discountAmount).toLocaleString('en-IN')}</span>
               </div>
               ` : ''}
               <div class="detail-row">
                 <span class="detail-label">Subtotal</span>
-                <span class="detail-value">₹${(parseFloat(payment.amount) - parseFloat(payment.discountAmount || "0")).toLocaleString('en-IN')}</span>
+                <span class="detail-value">Rs. ${(parseFloat(payment.amount) - parseFloat(payment.discountAmount || "0")).toLocaleString('en-IN')}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">GST (18%)</span>
-                <span class="detail-value">₹${parseFloat(payment.gstAmount).toLocaleString('en-IN')}</span>
+                <span class="detail-value">Rs. ${parseFloat(payment.gstAmount).toLocaleString('en-IN')}</span>
               </div>
               <div class="total-row">
                 <div class="detail-row" style="border: none; padding: 0;">
                   <span class="detail-label">Total Paid</span>
-                  <span class="detail-value">₹${parseFloat(payment.finalAmount).toLocaleString('en-IN')}</span>
+                  <span class="detail-value">Rs. ${parseFloat(payment.finalAmount).toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -154,166 +153,329 @@ export async function createInvoiceEmailHTML(data: InvoiceEmailData) {
   `;
 }
 
+// Generate PDF using pdf-lib (NO CHROME REQUIRED!)
 async function generateInvoicePDFAttachment(data: InvoiceEmailData): Promise<Buffer> {
   const { payment, user, course } = data;
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
-        .invoice-container { max-width: 800px; margin: 0 auto; border: 2px solid #e5e7eb; border-radius: 8px; padding: 40px; }
-        .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
-        .company-info h1 { color: #2563eb; font-size: 32px; margin-bottom: 8px; }
-        .company-info p { color: #6b7280; font-size: 14px; margin: 4px 0; }
-        .invoice-info { text-align: right; }
-        .invoice-info h2 { font-size: 24px; margin-bottom: 8px; }
-        .invoice-number { background: #eff6ff; padding: 8px 16px; border-radius: 4px; display: inline-block; margin: 8px 0; }
-        .invoice-number p { color: #2563eb; font-weight: 600; font-size: 14px; }
-        .customer-details { background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
-        .customer-details h3 { margin-bottom: 12px; font-size: 18px; }
-        .customer-details p { color: #6b7280; font-size: 14px; margin: 4px 0; }
-        .customer-name { font-weight: 600; color: #111827 !important; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        thead { background: #f3f4f6; border-bottom: 2px solid #d1d5db; }
-        th { padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 14px; }
-        th:last-child { text-align: right; }
-        td { padding: 16px 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-        td:last-child { text-align: right; font-weight: 600; }
-        .course-name { font-weight: 600; color: #111827; margin-bottom: 4px; }
-        .discount-row { color: #059669; }
-        .subtotal-row { background: #f9fafb; font-weight: 600; }
-        .total-row { background: #eff6ff; border-top: 2px solid #2563eb; }
-        .total-row td { font-size: 18px; font-weight: 700; color: #2563eb; padding: 16px 12px; }
-        .payment-details { background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
-        .payment-details h3 { margin-bottom: 12px; font-size: 18px; }
-        .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .payment-item p { color: #6b7280; font-size: 13px; margin-bottom: 4px; }
-        .payment-value { font-weight: 600; color: #111827; font-size: 14px; }
-        .footer { text-align: center; padding-top: 20px; border-top: 2px solid #e5e7eb; }
-        .footer p { color: #6b7280; font-size: 13px; margin: 4px 0; }
-      </style>
-    </head>
-    <body>
-      <div class="invoice-container">
-        <div class="header">
-          <div class="company-info">
-            <h1>FUTURETEK</h1>
-            <p>Education & Training</p>
-            <p>Email: support@futuretek.com</p>
-            <p>Phone: +91 XXXXXXXXXX</p>
-          </div>
-          <div class="invoice-info">
-            <h2>INVOICE</h2>
-            <div class="invoice-number">
-              <p>${payment.invoiceNumber}</p>
-            </div>
-            <p style="color: #6b7280; font-size: 14px; margin-top: 8px;">
-              Date: ${new Date(payment.createdAt).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </p>
-          </div>
-        </div>
+  let PDFDocument, rgb, StandardFonts;
 
-        <div class="customer-details">
-          <h3>Bill To:</h3>
-          <p class="customer-name">${user.name}</p>
-          <p>${user.email}</p>
-          ${user.gstNumber ? `<p>GST No: ${user.gstNumber}</p>` : ""}
-        </div>
+  try {
+    const pdfLib = await import("pdf-lib");
+    PDFDocument = pdfLib.PDFDocument;
+    rgb = pdfLib.rgb;
+    StandardFonts = pdfLib.StandardFonts;
+  } catch (err) {
+    console.error("❌ pdf-lib failed to load:", err);
+    throw new Error("PDF library could not be loaded");
+  }
 
-        <table>
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div class="course-name">${course.title}</div>
-              </td>
-              <td>₹${parseFloat(payment.amount).toLocaleString("en-IN")}</td>
-            </tr>
-            ${parseFloat(payment.discountAmount || '0') > 0 ? `
-            <tr class="discount-row">
-              <td>Discount Applied</td>
-              <td>-₹${parseFloat(payment.discountAmount).toLocaleString("en-IN")}</td>
-            </tr>
-            ` : ""}
-            <tr class="subtotal-row">
-              <td>Subtotal</td>
-              <td>₹${(parseFloat(payment.amount) - parseFloat(payment.discountAmount || "0")).toLocaleString("en-IN")}</td>
-            </tr>
-            <tr>
-              <td>GST (18%)</td>
-              <td>₹${parseFloat(payment.gstAmount).toLocaleString("en-IN")}</td>
-            </tr>
-            <tr class="total-row">
-              <td>Total Amount</td>
-              <td>₹${parseFloat(payment.finalAmount).toLocaleString("en-IN")}</td>
-            </tr>
-          </tbody>
-        </table>
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
 
-        <div class="payment-details">
-          <h3>Payment Details</h3>
-          <div class="payment-grid">
-            <div class="payment-item">
-              <p>Payment Method</p>
-              <div class="payment-value">Razorpay</div>
-            </div>
-            ${payment.razorpayPaymentId ? `
-            <div class="payment-item">
-              <p>Transaction ID</p>
-              <div class="payment-value" style="font-family: monospace; font-size: 12px;">
-                ${payment.razorpayPaymentId}
-              </div>
-            </div>
-            ` : ""}
-          </div>
-        </div>
+  // Embed fonts
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-        <div class="footer">
-          <p style="margin-bottom: 8px; font-weight: 600;">Thank you for your purchase!</p>
-          <p>This is a computer-generated invoice and does not require a signature.</p>
-          <p style="margin-top: 8px;">For any queries, please contact support@futuretek.com</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  // Set initial coordinates
+  let y = 800;
+  const leftMargin = 50;
+  const rightMargin = 400;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  // Colors
+  const blue = rgb(0.149, 0.388, 0.922);
+  const gray = rgb(0.42, 0.45, 0.5);
+  const green = rgb(0.02, 0.59, 0.41);
+  const darkGray = rgb(0.17, 0.24, 0.31);
+
+  // Header
+  page.drawText('FUTURETEK', {
+    x: leftMargin,
+    y,
+    size: 24,
+    font: boldFont,
+    color: blue,
   });
 
-  const page = await browser.newPage();
-  await page.setContent(html);
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20px", right: "20px", bottom: "20px", left: "20px" },
+  page.drawText('INVOICE', {
+    x: 400,
+    y,
+    size: 20,
+    font: boldFont,
+    color: darkGray,
+  });
+  y -= 30;
+
+  // Invoice Number and Date
+  page.drawText(`Invoice #: ${payment.invoiceNumber}`, {
+    x: 400,
+    y,
+    size: 10,
+    font: font,
+    color: gray,
   });
 
-  await browser.close();
+  page.drawText(`Date: ${new Date(payment.createdAt).toLocaleDateString('en-IN')}`, {
+    x: 400,
+    y: y - 15,
+    size: 10,
+    font: font,
+    color: gray,
+  });
+  y -= 50;
 
-  return Buffer.from(pdfBuffer);
+  // Company Info
+  page.drawText('Education & Training', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: font,
+    color: gray,
+  });
+  y -= 20;
+
+  page.drawText('Email: support@futuretek.com', {
+    x: leftMargin,
+    y,
+    size: 10,
+    font: font,
+    color: gray,
+  });
+  y -= 15;
+
+  page.drawText('Phone: +91 XXXXXXXXXX', {
+    x: leftMargin,
+    y,
+    size: 10,
+    font: font,
+    color: gray,
+  });
+  y -= 40;
+
+  // Bill To
+  page.drawText('Bill To:', {
+    x: leftMargin,
+    y,
+    size: 14,
+    font: boldFont,
+    color: darkGray,
+  });
+  y -= 20;
+
+  page.drawText(user.name, {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: boldFont,
+  });
+  y -= 15;
+
+  page.drawText(user.email, {
+    x: leftMargin,
+    y,
+    size: 10,
+    font: font,
+    color: gray,
+  });
+  y -= 15;
+
+  if (user.gstNumber) {
+    page.drawText(`GST No: ${user.gstNumber}`, {
+      x: leftMargin,
+      y,
+      size: 10,
+      font: font,
+      color: gray,
+    });
+    y -= 15;
+  }
+  y -= 20;
+
+  // Table Header
+  page.drawLine({
+    start: { x: leftMargin, y },
+    end: { x: 545, y },
+    thickness: 2,
+    color: gray,
+  });
+  y -= 20;
+
+  page.drawText('Description', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: boldFont,
+    color: darkGray,
+  });
+
+  page.drawText('Amount', {
+    x: rightMargin,
+    y,
+    size: 12,
+    font: boldFont,
+    color: darkGray,
+  });
+  y -= 30;
+
+  // Course Item
+  page.drawText(course.title, {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: boldFont,
+  });
+
+  page.drawText(`Rs. ${parseFloat(payment.amount).toLocaleString('en-IN')}`, {
+    x: rightMargin,
+    y,
+    size: 12,
+    font: font,
+  });
+  y -= 25;
+
+  // Discount
+  if (parseFloat(payment.discountAmount || '0') > 0) {
+    page.drawText('Discount', {
+      x: leftMargin,
+      y,
+      size: 11,
+      font: font,
+      color: green,
+    });
+
+    page.drawText(`-Rs. ${parseFloat(payment.discountAmount).toLocaleString('en-IN')}`, {
+      x: rightMargin,
+      y,
+      size: 11,
+      font: font,
+      color: green,
+    });
+    y -= 25;
+  }
+
+  // Subtotal
+  page.drawText('Subtotal', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: boldFont,
+  });
+
+  const subtotal = parseFloat(payment.amount) - parseFloat(payment.discountAmount || '0');
+  page.drawText(`Rs. ${subtotal.toLocaleString('en-IN')}`, {
+    x: rightMargin,
+    y,
+    size: 12,
+    font: boldFont,
+  });
+  y -= 25;
+
+  // GST
+  page.drawText('GST (18%)', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: font,
+  });
+
+  page.drawText(`Rs. ${parseFloat(payment.gstAmount).toLocaleString('en-IN')}`, {
+    x: rightMargin,
+    y,
+    size: 12,
+    font: font,
+  });
+  y -= 30;
+
+  // Total
+  page.drawLine({
+    start: { x: leftMargin, y: y + 5 },
+    end: { x: 545, y: y + 5 },
+    thickness: 1,
+    color: blue,
+  });
+  y -= 20;
+
+  page.drawText('Total Amount', {
+    x: leftMargin,
+    y,
+    size: 16,
+    font: boldFont,
+    color: blue,
+  });
+
+  page.drawText(`Rs. ${parseFloat(payment.finalAmount).toLocaleString('en-IN')}`, {
+    x: rightMargin,
+    y,
+    size: 16,
+    font: boldFont,
+    color: blue,
+  });
+  y -= 50;
+
+  // Payment Details
+  page.drawText('Payment Details', {
+    x: leftMargin,
+    y,
+    size: 14,
+    font: boldFont,
+    color: darkGray,
+  });
+  y -= 25;
+
+  page.drawText('Payment Method: Razorpay', {
+    x: leftMargin,
+    y,
+    size: 11,
+    font: font,
+  });
+  y -= 20;
+
+  if (payment.razorpayPaymentId) {
+    page.drawText(`Transaction ID: ${payment.razorpayPaymentId}`, {
+      x: leftMargin,
+      y,
+      size: 10,
+      font: font,
+      color: gray,
+    });
+  }
+
+  // Footer
+  y = 50;
+  page.drawText('Thank you for your purchase!', {
+    x: leftMargin,
+    y,
+    size: 12,
+    font: boldFont,
+    color: gray,
+  });
+  y -= 20;
+
+  page.drawText('This is a computer-generated invoice and does not require a signature.', {
+    x: leftMargin,
+    y,
+    size: 9,
+    font: font,
+    color: gray,
+  });
+  y -= 15;
+
+  page.drawText('For any queries, please contact support@futuretek.com', {
+    x: leftMargin,
+    y,
+    size: 9,
+    font: font,
+    color: gray,
+  });
+
+  // Save PDF
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }
 
 export async function sendInvoiceEmail(data: InvoiceEmailData) {
   try {
     const { payment, user } = data;
 
-    // Generate PDF attachment
     const pdfBuffer = await generateInvoicePDFAttachment(data);
 
     // Create email HTML
