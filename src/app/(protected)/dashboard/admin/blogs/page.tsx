@@ -4,6 +4,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Swal from 'sweetalert2';
 import {
   Popover,
   PopoverContent,
@@ -82,22 +83,50 @@ export default function BlogsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this blog?")) return;
+ const handleDelete = async (id: string) => {
+  const blogToDelete = blogs.find(b => b.id === id);
+  
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    html: `You are about to delete <strong>"${blogToDelete?.title}"</strong>.<br>This action cannot be undone.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true
+  });
 
-    try {
-      const res = await fetch(`/api/admin/blogs/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setBlogs((prev) => prev.filter((b) => b.id !== id));
-        alert("Blog deleted successfully");
-      } else {
-        alert("Failed to delete blog");
-      }
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert("Error deleting blog");
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/admin/blogs/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setBlogs((prev) => prev.filter((b) => b.id !== id));
+      await Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Blog post has been deleted successfully.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: 'Failed to delete blog post. Please try again.',
+      });
     }
-  };
+  } catch (err) {
+    console.error("Delete error:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'An error occurred while deleting the blog post.',
+    });
+  }
+};
 
   const filteredBlogs = blogs.filter((b) =>
     b.title.toLowerCase().includes(searchTerm.toLowerCase())

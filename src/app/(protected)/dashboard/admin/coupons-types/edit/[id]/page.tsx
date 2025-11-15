@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Swal from 'sweetalert2';
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,53 +36,71 @@ export default function EditCouponTypePage() {
     }
   }, [id]);
 
-  const fetchCouponType = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/admin/coupon-types/${id}`);
-      
-      if (!res.ok) {
-        throw new Error("Coupon type not found");
-      }
-      
-      const data = await res.json();
-      setCouponType(data);
-    } catch (error) {
-      console.error("Failed to fetch coupon type:", error);
-      alert("Coupon type not found");
-      router.back();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!couponType) return;
+ const fetchCouponType = async () => {
+  try {
+    setLoading(true);
+    const res = await fetch(`/api/admin/coupon-types/${id}`);
     
-    try {
-      setSaving(true);
-      const res = await fetch(`/api/admin/coupon-types/${couponType.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(couponType),
-      });
-
-      if (res.ok) {
-        alert("Coupon type updated successfully!");
-        router.push("/dashboard/admin/coupons-types");
-      } else {
-        const error = await res.json();
-        alert(error.error || "Failed to update coupon type");
-      }
-    } catch (error) {
-      console.error("Update error:", error);
-      alert("Error updating coupon type");
-    } finally {
-      setSaving(false);
+    if (!res.ok) {
+      throw new Error("Coupon type not found");
     }
-  };
+    
+    const data = await res.json();
+    setCouponType(data);
+  } catch (error) {
+    console.error("Failed to fetch coupon type:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Not Found',
+      text: 'Coupon type not found',
+    });
+    router.back();
+  } finally {
+    setLoading(false);
+  }
+};
+
+ const handleSave = async () => {
+  if (!couponType) return;
+  
+  try {
+    setSaving(true);
+    const res = await fetch(`/api/admin/coupon-types/${couponType.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(couponType),
+    });
+
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Coupon type updated successfully!',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      router.push("/dashboard/admin/coupons-types");
+    } else {
+      const error = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: error.error || 'Failed to update coupon type',
+      });
+    }
+  } catch (error) {
+    console.error("Update error:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error!',
+      text: 'Error updating coupon type',
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) {
     return (

@@ -100,7 +100,7 @@ export default function UserDetailPage() {
             course: {
               id: e.courseId,
               title: e.course?.title || `Course #${e.courseId.slice(0, 8)}`, // fallback title
-              slug: e.courseId,
+              slug: e.course?.slug ,
             },
             status: e.status,
             enrolledAt: e.enrolledAt,
@@ -293,7 +293,7 @@ export default function UserDetailPage() {
                         <tr key={e.id} className="hover:bg-muted/50">
                           <td className="px-4 py-3">
                             <Link
-                              href={`/courses/${e.course.slug}`}
+                              href={`/dashboard/admin/courses/${e.course.slug}`}
                               className="font-medium hover:underline"
                             >
                               {e.course.title}
@@ -352,9 +352,9 @@ export default function UserDetailPage() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                           Date
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                        {/* <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                           Action
-                        </th>
+                        </th> */}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -384,13 +384,13 @@ export default function UserDetailPage() {
                           <td className="px-4 py-3 text-sm text-muted-foreground">
                             {new Date(p.createdAt).toLocaleDateString("en-IN")}
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          {/* <td className="px-4 py-3 text-right">
                             <Link href={`/dashboard/admin/payments/${p.id}`}>
                               <Button size="sm" variant="ghost">
                                 View
                               </Button>
                             </Link>
-                          </td>
+                          </td> */}
                         </tr>
                       ))}
                     </tbody>

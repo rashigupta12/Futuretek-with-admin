@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Tag } from "lucide-react";
+import Swal from 'sweetalert2';
 
 interface CouponType {
   id: string;
@@ -79,50 +80,98 @@ export default function AddCouponPage() {
     }
   }, [formData.couponTypeId, couponTypes]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const payload = {
-        ...formData,
-        maxUsageCount: formData.maxUsageCount ? parseInt(formData.maxUsageCount) : undefined,
-        courseIds: formData.couponScope === "GENERAL" ? selectedCourses : undefined,
-      };
-
-      const response = await fetch("/api/admin/coupons", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert("Coupon created successfully!");
-        router.push("/dashboard/admin/coupons");
-      } else {
-        alert(data.error || "Failed to create coupon");
-      }
-    } catch (error) {
-      console.error("Error creating coupon:", error);
-      alert("Failed to create coupon");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+
+    // Special validation for discountValue
+    if (name === "discountValue" && value !== "") {
+      const selectedType = couponTypes.find(
+        (type) => type.id === formData.couponTypeId
+      );
+      
+      if (selectedType?.maxDiscountLimit) {
+        const maxValue = Number(selectedType.maxDiscountLimit);
+        const inputValue = Number(value);
+        
+        // If value exceeds max, don't update the state
+        if (inputValue > maxValue) {
+          return;
+        }
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // Check discount limit validation
+  const selectedType = couponTypes.find(
+    (type) => type.id === formData.couponTypeId
+  );
+  
+  if (selectedType?.maxDiscountLimit && 
+      Number(formData.discountValue) > Number(selectedType.maxDiscountLimit)) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Discount Limit Exceeded',
+      text: `Discount value cannot exceed ${selectedType.maxDiscountLimit}`,
+    });
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const payload = {
+      ...formData,
+      maxUsageCount: formData.maxUsageCount ? parseInt(formData.maxUsageCount) : undefined,
+      courseIds: formData.couponScope === "GENERAL" ? selectedCourses : undefined,
+    };
+
+    const response = await fetch("/api/admin/coupons", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Coupon created successfully!',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      router.push("/dashboard/admin/coupons");
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: data.error || 'Failed to create coupon',
+      });
+    }
+  } catch (error) {
+    console.error("Error creating coupon:", error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Unexpected Error',
+      text: 'Failed to create coupon',
+    });
+  } finally {
+    setLoading(false);
+  }
+};  
 
   const toggleCourseSelection = (courseId: string) => {
     setSelectedCourses((prev) =>
@@ -135,6 +184,9 @@ export default function AddCouponPage() {
   const selectedCouponType = couponTypes.find(
     (type) => type.id === formData.couponTypeId
   );
+
+  const isDiscountExceeded = selectedCouponType?.maxDiscountLimit && 
+    Number(formData.discountValue) > Number(selectedCouponType.maxDiscountLimit);
 
   return (
     <div className="space-y-6">
@@ -214,10 +266,19 @@ export default function AddCouponPage() {
                 step={formData.discountType === "PERCENTAGE" ? "1" : "0.01"}
                 min="0"
                 max={selectedCouponType?.maxDiscountLimit}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDiscountExceeded
+                    ? "border-red-500 bg-red-50"
+                    : "border-gray-300"
+                }`}
                 placeholder={formData.discountType === "PERCENTAGE" ? "10" : "50.00"}
                 required
               />
+              {isDiscountExceeded && (
+                <p className="text-red-600 text-sm mt-1">
+                  Maximum discount value is {selectedCouponType.maxDiscountLimit}
+                </p>
+              )}
             </div>
 
             <div>
@@ -337,7 +398,7 @@ export default function AddCouponPage() {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !!isDiscountExceeded}
               className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Save className="h-4 w-4" />

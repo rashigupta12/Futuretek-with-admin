@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Swal from 'sweetalert2';
 import React, { useState } from "react";
 import { useCurrentUser } from "@/hooks/auth";
 
@@ -45,43 +46,60 @@ export default function AddBlogPage() {
   setTags(newTags);
 };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    setLoading(true);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  setLoading(true);
 
-    const payload = {
-      slug,
-      title,
-      excerpt: excerpt || null,
-      content,
-      thumbnailUrl: thumbnailUrl || null,
-      authorId: authorId || "default-author-id", // Replace with actual user ID from session
-      tags: tags.filter((t) => t.trim()),
-      isPublished,
-    };
-
-    try {
-      const res = await fetch("/api/admin/blogs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        alert("Blog created successfully!");
-        router.push("/dashboard/admin/blogs");
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed to create blog");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Unexpected error");
-    } finally {
-      setLoading(false);
-    }
+  const payload = {
+    slug,
+    title,
+    excerpt: excerpt || null,
+    content,
+    thumbnailUrl: thumbnailUrl || null,
+    authorId: authorId || "default-author-id",
+    tags: tags.filter((t) => t.trim()),
+    isPublished,
   };
+
+  try {
+    const res = await fetch("/api/admin/blogs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      // Replace: alert("Blog created successfully!");
+      await Swal.fire({
+        icon: 'success',
+        title: 'Blog Created!',
+        text: 'Blog post has been created successfully',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      router.push("/dashboard/admin/blogs");
+    } else {
+      const err = await res.json();
+      // Replace: alert(err.error || "Failed to create blog");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.error || 'Failed to create blog',
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    // Replace: alert("Unexpected error");
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'An unexpected error occurred',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6 w-full">

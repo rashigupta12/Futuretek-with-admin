@@ -6,7 +6,8 @@ const nextConfig = {
   },
   experimental: {
     optimizeCss: true,
-    fontLoaders: [{ loader: "@next/font/google", options: { subsets: ["latin"] } }],
+    // Removed fontLoaders - it's not valid in Next.js 15
+    // Font optimization is now automatic with next/font
   },
   headers: async () => [
     {

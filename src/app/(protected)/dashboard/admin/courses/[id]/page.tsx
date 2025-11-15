@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import Swal from 'sweetalert2';
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
@@ -176,35 +177,75 @@ export default function ViewCoursePage() {
       });
 
       if (res.ok) {
-        alert("Course updated successfully!");
-        setIsEditing(false);
-        fetchCourse();
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed to update course");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error updating course");
-    } finally {
-      setSaving(false);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Course updated successfully!',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      setIsEditing(false);
+      fetchCourse();
+    } else {
+      const err = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.error || 'Failed to update course',
+      });
     }
-  };
+  } catch (err) {
+    console.error(err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error updating course',
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this course?")) return;
-    try {
-      const res = await fetch(`/api/admin/courses/${params.id}`, { method: "DELETE" });
-      if (res.ok) {
-        alert("Course deleted successfully");
-        router.push("/dashboard/admin/courses");
-      } else {
-        alert("Delete failed");
-      }
-    } catch {
-      alert("Error deleting course");
+ const handleDelete = async () => {
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/admin/courses/${params.id}`, { method: "DELETE" });
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Course deleted successfully',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      router.push("/dashboard/admin/courses");
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Delete failed',
+      });
     }
-  };
+  } catch {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Error deleting course',
+    });
+  }
+};
 
   // Session Management Functions
   const addSession = async () => {
@@ -1071,7 +1112,9 @@ export default function ViewCoursePage() {
                           type="number"
                           value={editData.maxStudents || ''}
                           onChange={(e) => updateEditField('maxStudents', e.target.value)}
-                          className="border-blue-300 focus:border-blue-500"
+                          className="border-blue-300 focus:border-blue-500" 
+                          disabled
+                          readOnly
                         />
                       </div>
                       <div className="space-y-2">
@@ -1081,6 +1124,8 @@ export default function ViewCoursePage() {
                           value={editData.currentEnrollments}
                           onChange={(e) => updateEditField('currentEnrollments', e.target.value)}
                           className="border-blue-300 focus:border-blue-500"
+                          disabled
+                          readOnly
                         />
                       </div>
                     </div>

@@ -13,6 +13,7 @@ import {
 import RichTextEditor from "@/components/courses/RichTextEditor";
 import SessionManager, { Session } from "@/components/SessionManager";
 
+import Swal from 'sweetalert2';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
@@ -142,14 +143,13 @@ export default function AddCoursePage() {
     e.preventDefault();
     
     if (!validateDates()) {
-      alert("Please fix the date validation errors before submitting");
-      return;
+// Replace: alert("Please fix the date validation errors before submitting");
+Swal.fire({
+  icon: 'warning',
+  title: 'Validation Error',
+  text: 'Please fix the date validation errors before submitting',
+});      return;
     }
-
-    if (!validateSessions()) {
-      return;
-    }
-
     setLoading(true);
 
     const payload = {
@@ -193,12 +193,31 @@ export default function AddCoursePage() {
       });
 
       if (res.ok) {
-        alert("Course created successfully!");
-        router.push("/dashboard/admin/courses");
+        // Replace: alert("Course created successfully!");
+Swal.fire({
+  icon: 'success',
+  title: 'Course Created!',
+  text: 'Course has been created successfully',
+  timer: 2000,
+  showConfirmButton: false
+}).then(() => {
+  router.push("/dashboard/admin/courses");
+});
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to create course");
-      }
+// Replace: alert(err.error || "Failed to create course");
+Swal.fire({
+  icon: 'error',
+  title: 'Error',
+  text: err.error || 'Failed to create course',
+});
+
+// Replace: alert("Unexpected error");
+Swal.fire({
+  icon: 'error',
+  title: 'Error',
+  text: 'An unexpected error occurred',
+});      }
     } catch (err) {
       console.error(err);
       alert("Unexpected error");

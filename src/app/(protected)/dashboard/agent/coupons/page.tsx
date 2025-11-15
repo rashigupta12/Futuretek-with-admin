@@ -4,6 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import Swal from "sweetalert2"
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -169,61 +170,85 @@ export default function MyCouponsPage() {
   }, [selectedType, discountValue, debouncedPreview]);
 
   const handleCreateCoupon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedType || !discountValue || !validFrom || !validUntil) return;
+  e.preventDefault();
+  if (!selectedType || !discountValue || !validFrom || !validUntil) return;
 
-    // Validate max usage
-    if (maxUsageCount && Number(maxUsageCount) < 1) {
-      setMaxUsageError("Max usage must be at least 1");
+  // Validate max usage
+  if (maxUsageCount && Number(maxUsageCount) < 1) {
+    setMaxUsageError("Max usage must be at least 1");
+    return;
+  }
+
+  const selectedTypeObj = types.find((t) => t.id === selectedType);
+  if (selectedTypeObj?.maxDiscountLimit) {
+    const max = Number(selectedTypeObj.maxDiscountLimit);
+    const entered = Number(discountValue);
+    if (entered > max) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Discount Limit Exceeded',
+        text: `Maximum allowed discount: ${max}${selectedTypeObj.discountType === "PERCENTAGE" ? "%" : "₹"}`,
+        confirmButtonColor: '#3085d6',
+      });
       return;
     }
+  }
 
-    const selectedTypeObj = types.find((t) => t.id === selectedType);
-    if (selectedTypeObj?.maxDiscountLimit) {
-      const max = Number(selectedTypeObj.maxDiscountLimit);
-      const entered = Number(discountValue);
-      if (entered > max) {
-        alert(`Max allowed: ${max}${selectedTypeObj.discountType === "PERCENTAGE" ? "%" : "₹"}`);
-        return;
-      }
-    }
+  setCreatingCoupon(true);
+  try {
+    const res = await fetch("/api/jyotishi/coupons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        couponTypeId: selectedType,
+        discountValue: Number(discountValue),
+        maxUsageCount: maxUsageCount ? Number(maxUsageCount) : null,
+        validFrom: validFrom.toISOString(),
+        validUntil: validUntil.toISOString(),
+      }),
+    });
 
-    setCreatingCoupon(true);
-    try {
-      const res = await fetch("/api/jyotishi/coupons", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          couponTypeId: selectedType,
-          discountValue: Number(discountValue),
-          maxUsageCount: maxUsageCount ? Number(maxUsageCount) : null,
-          validFrom: validFrom.toISOString(),
-          validUntil: validUntil.toISOString(),
-        }),
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Coupon Created!',
+        text: 'Your coupon has been created successfully',
+        timer: 3000,
+        showConfirmButton: false
       });
-
-      if (res.ok) {
-        alert("Coupon created!");
-        setShowSidebar(false);
-        mutate(); // Refresh list
-        // Reset
-        setSelectedType("");
-        setDiscountValue("");
-        setMaxUsageCount("");
-        setValidFrom(undefined);
-        setValidUntil(undefined);
-        setPreviewCode("");
-        setMaxUsageError("");
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed");
-      }
-    } catch {
-      alert("Error");
-    } finally {
-      setCreatingCoupon(false);
+      
+      setShowSidebar(false);
+      mutate(); // Refresh list
+      // Reset form
+      setSelectedType("");
+      setDiscountValue("");
+      setMaxUsageCount("");
+      setValidFrom(undefined);
+      setValidUntil(undefined);
+      setPreviewCode("");
+      setMaxUsageError("");
+    } else {
+      const err = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Creation Failed',
+        text: err.error || 'Failed to create coupon',
+        confirmButtonColor: '#d33',
+      });
     }
-  };
+  } catch {
+    Swal.fire({
+      icon: 'error',
+      title: 'Network Error',
+      text: 'Failed to create coupon. Please try again.',
+      confirmButtonColor: '#d33',
+    });
+  } finally {
+    setCreatingCoupon(false);
+  }
+};
+
+
 
   // const handleDelete = async (id: string) => {
   //   if (!confirm("Delete this coupon?")) return;

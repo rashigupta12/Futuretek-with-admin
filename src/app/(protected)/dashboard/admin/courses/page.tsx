@@ -4,6 +4,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Swal from "sweetalert2"
 import {
   Popover,
   PopoverContent,
@@ -67,22 +68,50 @@ export default function CoursesPage() {
   };
 
   // Delete handler
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this course?")) return;
+const handleDelete = async (id: string) => {
+  const courseToDelete = courses.find(c => c.id === id);
+  
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    html: `You are about to delete <strong>"${courseToDelete?.title}"</strong>.<br>This action cannot be undone.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true
+  });
 
-    try {
-      const res = await fetch(`/api/admin/courses/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setCourses((prev) => prev.filter((c) => c.id !== id));
-        alert("Course deleted successfully");
-      } else {
-        alert("Failed to delete course");
-      }
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert("Error deleting course");
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/admin/courses/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setCourses((prev) => prev.filter((c) => c.id !== id));
+      await Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Course has been deleted successfully.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete Failed',
+        text: 'Failed to delete course. Please try again.',
+      });
     }
-  };
+  } catch (err) {
+    console.error("Delete error:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'An error occurred while deleting the course.',
+    });
+  }
+};
 
   // Filter by search
   const filteredCourses = courses.filter((c) =>

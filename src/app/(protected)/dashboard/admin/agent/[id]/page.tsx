@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import Swal from 'sweetalert2';
 import {
   Card,
   CardContent,
@@ -135,81 +136,152 @@ export default function ViewJyotishiPage() {
     }
   };
 
-  const handleEditToggle = () => {
-    if (isEditing) {
-      // Reset form data when canceling edit
-      if (jyotishi) {
-        setFormData({
-          name: jyotishi.name || "",
-          email: jyotishi.email || "",
-          mobile: jyotishi.mobile || "",
-          commissionRate: jyotishi.commissionRate?.toString() || "",
-          bankAccountNumber: jyotishi.bankAccountNumber || "",
-          bankIfscCode: jyotishi.bankIfscCode || "",
-          bankAccountHolderName: jyotishi.bankAccountHolderName || "",
-          panNumber: jyotishi.panNumber || "",
-          bio: jyotishi.bio || "",
-        });
-      }
-    }
-    setIsEditing(!isEditing);
-  };
+ const handleEditToggle = () => {
+  if (isEditing) {
+    // Show confirmation if user cancels with unsaved changes
+    const hasChanges = JSON.stringify({
+      name: jyotishi?.name || "",
+      email: jyotishi?.email || "",
+      mobile: jyotishi?.mobile || "",
+      commissionRate: jyotishi?.commissionRate?.toString() || "",
+      bankAccountNumber: jyotishi?.bankAccountNumber || "",
+      bankIfscCode: jyotishi?.bankIfscCode || "",
+      bankAccountHolderName: jyotishi?.bankAccountHolderName || "",
+      panNumber: jyotishi?.panNumber || "",
+      bio: jyotishi?.bio || "",
+    }) !== JSON.stringify(formData);
 
-  const handleSave = async () => {
-    if (!jyotishi) return;
-
-    setSaving(true);
-    try {
-      const payload = {
-        ...formData,
-        commissionRate: Number(formData.commissionRate),
-        mobile: formData.mobile || null,
-        bankAccountNumber: formData.bankAccountNumber || null,
-        bankIfscCode: formData.bankIfscCode || null,
-        bankAccountHolderName: formData.bankAccountHolderName || null,
-        panNumber: formData.panNumber || null,
-        bio: formData.bio || null,
-      };
-
-      const res = await fetch(`/api/admin/jyotishi/${jyotishi.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    if (hasChanges) {
+      Swal.fire({
+        title: 'Discard Changes?',
+        text: "You have unsaved changes that will be lost.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, discard!',
+        cancelButtonText: 'Continue editing'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Reset form data when canceling edit
+          if (jyotishi) {
+            setFormData({
+              name: jyotishi.name || "",
+              email: jyotishi.email || "",
+              mobile: jyotishi.mobile || "",
+              commissionRate: jyotishi.commissionRate?.toString() || "",
+              bankAccountNumber: jyotishi.bankAccountNumber || "",
+              bankIfscCode: jyotishi.bankIfscCode || "",
+              bankAccountHolderName: jyotishi.bankAccountHolderName || "",
+              panNumber: jyotishi.panNumber || "",
+              bio: jyotishi.bio || "",
+            });
+          }
+          setIsEditing(false);
+        }
       });
-
-      if (res.ok) {
-        const updatedData = await res.json();
-        setJyotishi(updatedData.jyotishi);
-        setIsEditing(false);
-        alert("Jyotishi updated successfully!");
-      } else {
-        const error = await res.json();
-        alert(error.error || "Failed to update jyotishi");
-      }
-    } catch (err) {
-      console.error("Update error:", err);
-      alert("Unexpected error occurred");
-    } finally {
-      setSaving(false);
+      return;
     }
-  };
+  }
+  setIsEditing(!isEditing);
+};
 
-  const handleDeactivate = async () => {
-    if (!confirm("Are you sure you want to deactivate this Jyotishi?")) return;
-    try {
-      const res = await fetch(`/api/admin/jyotishi/${params.id}`, {
-        method: "DELETE",
+ const handleSave = async () => {
+  if (!jyotishi) return;
+
+  setSaving(true);
+  try {
+    const payload = {
+      ...formData,
+      commissionRate: Number(formData.commissionRate),
+      mobile: formData.mobile || null,
+      bankAccountNumber: formData.bankAccountNumber || null,
+      bankIfscCode: formData.bankIfscCode || null,
+      bankAccountHolderName: formData.bankAccountHolderName || null,
+      panNumber: formData.panNumber || null,
+      bio: formData.bio || null,
+    };
+
+    const res = await fetch(`/api/admin/jyotishi/${jyotishi.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const updatedData = await res.json();
+      setJyotishi(updatedData.jyotishi);
+      setIsEditing(false);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Jyotishi updated successfully!',
+        timer: 2000,
+        showConfirmButton: false
       });
-      if (res.ok) {
-        alert("Jyotishi deactivated successfully");
-        router.push("/dashboard/admin/agent");
-      } else {
-        alert("Failed to deactivate");
-      }
-    } catch {
-      alert("Error deactivating Jyotishi");
+    } else {
+      const error = await res.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: error.error || 'Failed to update jyotishi',
+      });
     }
-  };
+  } catch (err) {
+    console.error("Update error:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Unexpected Error!',
+      text: 'An unexpected error occurred while updating jyotishi',
+    });
+  } finally {
+    setSaving(false);
+  }
+};
+
+ const handleDeactivate = async () => {
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "You want to deactivate this Jyotishi?",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, deactivate!',
+    cancelButtonText: 'Cancel'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/admin/jyotishi/${params.id}`, {
+      method: "DELETE",
+    });
+    
+    if (res.ok) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Deactivated!',
+        text: 'Jyotishi deactivated successfully',
+      });
+      router.push("/dashboard/admin/agent");
+    } else {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: 'Failed to deactivate jyotishi',
+      });
+    }
+  } catch {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Error!',
+      text: 'Error deactivating Jyotishi',
+    });
+  }
+};
+
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
