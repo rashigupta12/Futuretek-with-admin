@@ -82,6 +82,8 @@ interface CourseData {
   disclaimer?: string;
   maxStudents?: number;
   currentEnrollments?: number;
+   commissionPercourse?: string; // ✅ ADD THIS
+  
 }
 
 /* -------------------------------------------------------------
@@ -678,25 +680,26 @@ export default function CoursePage() {
 
       {/* Checkout Sidebar */}
       {!isEnrolled && !isAdminOrJyotishi && (
-        <CheckoutSidebar
-          course={{
-            id: course.id,
-            title: course.title,
-            priceINR: course.priceINR || "0",
-            slug: course.slug,
-          }}
-          isOpen={showCheckout}
-          onClose={() => setShowCheckout(false)}
-          appliedCoupons={course.appliedCoupons || []}
-          hasAssignedCoupon={course.hasAssignedCoupon}
-          finalPrice={course.finalPrice}
-          originalPrice={course.originalPrice}
-          discountAmount={course.discountAmount}
-          adminDiscountAmount={course.adminDiscountAmount}
-          jyotishiDiscountAmount={course.jyotishiDiscountAmount}
-          priceAfterAdminDiscount={course.priceAfterAdminDiscount}
-        />
-      )}
+  <CheckoutSidebar
+    course={{
+      id: course.id,
+      title: course.title,
+      priceINR: course.priceINR || "0",
+      slug: course.slug,
+    }}
+    isOpen={showCheckout}
+    onClose={() => setShowCheckout(false)}
+    appliedCoupons={course.appliedCoupons || []}
+    hasAssignedCoupon={course.hasAssignedCoupon}
+    finalPrice={course.finalPrice}
+    originalPrice={course.originalPrice}
+    discountAmount={course.discountAmount}
+    adminDiscountAmount={course.adminDiscountAmount}
+    jyotishiDiscountAmount={course.jyotishiDiscountAmount}
+    priceAfterAdminDiscount={course.priceAfterAdminDiscount}
+    commissionPercourse={course.commissionPercourse} // ✅ ADD THIS LINE
+  />
+)}
     </div>
   );
 }

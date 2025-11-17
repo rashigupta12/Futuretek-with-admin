@@ -2,7 +2,7 @@
 // app/(protected)/dashboard/agent/assign-coupons/page.tsx
 "use client";
 
-import { AlertCircle, Book, Calendar, Clock, Search, Tag, Users, X, Plus, ShieldAlert, RefreshCw } from "lucide-react";
+import { AlertCircle, Book, Calendar, Clock, Search, Tag, Users, X, Plus, ShieldAlert, RefreshCw, DollarSign } from "lucide-react";
 import React, { useEffect, useState, useCallback } from "react";
 import Swal from "sweetalert2"
 
@@ -19,6 +19,8 @@ interface Course {
   priceINR: string;
   hasAdminDiscount?: boolean;
   adminDiscountAmount?: string;
+  commissionPercourse?: string | null;
+  hasCommission?: boolean;
 }
 
 interface Coupon {
@@ -90,7 +92,8 @@ export default function AssignCouponsPage() {
     try {
       const [studentsRes, coursesRes, couponsRes] = await Promise.all([
         fetch("/api/jyotishi/students"),
-        fetch("/api/courses"),
+        // ✅ NEW: Add forJyotishi parameter to only get courses with commission
+        fetch("/api/courses?forJyotishi=true"),
         fetch("/api/jyotishi/coupons")
       ]);
 
@@ -123,7 +126,9 @@ export default function AssignCouponsPage() {
             title: course.title,
             priceINR: course.priceINR,
             hasAdminDiscount,
-            adminDiscountAmount
+            adminDiscountAmount,
+            commissionPercourse: course.commissionPercourse,
+            hasCommission: course.hasCommission
           };
         } catch {
           return {
@@ -131,7 +136,9 @@ export default function AssignCouponsPage() {
             title: course.title,
             priceINR: course.priceINR,
             hasAdminDiscount: false,
-            adminDiscountAmount: "0"
+            adminDiscountAmount: "0",
+            commissionPercourse: course.commissionPercourse,
+            hasCommission: course.hasCommission
           };
         }
       });
@@ -498,6 +505,9 @@ export default function AssignCouponsPage() {
                     <label className="block text-sm font-medium text-gray-700">
                       <Book className="w-4 h-4 inline mr-2 text-blue-600" />
                       Select Course
+                      <span className="text-xs text-green-600 ml-2">
+                        (Only courses with commission)
+                      </span>
                     </label>
                     <select
                       value={selectedCourse}
@@ -517,17 +527,38 @@ export default function AssignCouponsPage() {
                           className={course.hasAdminDiscount ? "text-gray-400 bg-gray-100" : ""}
                         >
                           {course.title} (₹{course.priceINR})
+                          {course.commissionPercourse && ` - Commission: ${course.commissionPercourse}%`}
                           {course.hasAdminDiscount && " - Admin Discount Applied"}
                         </option>
                       ))}
                     </select>
                     {courses.length === 0 && (
-                      <p className="text-sm text-gray-500">No courses available</p>
+                      <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                        <DollarSign className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span>No courses with commission available. Please contact admin to set up commission for courses.</span>
+                      </div>
                     )}
                     {courses.filter(c => !c.hasAdminDiscount).length === 0 && courses.length > 0 && (
                       <p className="text-sm text-amber-600">All courses have admin discounts applied</p>
                     )}
                   </div>
+
+                  {/* Commission Info Badge */}
+                  {selectedCourseData?.commissionPercourse && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-green-600" />
+                        <div>
+                          <span className="text-green-900 font-medium block">
+                            Commission Available
+                          </span>
+                          <p className="text-green-700 text-sm mt-1">
+                            You will earn {selectedCourseData.commissionPercourse}% commission on this course enrollment.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Admin Discount Warning */}
                   {selectedCourseData?.hasAdminDiscount && (

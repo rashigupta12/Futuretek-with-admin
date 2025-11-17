@@ -1,4 +1,4 @@
-/*eslint-disable  @typescript-eslint/no-explicit-any*/
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
@@ -24,7 +24,7 @@ import {
   Users,
   X,
   Video,
-  Link as LinkIcon
+  Link as LinkIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -51,6 +51,7 @@ type Course = {
   disclaimer?: string | null;
   maxStudents?: number | null;
   currentEnrollments: number;
+  commissionPercourse?: number | null; // ← NEW: Decimal commission
   createdAt: string;
   updatedAt: string;
   features?: { feature: string }[] | string[];
@@ -111,6 +112,7 @@ export default function ViewCoursePage() {
         status: safeStatus,
         priceINR: data.priceINR ?? 0,
         priceUSD: data.priceUSD ?? 0,
+        commissionPercourse: data.commissionPercourse ?? null, // ← NEW
         features: normalizedFeatures,
         whyLearn: Array.isArray(data.whyLearn) ? data.whyLearn : [],
         content: Array.isArray(data.content) ? data.content : [],
@@ -122,6 +124,12 @@ export default function ViewCoursePage() {
       setEditData(courseData);
     } catch (err) {
       console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Not Found",
+        text: "Course not found",
+      });
+      router.back();
     } finally {
       setLoading(false);
     }
@@ -141,7 +149,7 @@ export default function ViewCoursePage() {
 
   const handleSave = async () => {
     if (!editData) return;
-    
+
     setSaving(true);
     try {
       const payload = {
@@ -164,10 +172,17 @@ export default function ViewCoursePage() {
         disclaimer: editData.disclaimer || null,
         maxStudents: editData.maxStudents ? Number(editData.maxStudents) : null,
         currentEnrollments: Number(editData.currentEnrollments),
-        features: (editData.features || []).map(f => typeof f === 'string' ? f : f.feature).filter(f => f.trim()),
-        whyLearn: (editData.whyLearn || []).filter(w => w.title.trim() && w.description.trim()),
-        content: (editData.content || []).map(c => typeof c === 'string' ? c : c.content).filter(c => c.trim()),
-        topics: (editData.topics || []).map(t => typeof t === 'string' ? t : t.topic).filter(t => t.trim()),
+        commissionPercourse: editData.commissionPercourse ? Number(editData.commissionPercourse) : null, // ← NEW
+        features: (editData.features || [])
+          .map((f) => (typeof f === "string" ? f : f.feature))
+          .filter((f) => f.trim()),
+        whyLearn: (editData.whyLearn || []).filter((w) => w.title.trim() && w.description.trim()),
+        content: (editData.content || [])
+          .map((c) => (typeof c === "string" ? c : c.content))
+          .filter((c) => c.trim()),
+        topics: (editData.topics || [])
+          .map((t) => (typeof t === "string" ? t : t.topic))
+          .filter((t) => t.trim()),
       };
 
       const res = await fetch(`/api/admin/courses/${editData.id}`, {
@@ -177,83 +192,84 @@ export default function ViewCoursePage() {
       });
 
       if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Course updated successfully!',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      setIsEditing(false);
-      fetchCourse();
-    } else {
-      const err = await res.json();
+        await Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: "Course updated successfully!",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        setIsEditing(false);
+        fetchCourse();
+      } else {
+        const err = await res.json();
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: err.error || "Failed to update course",
+        });
+      }
+    } catch (err) {
+      console.error(err);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: err.error || 'Failed to update course',
+        icon: "error",
+        title: "Error",
+        text: "Error updating course",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/admin/courses/${params.id}`, { method: "DELETE" });
+      if (res.ok) {
+        await Swal.fire({
+          icon: "success",
+          title: "Deleted!",
+          text: "Course deleted successfully",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        router.push("/dashboard/admin/courses");
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Delete failed",
+        });
+      }
+    } catch {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Error deleting course",
       });
     }
-  } catch (err) {
-    console.error(err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error updating course',
-    });
-  } finally {
-    setSaving(false);
-  }
-};
-
- const handleDelete = async () => {
-  const result = await Swal.fire({
-    title: 'Are you sure?',
-    text: "You won't be able to revert this!",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Yes, delete it!',
-    cancelButtonText: 'Cancel'
-  });
-
-  if (!result.isConfirmed) return;
-
-  try {
-    const res = await fetch(`/api/admin/courses/${params.id}`, { method: "DELETE" });
-    if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Course deleted successfully',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      router.push("/dashboard/admin/courses");
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Delete failed',
-      });
-    }
-  } catch {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error deleting course',
-    });
-  }
-};
+  };
 
   // Session Management Functions
   const addSession = async () => {
     if (!course) return;
 
-    const newSessionNumber = course.sessions && course.sessions.length > 0 
-      ? Math.max(...course.sessions.map(s => s.sessionNumber)) + 1 
-      : 1;
+    const newSessionNumber =
+      course.sessions && course.sessions.length > 0
+        ? Math.max(...course.sessions.map((s) => s.sessionNumber)) + 1
+        : 1;
 
     const newSession: Partial<Session> = {
       sessionNumber: newSessionNumber,
@@ -276,15 +292,15 @@ export default function ViewCoursePage() {
       });
 
       if (res.ok) {
-        alert("Session added successfully!");
+        Swal.fire("Success", "Session added successfully!", "success");
         fetchCourse();
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to add session");
+        Swal.fire("Error", err.error || "Failed to add session", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Error adding session");
+      Swal.fire("Error", "Error adding session", "error");
     }
   };
 
@@ -309,23 +325,30 @@ export default function ViewCoursePage() {
       });
 
       if (res.ok) {
-        alert("Session updated successfully!");
+        Swal.fire("Success", "Session updated successfully!", "success");
         setEditingSession(null);
         setEditSessionData(null);
         fetchCourse();
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to update session");
+        Swal.fire("Error", err.error || "Failed to update session", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Error updating session");
+      Swal.fire("Error", "Error updating session", "error");
     }
   };
 
   const deleteSession = async (sessionId: string) => {
-    if (!confirm("Are you sure you want to delete this session?")) return;
-    if (!course) return;
+    const result = await Swal.fire({
+      title: "Delete Session?",
+      text: "This cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+    });
+    if (!result.isConfirmed || !course) return;
 
     try {
       const res = await fetch(`/api/admin/courses/${course.id}/sessions/${sessionId}`, {
@@ -333,14 +356,14 @@ export default function ViewCoursePage() {
       });
 
       if (res.ok) {
-        alert("Session deleted successfully!");
+        Swal.fire("Deleted", "Session deleted.", "success");
         fetchCourse();
       } else {
-        alert("Failed to delete session");
+        Swal.fire("Error", "Failed to delete session", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Error deleting session");
+      Swal.fire("Error", "Error deleting session", "error");
     }
   };
 
@@ -349,52 +372,63 @@ export default function ViewCoursePage() {
     setEditSessionData({ ...editSessionData, [field]: value });
   };
 
-  const updateEditField = (field: string, value: any) => {
+  const updateEditField = (field: keyof Course, value: any) => {
     if (!editData) return;
     setEditData({ ...editData, [field]: value });
   };
 
-  const addArrayItem = (field: 'features' | 'whyLearn' | 'content' | 'topics') => {
+  const addArrayItem = (
+    field: "features" | "whyLearn" | "content" | "topics"
+  ) => {
     if (!editData) return;
-    const newItem = field === 'whyLearn' 
-      ? { title: '', description: '' }
-      : field === 'features'
-      ? { feature: '' }
-      : field === 'content'
-      ? { content: '' }
-      : { topic: '' };
-    const currentArray = editData[field] || [];
+    const newItem =
+      field === "whyLearn"
+        ? { title: "", description: "" }
+        : field === "features"
+        ? { feature: "" }
+        : field === "content"
+        ? { content: "" }
+        : { topic: "" };
+    const currentArray = (editData[field] as any[]) || [];
     setEditData({ ...editData, [field]: [...currentArray, newItem] });
   };
 
-  const removeArrayItem = (field: 'features' | 'whyLearn' | 'content' | 'topics', index: number) => {
+  const removeArrayItem = (
+    field: "features" | "whyLearn" | "content" | "topics",
+    index: number
+  ) => {
     if (!editData) return;
-    const currentArray = editData[field] || [];
+    const currentArray = (editData[field] as any[]) || [];
     const newArray = [...currentArray];
     newArray.splice(index, 1);
     setEditData({ ...editData, [field]: newArray });
   };
 
-  const updateArrayItem = (field: 'features' | 'whyLearn' | 'content' | 'topics', index: number, value: any) => {
+  const updateArrayItem = (
+    field: "features" | "whyLearn" | "content" | "topics",
+    index: number,
+    value: any
+  ) => {
     if (!editData) return;
-    const currentArray = editData[field] || [];
+    const currentArray = (editData[field] as any[]) || [];
     const newArray = [...currentArray];
     newArray[index] = value;
     setEditData({ ...editData, [field]: newArray });
   };
 
   // Helper functions
-  const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString("en-IN") : "Not set";
+  const formatDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("en-IN") : "Not set";
   const formatTime = (time: string) => {
     if (!time) return "-";
-    const [hours, minutes] = time.split(':');
+    const [hours, minutes] = time.split(":");
     const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const ampm = hour >= 12 ? "PM" : "AM";
     const formattedHour = hour % 12 || 12;
     return `${formattedHour}:${minutes} ${ampm}`;
   };
 
-  const formatDateForInput = (d: string | null) => d ? d.split('T')[0] : '';
+  const formatDateForInput = (d: string | null) => (d ? d.split("T")[0] : "");
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -410,29 +444,32 @@ export default function ViewCoursePage() {
   const getSessionStatus = (session: Session) => {
     const now = new Date();
     const sessionDateTime = new Date(`${session.sessionDate}T${session.sessionTime}`);
-    
+
     if (session.isCompleted) return { text: "Completed", color: "bg-green-100 text-green-800" };
     if (sessionDateTime < now) return { text: "Missed", color: "bg-red-100 text-red-800" };
-    if (sessionDateTime.toDateString() === now.toDateString()) return { text: "Today", color: "bg-blue-100 text-blue-800" };
+    if (sessionDateTime.toDateString() === now.toDateString())
+      return { text: "Today", color: "bg-blue-100 text-blue-800" };
     return { text: "Upcoming", color: "bg-yellow-100 text-yellow-800" };
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
 
-  if (!course || !editData) return (
-    <div className="container mx-auto p-8 text-center">
-      <h2 className="text-2xl font-bold text-red-600 mb-4">Course Not Found</h2>
-      <Button asChild className="bg-blue-600 hover:bg-blue-700">
-        <Link href="/dashboard/admin/courses">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Courses
-        </Link>
-      </Button>
-    </div>
-  );
+  if (!course || !editData)
+    return (
+      <div className="container mx-auto p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Course Not Found</h2>
+        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <Link href="/dashboard/admin/courses">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Courses
+          </Link>
+        </Button>
+      </div>
+    );
 
   const displayData = isEditing ? editData : course;
 
@@ -463,24 +500,22 @@ export default function ViewCoursePage() {
                   <Label className="text-sm text-gray-700">Title</Label>
                   <Input
                     value={editData.title}
-                    onChange={(e) => updateEditField('title', e.target.value)}
+                    onChange={(e) => updateEditField("title", e.target.value)}
                     className="text-2xl font-bold border-blue-300 focus:border-blue-500 h-16"
                   />
                 </div>
                 <div>
                   <Label className="text-sm text-gray-700">Tagline</Label>
                   <Input
-                    value={editData.tagline || ''}
-                    onChange={(e) => updateEditField('tagline', e.target.value)}
+                    value={editData.tagline || ""}
+                    onChange={(e) => updateEditField("tagline", e.target.value)}
                     className="border-blue-300 focus:border-blue-500"
                   />
                 </div>
               </div>
             ) : (
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                  {displayData.title}
-                </h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">{displayData.title}</h1>
                 {displayData.tagline && (
                   <p className="text-lg text-gray-600 mb-6">{displayData.tagline}</p>
                 )}
@@ -494,8 +529,10 @@ export default function ViewCoursePage() {
                   {(editData.topics || []).map((t, i) => (
                     <div key={i} className="flex gap-2 items-center">
                       <Input
-                        value={typeof t === 'string' ? t : t.topic}
-                        onChange={(e) => updateArrayItem('topics', i, { topic: e.target.value })}
+                        value={typeof t === "string" ? t : t.topic}
+                        onChange={(e) =>
+                          updateArrayItem("topics", i, { topic: e.target.value })
+                        }
                         placeholder="Topic"
                         className="border-blue-300 focus:border-blue-500"
                       />
@@ -503,7 +540,7 @@ export default function ViewCoursePage() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeArrayItem('topics', i)}
+                        onClick={() => removeArrayItem("topics", i)}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -513,7 +550,7 @@ export default function ViewCoursePage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => addArrayItem('topics')}
+                    onClick={() => addArrayItem("topics")}
                     className="border-blue-300 text-blue-700 hover:bg-blue-50"
                   >
                     <Plus className="h-4 w-4 mr-2" /> Add Topic
@@ -522,10 +559,10 @@ export default function ViewCoursePage() {
               ) : (
                 displayData.topics?.map((t) => (
                   <Badge
-                    key={typeof t === 'string' ? t : t.topic}
+                    key={typeof t === "string" ? t : t.topic}
                     className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
                   >
-                    {typeof t === 'string' ? t : t.topic}
+                    {typeof t === "string" ? t : t.topic}
                   </Badge>
                 ))
               )}
@@ -548,10 +585,7 @@ export default function ViewCoursePage() {
                       {course.sessions?.length || 0} sessions scheduled
                     </CardDescription>
                   </div>
-                  <Button
-                    onClick={addSession}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
+                  <Button onClick={addSession} className="bg-green-600 hover:bg-green-700">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Session
                   </Button>
@@ -578,7 +612,9 @@ export default function ViewCoursePage() {
                                     <Label>Session Title</Label>
                                     <Input
                                       value={editSessionData?.title || ""}
-                                      onChange={(e) => updateEditSessionField("title", e.target.value)}
+                                      onChange={(e) =>
+                                        updateEditSessionField("title", e.target.value)
+                                      }
                                       required
                                     />
                                   </div>
@@ -587,7 +623,9 @@ export default function ViewCoursePage() {
                                     <Input
                                       type="date"
                                       value={editSessionData?.sessionDate || ""}
-                                      onChange={(e) => updateEditSessionField("sessionDate", e.target.value)}
+                                      onChange={(e) =>
+                                        updateEditSessionField("sessionDate", e.target.value)
+                                      }
                                       required
                                     />
                                   </div>
@@ -596,7 +634,9 @@ export default function ViewCoursePage() {
                                     <Input
                                       type="time"
                                       value={editSessionData?.sessionTime || ""}
-                                      onChange={(e) => updateEditSessionField("sessionTime", e.target.value)}
+                                      onChange={(e) =>
+                                        updateEditSessionField("sessionTime", e.target.value)
+                                      }
                                       required
                                     />
                                   </div>
@@ -605,7 +645,12 @@ export default function ViewCoursePage() {
                                     <Input
                                       type="number"
                                       value={editSessionData?.duration || 60}
-                                      onChange={(e) => updateEditSessionField("duration", parseInt(e.target.value) || 60)}
+                                      onChange={(e) =>
+                                        updateEditSessionField(
+                                          "duration",
+                                          parseInt(e.target.value) || 60
+                                        )
+                                      }
                                       min="1"
                                       required
                                     />
@@ -615,7 +660,9 @@ export default function ViewCoursePage() {
                                     <Input
                                       type="url"
                                       value={editSessionData?.meetingLink || ""}
-                                      onChange={(e) => updateEditSessionField("meetingLink", e.target.value)}
+                                      onChange={(e) =>
+                                        updateEditSessionField("meetingLink", e.target.value)
+                                      }
                                       placeholder="https://zoom.us/j/..."
                                     />
                                   </div>
@@ -623,7 +670,9 @@ export default function ViewCoursePage() {
                                     <Label>Passcode</Label>
                                     <Input
                                       value={editSessionData?.meetingPasscode || ""}
-                                      onChange={(e) => updateEditSessionField("meetingPasscode", e.target.value)}
+                                      onChange={(e) =>
+                                        updateEditSessionField("meetingPasscode", e.target.value)
+                                      }
                                       placeholder="123456"
                                     />
                                   </div>
@@ -632,7 +681,9 @@ export default function ViewCoursePage() {
                                     <Input
                                       type="url"
                                       value={editSessionData?.recordingUrl || ""}
-                                      onChange={(e) => updateEditSessionField("recordingUrl", e.target.value)}
+                                      onChange={(e) =>
+                                        updateEditSessionField("recordingUrl", e.target.value)
+                                      }
                                       placeholder="https://youtube.com/..."
                                     />
                                   </div>
@@ -640,7 +691,9 @@ export default function ViewCoursePage() {
                                     <input
                                       type="checkbox"
                                       checked={editSessionData?.isCompleted || false}
-                                      onChange={(e) => updateEditSessionField("isCompleted", e.target.checked)}
+                                      onChange={(e) =>
+                                        updateEditSessionField("isCompleted", e.target.checked)
+                                      }
                                       className="rounded border-gray-300"
                                     />
                                     <Label className="text-sm">Session Completed</Label>
@@ -650,13 +703,18 @@ export default function ViewCoursePage() {
                                   <Label>Description</Label>
                                   <Textarea
                                     value={editSessionData?.description || ""}
-                                    onChange={(e) => updateEditSessionField("description", e.target.value)}
+                                    onChange={(e) =>
+                                      updateEditSessionField("description", e.target.value)
+                                    }
                                     placeholder="Session details and topics covered..."
                                     rows={3}
                                   />
                                 </div>
                                 <div className="flex gap-2">
-                                  <Button onClick={saveSession} className="bg-green-600 hover:bg-green-700">
+                                  <Button
+                                    onClick={saveSession}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
                                     <Save className="h-4 w-4 mr-2" />
                                     Save Session
                                   </Button>
@@ -709,9 +767,9 @@ export default function ViewCoursePage() {
                                   {session.meetingLink && (
                                     <div className="flex items-center gap-2">
                                       <LinkIcon className="h-4 w-4 text-blue-600" />
-                                      <a 
-                                        href={session.meetingLink} 
-                                        target="_blank" 
+                                      <a
+                                        href={session.meetingLink}
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-blue-600 hover:underline"
                                       >
@@ -730,9 +788,9 @@ export default function ViewCoursePage() {
                                   {session.recordingUrl && (
                                     <div className="flex items-center gap-2 md:col-span-2">
                                       <Video className="h-4 w-4 text-green-600" />
-                                      <a 
-                                        href={session.recordingUrl} 
-                                        target="_blank" 
+                                      <a
+                                        href={session.recordingUrl}
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-green-600 hover:underline"
                                       >
@@ -762,7 +820,7 @@ export default function ViewCoursePage() {
                     <Label className="text-sm text-gray-700">Description</Label>
                     <Textarea
                       value={editData.description}
-                      onChange={(e) => updateEditField('description', e.target.value)}
+                      onChange={(e) => updateEditField("description", e.target.value)}
                       rows={6}
                       className="border-blue-300 focus:border-blue-500"
                     />
@@ -780,8 +838,8 @@ export default function ViewCoursePage() {
                     </Label>
                     {isEditing ? (
                       <Input
-                        value={editData.instructor || ''}
-                        onChange={(e) => updateEditField('instructor', e.target.value)}
+                        value={editData.instructor || ""}
+                        onChange={(e) => updateEditField("instructor", e.target.value)}
                         className="border-blue-300 focus:border-blue-500"
                       />
                     ) : (
@@ -798,15 +856,15 @@ export default function ViewCoursePage() {
                     {isEditing ? (
                       <div className="space-y-2">
                         <Input
-                          value={editData.duration || ''}
-                          onChange={(e) => updateEditField('duration', e.target.value)}
+                          value={editData.duration || ""}
+                          onChange={(e) => updateEditField("duration", e.target.value)}
                           placeholder="25 live sessions"
                           className="border-blue-300 focus:border-blue-500"
                         />
                         <Input
                           type="number"
-                          value={editData.totalSessions || ''}
-                          onChange={(e) => updateEditField('totalSessions', e.target.value)}
+                          value={editData.totalSessions || ""}
+                          onChange={(e) => updateEditField("totalSessions", e.target.value)}
                           placeholder="Sessions count"
                           className="border-blue-300 focus:border-blue-500"
                         />
@@ -834,8 +892,10 @@ export default function ViewCoursePage() {
                     {(editData.features || []).map((f, i) => (
                       <div key={i} className="flex gap-2">
                         <Input
-                          value={typeof f === 'string' ? f : f.feature}
-                          onChange={(e) => updateArrayItem('features', i, { feature: e.target.value })}
+                          value={typeof f === "string" ? f : f.feature}
+                          onChange={(e) =>
+                            updateArrayItem("features", i, { feature: e.target.value })
+                          }
                           placeholder="Feature"
                           className="border-blue-300 focus:border-blue-500"
                         />
@@ -843,7 +903,7 @@ export default function ViewCoursePage() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeArrayItem('features', i)}
+                          onClick={() => removeArrayItem("features", i)}
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -853,7 +913,7 @@ export default function ViewCoursePage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => addArrayItem('features')}
+                      onClick={() => addArrayItem("features")}
                       className="border-blue-300 text-blue-700 hover:bg-blue-50"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Feature
@@ -868,7 +928,7 @@ export default function ViewCoursePage() {
                       >
                         <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
                         <span className="leading-snug text-gray-700">
-                          {typeof f === 'string' ? f : f.feature}
+                          {typeof f === "string" ? f : f.feature}
                         </span>
                       </div>
                     ))}
@@ -880,9 +940,7 @@ export default function ViewCoursePage() {
             {/* Why Learn */}
             <Card className="border border-gray-200 hover:shadow-md transition-shadow">
               <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50">
-                <CardTitle>
-                  Why Learn {displayData.title}
-                </CardTitle>
+                <CardTitle>Why Learn {displayData.title}</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 {isEditing ? (
@@ -890,34 +948,47 @@ export default function ViewCoursePage() {
                     <div className="space-y-2">
                       <Label className="text-sm text-gray-700">Introduction</Label>
                       <Textarea
-                        value={editData.whyLearnIntro || ''}
-                        onChange={(e) => updateEditField('whyLearnIntro', e.target.value)}
+                        value={editData.whyLearnIntro || ""}
+                        onChange={(e) => updateEditField("whyLearnIntro", e.target.value)}
                         rows={3}
                         className="border-amber-300 focus:border-amber-500"
                       />
                     </div>
                     {(editData.whyLearn || []).map((item, i) => (
-                      <div key={i} className="space-y-2 p-4 border border-amber-200 rounded bg-amber-50">
+                      <div
+                        key={i}
+                        className="space-y-2 p-4 border border-amber-200 rounded bg-amber-50"
+                      >
                         <div className="flex justify-between items-center">
                           <Label className="text-sm text-gray-700">Item {i + 1}</Label>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            onClick={() => removeArrayItem('whyLearn', i)}
+                            onClick={() => removeArrayItem("whyLearn", i)}
                           >
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
                         <Input
                           value={item.title}
-                          onChange={(e) => updateArrayItem('whyLearn', i, { ...item, title: e.target.value })}
+                          onChange={(e) =>
+                            updateArrayItem("whyLearn", i, {
+                              ...item,
+                              title: e.target.value,
+                            })
+                          }
                           placeholder="Title"
                           className="border-amber-300 focus:border-amber-500"
                         />
                         <Textarea
                           value={item.description}
-                          onChange={(e) => updateArrayItem('whyLearn', i, { ...item, description: e.target.value })}
+                          onChange={(e) =>
+                            updateArrayItem("whyLearn", i, {
+                              ...item,
+                              description: e.target.value,
+                            })
+                          }
                           placeholder="Description"
                           rows={3}
                           className="border-amber-300 focus:border-amber-500"
@@ -928,7 +999,7 @@ export default function ViewCoursePage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => addArrayItem('whyLearn')}
+                      onClick={() => addArrayItem("whyLearn")}
                       className="border-amber-300 text-amber-700 hover:bg-amber-50"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Item
@@ -937,7 +1008,9 @@ export default function ViewCoursePage() {
                 ) : (
                   <>
                     {displayData.whyLearnIntro && (
-                      <p className="mb-6 leading-relaxed text-gray-700">{displayData.whyLearnIntro}</p>
+                      <p className="mb-6 leading-relaxed text-gray-700">
+                        {displayData.whyLearnIntro}
+                      </p>
                     )}
                     <Accordion type="single" collapsible className="w-full">
                       {displayData.whyLearn?.map((item, index) => (
@@ -971,8 +1044,10 @@ export default function ViewCoursePage() {
                     {editData.content?.map((c, i) => (
                       <div key={i} className="flex gap-2">
                         <Input
-                          value={typeof c === 'string' ? c : c.content}
-                          onChange={(e) => updateArrayItem('content', i, { content: e.target.value })}
+                          value={typeof c === "string" ? c : c.content}
+                          onChange={(e) =>
+                            updateArrayItem("content", i, { content: e.target.value })
+                          }
                           placeholder="Content item"
                           className="border-blue-300 focus:border-blue-500"
                         />
@@ -980,7 +1055,7 @@ export default function ViewCoursePage() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeArrayItem('content', i)}
+                          onClick={() => removeArrayItem("content", i)}
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -990,7 +1065,7 @@ export default function ViewCoursePage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => addArrayItem('content')}
+                      onClick={() => addArrayItem("content")}
                       className="border-blue-300 text-blue-700 hover:bg-blue-50"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Add Content
@@ -1005,7 +1080,7 @@ export default function ViewCoursePage() {
                       >
                         <BookOpen className="h-5 w-5 mt-1 text-blue-600 group-hover:scale-110 transition-transform" />
                         <span className="leading-relaxed text-gray-700">
-                          {typeof c === 'string' ? c : c.content}
+                          {typeof c === "string" ? c : c.content}
                         </span>
                       </div>
                     ))}
@@ -1038,7 +1113,7 @@ export default function ViewCoursePage() {
                         <Input
                           type="number"
                           value={editData.priceUSD}
-                          onChange={(e) => updateEditField('priceUSD', e.target.value)}
+                          onChange={(e) => updateEditField("priceUSD", e.target.value)}
                           className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
@@ -1047,7 +1122,18 @@ export default function ViewCoursePage() {
                         <Input
                           type="number"
                           value={editData.priceINR}
-                          onChange={(e) => updateEditField('priceINR', e.target.value)}
+                          onChange={(e) => updateEditField("priceINR", e.target.value)}
+                          className="border-blue-300 focus:border-blue-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-700">Commission per Course (%)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editData.commissionPercourse ?? ""}
+                          onChange={(e) => updateEditField("commissionPercourse", e.target.value)}
+                          placeholder="15.5"
                           className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
@@ -1055,7 +1141,7 @@ export default function ViewCoursePage() {
                         <Label className="text-sm text-gray-700">Status</Label>
                         <select
                           value={editData.status}
-                          onChange={(e) => updateEditField('status', e.target.value)}
+                          onChange={(e) => updateEditField("status", e.target.value)}
                           className="w-full p-2 border border-blue-300 rounded focus:border-blue-500"
                         >
                           <option value="DRAFT">DRAFT</option>
@@ -1072,15 +1158,18 @@ export default function ViewCoursePage() {
                         <span className="text-3xl font-bold text-blue-600">
                           ${Number(displayData.priceUSD).toLocaleString()}
                         </span>
-                        <Badge
-                          className={`text-white ${getStatusColor(displayData.status)}`}
-                        >
+                        <Badge className={`text-white ${getStatusColor(displayData.status)}`}>
                           {displayData.status.replace(/_/g, " ")}
                         </Badge>
                       </div>
                       <p className="text-lg font-medium text-amber-600">
                         ₹{Number(displayData.priceINR).toLocaleString("en-IN")}
                       </p>
+                      {displayData.commissionPercourse !== null && (
+                        <p className="text-sm text-gray-600">
+                          Commission: {displayData.commissionPercourse}%
+                        </p>
+                      )}
                     </>
                   )}
 
@@ -1092,8 +1181,8 @@ export default function ViewCoursePage() {
                         <Label className="text-sm text-gray-700">Start Date</Label>
                         <Input
                           type="date"
-                          value={formatDateForInput(editData.startDate ||"")}
-                          onChange={(e) => updateEditField('startDate', e.target.value)}
+                          value={formatDateForInput(editData.startDate || "")}
+                          onChange={(e) => updateEditField("startDate", e.target.value)}
                           className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
@@ -1101,8 +1190,8 @@ export default function ViewCoursePage() {
                         <Label className="text-sm text-gray-700">End Date</Label>
                         <Input
                           type="date"
-                          value={formatDateForInput(editData.endDate ||"")}
-                          onChange={(e) => updateEditField('endDate', e.target.value)}
+                          value={formatDateForInput(editData.endDate || "")}
+                          onChange={(e) => updateEditField("endDate", e.target.value)}
                           className="border-blue-300 focus:border-blue-500"
                         />
                       </div>
@@ -1110,9 +1199,9 @@ export default function ViewCoursePage() {
                         <Label className="text-sm text-gray-700">Max Students</Label>
                         <Input
                           type="number"
-                          value={editData.maxStudents || ''}
-                          onChange={(e) => updateEditField('maxStudents', e.target.value)}
-                          className="border-blue-300 focus:border-blue-500" 
+                          value={editData.maxStudents || ""}
+                          onChange={(e) => updateEditField("maxStudents", e.target.value)}
+                          className="border-blue-300 focus:border-blue-500"
                           disabled
                           readOnly
                         />
@@ -1122,7 +1211,7 @@ export default function ViewCoursePage() {
                         <Input
                           type="number"
                           value={editData.currentEnrollments}
-                          onChange={(e) => updateEditField('currentEnrollments', e.target.value)}
+                          onChange={(e) => updateEditField("currentEnrollments", e.target.value)}
                           className="border-blue-300 focus:border-blue-500"
                           disabled
                           readOnly
@@ -1133,11 +1222,15 @@ export default function ViewCoursePage() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Start Date</span>
-                        <span className="font-medium text-gray-900">{formatDate(displayData.startDate||"")}</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDate(displayData.startDate || "")}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">End Date</span>
-                        <span className="font-medium text-gray-900">{formatDate(displayData.endDate||"")}</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDate(displayData.endDate || "")}
+                        </span>
                       </div>
                       {displayData.maxStudents && (
                         <div className="flex justify-between">
@@ -1156,13 +1249,17 @@ export default function ViewCoursePage() {
                   <div className="space-y-2">
                     {!isEditing ? (
                       <>
-                        <Button asChild variant="outline" className="w-full justify-start border-blue-300 text-blue-700 hover:bg-blue-50">
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="w-full justify-start border-blue-300 text-blue-700 hover:bg-blue-50"
+                        >
                           <Link href={`/courses/${displayData.slug}`} target="_blank">
                             <Eye className="h-4 w-4 mr-2" />
                             View Live Page
                           </Link>
                         </Button>
-                        <Button 
+                        <Button
                           className="w-full justify-start bg-blue-600 hover:bg-blue-700"
                           onClick={handleEdit}
                         >
@@ -1219,16 +1316,20 @@ export default function ViewCoursePage() {
                   {isEditing ? (
                     <Input
                       value={editData.slug}
-                      onChange={(e) => updateEditField('slug', e.target.value)}
+                      onChange={(e) => updateEditField("slug", e.target.value)}
                       className="w-40 border-blue-300 focus:border-blue-500"
                     />
                   ) : (
-                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">{displayData.slug}</code>
+                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">
+                      {displayData.slug}
+                    </code>
                   )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Created</span>
-                  <span className="text-gray-900">{new Date(displayData.createdAt).toLocaleDateString("en-IN")}</span>
+                  <span className="text-gray-900">
+                    {new Date(displayData.createdAt).toLocaleDateString("en-IN")}
+                  </span>
                 </div>
               </CardContent>
             </Card>

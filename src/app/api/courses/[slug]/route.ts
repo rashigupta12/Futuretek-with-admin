@@ -273,30 +273,33 @@ export async function GET(
 
     finalPrice = Math.max(0, currentPrice);
 
+    
+
     // ✅ Return response
-    return NextResponse.json(
-      {
-        course: {
-          ...course,
-          features: features.map((f) => f.feature),
-          whyLearn: whyLearn.map((w) => ({
-            title: w.title,
-            description: w.description,
-          })),
-          content: content.map((c) => c.content),
-          topics: topics.map((t) => t.topic),
-          originalPrice: course.priceINR,
-          finalPrice: finalPrice.toFixed(2),
-          discountAmount: totalDiscountAmount.toFixed(2),
-          adminDiscountAmount: adminDiscountAmount.toFixed(2),
-          jyotishiDiscountAmount: jyotishiDiscountAmount.toFixed(2),
-          priceAfterAdminDiscount: priceAfterAdminDiscount.toFixed(2),
-          appliedCoupons: appliedCoupons.length > 0 ? appliedCoupons : null,
-          hasAssignedCoupon,
-        },
-      },
-      { status: 200 }
-    );
+  return NextResponse.json(
+  {
+    course: {
+      ...course,
+      commissionPercourse: course.commissionPercourse, // ← ADD THIS LINE
+      features: features.map((f) => f.feature),
+      whyLearn: whyLearn.map((w) => ({
+        title: w.title,
+        description: w.description,
+      })),
+      content: content.map((c) => c.content),
+      topics: topics.map((t) => t.topic),
+      originalPrice: course.priceINR,
+      finalPrice: finalPrice.toFixed(2),
+      discountAmount: totalDiscountAmount.toFixed(2),
+      adminDiscountAmount: adminDiscountAmount.toFixed(2),
+      jyotishiDiscountAmount: jyotishiDiscountAmount.toFixed(2),
+      priceAfterAdminDiscount: priceAfterAdminDiscount.toFixed(2),
+      appliedCoupons: appliedCoupons.length > 0 ? appliedCoupons : null,
+      hasAssignedCoupon,
+    },
+  },
+  { status: 200 }
+);
   } catch (error) {
     console.error("Error fetching course:", error);
     return NextResponse.json(

@@ -197,6 +197,8 @@ export const CoursesTable = pgTable(
       .defaultNow()
       .notNull()
       .$onUpdate(() => new Date()),
+    // ✅ FIX: Match the exact database column name (with capital C)
+    commissionPercourse: decimal("Commission_per_course", { precision: 10, scale: 2 })
   },
   (table) => [
     uniqueIndex("courses_slug_key").on(table.slug),
