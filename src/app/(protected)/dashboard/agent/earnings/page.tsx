@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { DollarSign, TrendingUp, Wallet, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { DollarSign, Filter, IndianRupee, Users, Wallet } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 type Commission = {
   id: string;
@@ -21,22 +21,33 @@ type Commission = {
 };
 
 type Stats = {
-  totalEarnings: string;
-  pendingEarnings: string;
-  paidEarnings: string;
-  totalSales: string;
+  totalSales: string; // Total course sale amount
+  totalCommission: string; // Total commission earned
+  paidEarnings: string; // Already paid out
+  pendingEarnings: string; // Pending payout
+  salesCount: number; // Number of sales
+  ytdSales: string;
+  ytdCommission: string;
+  mtdSales: string;
+  mtdCommission: string;
+  ytdSalesCount: number;
+  mtdSalesCount: number;
 };
+
+type TimeFilter = 'ytd' | 'mtd';
 
 export default function EarningsPage() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('mtd');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("/api/jyotishi/earnings");
+        setLoading(true);
+        const res = await fetch(`/api/jyotishi/earnings?filter=${timeFilter}`);
         const data = await res.json();
 
         setStats(data.stats);
@@ -49,19 +60,39 @@ export default function EarningsPage() {
     };
 
     if (session) fetchData();
-  }, [session]);
+  }, [session, timeFilter]);
+
+  const formatCurrency = (amount: string | number) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return `₹${numAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  };
+
+  const getSalesAmount = () => {
+    if (!stats) return "0";
+    return timeFilter === 'mtd' ? stats.mtdSales : stats.ytdSales;
+  };
+
+  const getCommissionAmount = () => {
+    if (!stats) return "0";
+    return timeFilter === 'mtd' ? stats.mtdCommission : stats.ytdCommission;
+  };
+
+  const getSalesCount = () => {
+    if (!stats) return 0;
+    return timeFilter === 'mtd' ? stats.mtdSalesCount : stats.ytdSalesCount;
+  };
 
   const StatCard = ({
     title,
     value,
+    subtitle,
     icon: Icon,
-    badge,
     gradient,
   }: {
     title: string;
-    value: string | number;
+    value: string;
+    subtitle?: string;
     icon: React.ComponentType<{ className?: string }>;
-    badge?: string;
     gradient: string;
   }) => (
     <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -73,7 +104,7 @@ export default function EarningsPage() {
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold text-gray-900">{value}</div>
-        {badge && <p className="text-xs text-gray-500 mt-1">{badge}</p>}
+        {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
       </CardContent>
     </Card>
   );
@@ -82,10 +113,36 @@ export default function EarningsPage() {
     <div className="space-y-6 w-full mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-700">Earnings Overview</h1>
-        <p className="text-gray-600 mt-1">
-          Track commissions earned from students using your coupons.
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-blue-700">Earnings Overview</h1>
+            <p className="text-gray-600 mt-1">
+              Track your sales performance and commission earnings
+            </p>
+          </div>
+          
+          {/* Time Filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <select 
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
+              className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="mtd">Month to Date</option>
+              <option value="ytd">Year to Date</option>
+            </select>
+          </div>
+        </div>
+
+        {stats && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm">
+              <span className="font-semibold">Viewing:</span>
+              <span>{timeFilter === 'mtd' ? 'Month to Date' : 'Year to Date'}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ---- Summary Cards ---- */}
@@ -97,35 +154,45 @@ export default function EarningsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Total Earnings"
-            value={`₹${Number(stats?.totalEarnings ?? 0).toLocaleString()}`}
-            icon={DollarSign}
-            gradient="bg-gradient-to-br from-blue-500 to-blue-600"
-          />
-          <StatCard
-            title="Pending Earnings"
-            value={`₹${Number(stats?.pendingEarnings ?? 0).toLocaleString()}`}
-            icon={Clock}
-            badge="Awaiting payout"
-            gradient="bg-gradient-to-br from-amber-500 to-amber-600"
-          />
-          <StatCard
-            title="Paid Earnings"
-            value={`₹${Number(stats?.paidEarnings ?? 0).toLocaleString()}`}
-            icon={Wallet}
-            badge="Already transferred"
-            gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
-          />
+          {/* Total Sales - Course Sale Amount */}
           <StatCard
             title="Total Sales"
-            value={stats?.totalSales ?? 0}
-            icon={TrendingUp}
+            value={formatCurrency(getSalesAmount())}
+            subtitle={`${getSalesCount()} ${timeFilter === 'mtd' ? 'this month' : 'this year'}`}
+            icon={IndianRupee}
+            gradient="bg-gradient-to-br from-purple-500 to-purple-600"
+          />
+          
+          {/* Total Commission */}
+          <StatCard
+            title="Total Commission"
+            value={formatCurrency(getCommissionAmount())}
+            subtitle="Your earnings"
+            icon={DollarSign}
+            gradient="bg-gradient-to-br from-green-500 to-green-600"
+          />
+          
+          {/* Paid Earnings */}
+          <StatCard
+            title="Paid Earnings"
+            value={formatCurrency(stats?.paidEarnings ?? "0")}
+            subtitle="Already transferred"
+            icon={Wallet}
+            gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
+          />
+          
+          {/* Number of Sales */}
+          <StatCard
+            title="Number of Sales"
+            value={getSalesCount().toString()}
+            subtitle="Successful enrollments"
+            icon={Users}
             gradient="bg-gradient-to-br from-indigo-500 to-indigo-600"
           />
         </div>
       )}
 
+ 
       {/* ---- Commission Table ---- */}
       <Card className="border border-gray-200 shadow-sm">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
@@ -176,10 +243,10 @@ export default function EarningsPage() {
                         </code>
                       </TableCell>
                       <TableCell className="text-right text-gray-900 font-medium py-4">
-                        ₹{Number(c.saleAmount).toLocaleString()}
+                        {formatCurrency(c.saleAmount)}
                       </TableCell>
                       <TableCell className="text-right font-bold text-blue-600 py-4">
-                        ₹{Number(c.commissionAmount).toLocaleString()}
+                        {formatCurrency(c.commissionAmount)}
                       </TableCell>
                       <TableCell className="py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
