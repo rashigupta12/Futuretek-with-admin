@@ -14,7 +14,7 @@ import {
   CouponCoursesTable,
   UsersTable,
 } from "@/db/schema";
-import { eq, and, gt, lt, or, isNull, notExists } from "drizzle-orm";
+import { eq, and, gt, lt, or, isNull } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -68,7 +68,8 @@ export async function GET(
 
     const userId = session?.user?.id;
 
-    // Get general coupons (available to everyone) - RUNS FOR ALL USERS
+    // ✅ FIXED: Get general coupons (available to everyone) - ONLY course-specific coupons
+    // Uses INNER JOIN to ensure coupons MUST be mapped to this specific course
     const generalCoupons = await db
       .select({
         coupon: CouponsTable,
@@ -84,9 +85,13 @@ export async function GET(
         UsersTable,
         eq(CouponsTable.createdByJyotishiId, UsersTable.id)
       )
-      .leftJoin(
+      // ✅ INNER JOIN ensures coupon MUST be mapped to THIS course
+      .innerJoin(
         CouponCoursesTable,
-        eq(CouponCoursesTable.couponId, CouponsTable.id)
+        and(
+          eq(CouponCoursesTable.couponId, CouponsTable.id),
+          eq(CouponCoursesTable.courseId, course.id)
+        )
       )
       .where(
         and(
@@ -96,18 +101,6 @@ export async function GET(
           or(
             isNull(CouponsTable.maxUsageCount),
             lt(CouponsTable.currentUsageCount, CouponsTable.maxUsageCount)
-          ),
-          // Only include coupons that are not personally assigned
-          notExists(
-            db
-              .select()
-              .from(UserCourseCouponsTable)
-              .where(eq(UserCourseCouponsTable.couponId, CouponsTable.id))
-          ),
-          // Course-specific or general coupons
-          or(
-            isNull(CouponCoursesTable.id),
-            eq(CouponCoursesTable.courseId, course.id)
           )
         )
       )
@@ -235,7 +228,7 @@ export async function GET(
 
       // Apply personal coupons on top of general coupons
       for (const couponData of personalCoupons) {
-        const { coupon, creator} = couponData;
+        const { coupon, creator } = couponData;
         
         // Skip if this coupon was already applied as a general coupon
         if (appliedCoupons.some(ac => ac.id === coupon.id)) continue;

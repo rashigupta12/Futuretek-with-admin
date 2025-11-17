@@ -1,5 +1,6 @@
 "use client";
 import {
+  Award,
   BookOpen,
   ChevronDown,
   CreditCard,
@@ -128,7 +129,7 @@ export default function AdminLayout({
       ],
     },
     {
-      title: "Coupons Types",
+      title: "Coupons",
       icon: Tag,
       key: "coupons",
       subItems: [
@@ -142,7 +143,11 @@ export default function AdminLayout({
           href: "/dashboard/admin/coupons-types/add",
           icon: Plus,
         },
-
+{
+          title: "All Coupons",
+          href: "/dashboard/admin/coupons",
+          icon: List,
+        },
          {
           title: "Add Coupon",
           href: "/dashboard/admin/coupons/add",
@@ -168,23 +173,23 @@ export default function AdminLayout({
     //   href: "/dashboard/admin/payments",
     //   single: true,
     // },
-    // {
-    //   title: "Certificates",
-    //   icon: Award,
-    //   key: "certificates",
-    //   subItems: [
-    //     {
-    //       title: "Requests",
-    //       href: "/dashboard/admin/certificates/requests",
-    //       icon: List,
-    //     },
-    //     {
-    //       title: "All Certificates",
-    //       href: "/dashboard/admin/certificates",
-    //       icon: Award,
-    //     },
-    //   ],
-    // },
+    {
+      title: "Certificates",
+      icon: Award,
+      key: "certificates",
+      subItems: [
+        {
+          title: "Requests",
+          href: "/dashboard/admin/certificates/requests",
+          icon: List,
+        },
+        {
+          title: "All Certificates",
+          href: "/dashboard/admin/certificates",
+          icon: Award,
+        },
+      ],
+    },
     // {
     //   title: "Website Content",
     //   icon: Globe,

@@ -8,8 +8,9 @@ import {
   CourseWhyLearnTable,
   CourseContentTable,
   CourseTopicsTable,
+  CourseSessionsTable,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 // ==========================
 // GET - Get single course
@@ -31,11 +32,12 @@ export async function GET(
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    const [features, whyLearn, content, topics] = await Promise.all([
+    const [features, whyLearn, content, topics, sessions] = await Promise.all([
       db.select().from(CourseFeaturesTable).where(eq(CourseFeaturesTable.courseId, course.id)),
       db.select().from(CourseWhyLearnTable).where(eq(CourseWhyLearnTable.courseId, course.id)),
       db.select().from(CourseContentTable).where(eq(CourseContentTable.courseId, course.id)),
       db.select().from(CourseTopicsTable).where(eq(CourseTopicsTable.courseId, course.id)),
+      db.select().from(CourseSessionsTable).where(eq(CourseSessionsTable.courseId, course.id)),
     ]);
 
     return NextResponse.json(
@@ -46,8 +48,23 @@ export async function GET(
           title: w.title,
           description: w.description,
         })),
-        courseContent: content.map((c) => c.content),
+        content: content.map((c) => c.content),
         topics: topics.map((t) => t.topic),
+        sessions: sessions.map((s) => ({
+          id: s.id,
+          sessionNumber: s.sessionNumber,
+          title: s.title,
+          description: s.description,
+          sessionDate: s.sessionDate?.toISOString().split('T')[0] || '',
+          sessionTime: s.sessionTime,
+          duration: s.duration,
+          meetingLink: s.meetingLink,
+          meetingPasscode: s.meetingPasscode,
+          recordingUrl: s.recordingUrl,
+          isCompleted: s.isCompleted,
+          createdAt: s.createdAt?.toISOString(),
+          updatedAt: s.updatedAt?.toISOString(),
+        })),
       },
       { status: 200 }
     );
@@ -73,7 +90,7 @@ export async function PUT(
     const { id } = params;
     const body = await req.json();
 
-    const { features, whyLearn, content, topics, ...courseData } = body;
+    const { features, whyLearn, content, topics, sessions, ...courseData } = body;
 
     const dateFields = [
       "createdAt",
@@ -199,6 +216,7 @@ export async function DELETE(
       db.delete(CourseWhyLearnTable).where(eq(CourseWhyLearnTable.courseId, id)),
       db.delete(CourseContentTable).where(eq(CourseContentTable.courseId, id)),
       db.delete(CourseTopicsTable).where(eq(CourseTopicsTable.courseId, id)),
+      db.delete(CourseSessionsTable).where(eq(CourseSessionsTable.courseId, id)),
     ]);
 
     // Delete the main course
@@ -216,3 +234,4 @@ export async function DELETE(
     );
   }
 }
+

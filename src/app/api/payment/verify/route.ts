@@ -1,17 +1,17 @@
-/* eslint-disable  @typescript-eslint/no-require-imports */
-/* eslint-disable   @typescript-eslint/no-explicit-any*/
-/* eslint-disable   @typescript-eslint/no-unused-vars*/
-import { eq } from 'drizzle-orm';
-
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-explicit-any*/
+/* eslint-disable @typescript-eslint/no-unused-vars*/
 // app/api/payment/verify/route.ts
+import { eq } from 'drizzle-orm';
 import { db } from "@/db";
 import { CommissionsTable, CouponsTable, CoursesTable, EnrollmentsTable, PaymentsTable, UsersTable } from "@/db/schema";
 import { sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from '@/auth';
+import { sendInvoiceEmail } from '@/lib/invoiceEmail';
 import nodemailer from 'nodemailer';
 
-// Create email transporter
+// Create email transporter for other emails (course details, zoom)
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
   port: parseInt(process.env.MAIL_PORT || '465'),
@@ -22,54 +22,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Email templates (keep your existing templates)
-function createPaymentSuccessEmail(courseTitle: string, amount: number, paymentId: string, studentName: string) {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-        .invoice-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
-        .button { background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; }
-        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>Payment Successful! 🎉</h1>
-          <p>Thank you for your purchase</p>
-        </div>
-        <div class="content">
-          <h2>Hello ${studentName},</h2>
-          <p>Your payment for <strong>${courseTitle}</strong> has been successfully processed.</p>
-          
-          <div class="invoice-details">
-            <h3>Invoice Details</h3>
-            <p><strong>Course:</strong> ${courseTitle}</p>
-            <p><strong>Amount Paid:</strong> ₹${amount.toLocaleString('en-IN')}</p>
-            <p><strong>Payment ID:</strong> ${paymentId}</p>
-            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
-          </div>
-
-          <p>You can access your course from your dashboard:</p>
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/user/courses" class="button">Go to My Courses</a>
-          
-          <p>If you have any questions, please don't hesitate to contact our support team.</p>
-        </div>
-        <div class="footer">
-          <p>Best regards,<br>The Futuretek Team</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-}
-
+// Course Details Email Template
 function createCourseDetailsEmail(courseTitle: string, courseDescription: string, studentName: string, duration?: string, instructor?: string) {
   return `
     <!DOCTYPE html>
@@ -140,6 +93,7 @@ function createCourseDetailsEmail(courseTitle: string, courseDescription: string
   `;
 }
 
+// Zoom Details Email Template
 function createZoomDetailsEmail(courseTitle: string, studentName: string, zoomLink?: string, schedule?: string) {
   return `
     <!DOCTYPE html>
@@ -208,7 +162,7 @@ function createZoomDetailsEmail(courseTitle: string, studentName: string, zoomLi
   `;
 }
 
-// Email sending function
+// Email sending helper function
 async function sendEmailDirectly(to: string, subject: string, html: string) {
   try {
     const mailOptions = {
@@ -275,7 +229,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 1: Check if payment is already verified to prevent duplicate processing
+    // Step 1: Check if payment is already verified
     const [existingPayment] = await db
       .select()
       .from(PaymentsTable)
@@ -319,20 +273,14 @@ export async function POST(req: NextRequest) {
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
-      console.error('Invalid payment signature:', {
-        expected: expectedSignature,
-        received: razorpay_signature,
-        paymentId,
-        userId
-      });
+      console.error('Invalid payment signature');
 
-      // Update payment status to failed
       await db
         .update(PaymentsTable)
         .set({
           status: "FAILED",
           updatedAt: new Date(),
-          razorpaySignature: razorpay_signature, // Store for debugging
+          razorpaySignature: razorpay_signature,
         })
         .where(eq(PaymentsTable.id, paymentId));
 
@@ -385,7 +333,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 4: Start database transaction for atomic operations
+    // Step 4: Start database transaction
     let enrollment;
     
     try {
@@ -421,13 +369,12 @@ export async function POST(req: NextRequest) {
         sql`UPDATE ${CoursesTable} SET current_enrollments = current_enrollments + 1 WHERE id = ${courseId}`
       );
 
-      // Handle coupon usage
+      // Handle coupon usage and commission
       if (existingPayment.couponId) {
         await db.execute(
           sql`UPDATE ${CouponsTable} SET current_usage_count = current_usage_count + 1 WHERE id = ${existingPayment.couponId}`
         );
 
-        // Create commission record ONLY if Jyotishi coupon was used
         if (existingPayment.jyotishiId && parseFloat(existingPayment.commissionAmount) > 0) {
           const [jyotishi] = await db
             .select({ 
@@ -439,7 +386,6 @@ export async function POST(req: NextRequest) {
             .where(eq(UsersTable.id, existingPayment.jyotishiId))
             .limit(1);
 
-          // Only create commission if the creator is JYOTISHI (not ADMIN)
           if (jyotishi?.role === "JYOTISHI") {
             await db.insert(CommissionsTable).values({
               jyotishiId: existingPayment.jyotishiId,
@@ -453,14 +399,7 @@ export async function POST(req: NextRequest) {
               status: "PENDING",
             });
 
-            console.log('💰 Commission created for Jyotishi:', {
-              jyotishiId: existingPayment.jyotishiId,
-              jyotishiName: jyotishi.name,
-              commissionAmount: existingPayment.commissionAmount,
-              saleAmount: existingPayment.finalAmount
-            });
-          } else {
-            console.log('ℹ️ No commission created - coupon creator is ADMIN');
+            console.log('💰 Commission created for Jyotishi');
           }
         }
       }
@@ -468,7 +407,6 @@ export async function POST(req: NextRequest) {
     } catch (dbError) {
       console.error('Database transaction failed:', dbError);
       
-      // Rollback: Mark payment as failed if enrollment creation failed
       await db
         .update(PaymentsTable)
         .set({
@@ -482,19 +420,20 @@ export async function POST(req: NextRequest) {
 
     // Step 5: Send emails (non-blocking)
     if (user.email) {
-      sendEmailsAfterPayment(user, course, existingPayment, enrollment.id)
+      // Get updated payment record with all details
+      const [updatedPayment] = await db
+        .select()
+        .from(PaymentsTable)
+        .where(eq(PaymentsTable.id, paymentId))
+        .limit(1);
+
+      sendEmailsAfterPayment(user, course, updatedPayment, enrollment.id)
         .catch(emailError => {
           console.error('Email sending failed but payment was successful:', emailError);
-          // Don't fail the payment if emails fail
         });
     }
 
-    console.log('✅ Payment verification completed successfully:', {
-      paymentId,
-      enrollmentId: enrollment.id,
-      userId,
-      courseId
-    });
+    console.log('✅ Payment verification completed successfully');
 
     return NextResponse.json(
       {
@@ -507,14 +446,8 @@ export async function POST(req: NextRequest) {
     );
 
   } catch (error) {
-    console.error("❌ Payment verification error:", {
-      paymentId,
-      userId,
-      courseId,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error("❌ Payment verification error:", error);
 
-    // If we have paymentId, mark it as failed
     if (paymentId) {
       try {
         await db
@@ -544,13 +477,20 @@ async function sendEmailsAfterPayment(user: any, course: any, payment: any, enro
   try {
     console.log('📧 Starting email sending process to:', user.email);
 
-    const paymentEmailHtml = createPaymentSuccessEmail(
-      course.title,
-      parseFloat(payment.finalAmount),
-      payment.id,
-      user.name || 'Student'
-    );
+    // 1. Send invoice email with PDF attachment (highest priority)
+    const invoiceResult = await sendInvoiceEmail({
+      payment,
+      user,
+      course,
+    });
 
+    if (invoiceResult.success) {
+      console.log('✅ Invoice email sent successfully');
+    } else {
+      console.error('❌ Invoice email failed:', invoiceResult.error);
+    }
+
+    // 2. Send course details email
     const courseEmailHtml = createCourseDetailsEmail(
       course.title,
       course.description || 'An amazing learning experience',
@@ -559,6 +499,19 @@ async function sendEmailsAfterPayment(user: any, course: any, payment: any, enro
       course.instructor
     );
 
+    const courseEmailResult = await sendEmailDirectly(
+      user.email, 
+      `Welcome to ${course.title} - Course Details`, 
+      courseEmailHtml
+    );
+
+    if (courseEmailResult.success) {
+      console.log('✅ Course details email sent successfully');
+    } else {
+      console.error('❌ Course details email failed:', courseEmailResult.error);
+    }
+
+    // 3. Send zoom details email
     const zoomEmailHtml = createZoomDetailsEmail(
       course.title,
       user.name || 'Student',
@@ -566,29 +519,19 @@ async function sendEmailsAfterPayment(user: any, course: any, payment: any, enro
       course.schedule
     );
 
-    const emailPromises = [
-      sendEmailDirectly(user.email, `Payment Successful - ${course.title}`, paymentEmailHtml),
-      sendEmailDirectly(user.email, `Welcome to ${course.title} - Course Details`, courseEmailHtml),
-      sendEmailDirectly(user.email, `Live Session Details - ${course.title}`, zoomEmailHtml)
-    ];
+    const zoomEmailResult = await sendEmailDirectly(
+      user.email, 
+      `Live Session Details - ${course.title}`, 
+      zoomEmailHtml
+    );
 
-    const emailResults = await Promise.allSettled(emailPromises);
+    if (zoomEmailResult.success) {
+      console.log('✅ Zoom details email sent successfully');
+    } else {
+      console.error('❌ Zoom details email failed:', zoomEmailResult.error);
+    }
 
-    let successfulEmails = 0;
-    const emailTypes = ['Payment Success', 'Course Details', 'Zoom Details'];
-    
-    emailResults.forEach((result, index) => {
-      if (result.status === 'fulfilled' && result.value.success) {
-        console.log(`✅ ${emailTypes[index]} email sent successfully`);
-        successfulEmails++;
-      } else {
-        console.error(`❌ ${emailTypes[index]} email failed:`, 
-          result.status === 'fulfilled' ? result.value.error : result.reason
-        );
-      }
-    });
-
-    console.log(`📊 Email sending summary: ${successfulEmails}/3 emails sent successfully`);
+    console.log('📊 Email sending process completed');
 
   } catch (error) {
     console.error('❌ Error in email sending process:', error);

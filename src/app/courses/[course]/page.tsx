@@ -35,7 +35,7 @@ import { notFound, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 /* -------------------------------------------------------------
-   Types (unchanged)
+   Types
 ------------------------------------------------------------- */
 interface CourseData {
   appliedCoupons?: Array<{
@@ -85,7 +85,7 @@ interface CourseData {
 }
 
 /* -------------------------------------------------------------
-   Cached plain‑text extractor (runs once per HTML string)
+   Cached plain‑text extractor
 ------------------------------------------------------------- */
 const plainTextCache = new Map<string, string>();
 const getPlainText = (html: string): string => {
@@ -100,7 +100,7 @@ const getPlainText = (html: string): string => {
 };
 
 /* -------------------------------------------------------------
-   Safe HTML component (unchanged)
+   Safe HTML component
 ------------------------------------------------------------- */
 function SafeHTML({
   content,
@@ -115,14 +115,14 @@ function SafeHTML({
 }
 
 /* -------------------------------------------------------------
-   Fetch course – client‑side, with cache‑control
+   Optimized fetch with better caching
 ------------------------------------------------------------- */
 const fetchCourse = async (slug: string): Promise<CourseData | null> => {
   try {
     const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const res = await fetch(`${base}/api/courses/${slug}`, {
       headers: { "Content-Type": "application/json" },
-      next: { revalidate: 60 }, // ISR‑like cache
+      cache: "force-cache", // Use browser cache
     });
 
     if (!res.ok) return res.status === 404 ? null : null;
@@ -130,7 +130,7 @@ const fetchCourse = async (slug: string): Promise<CourseData | null> => {
 
     if (!course?.id) return null;
 
-    // Normalise features
+    // Normalize features
     if (Array.isArray(course.features)) {
       course.features = course.features.map((f: any) =>
         typeof f === "string" ? f : f.feature || f
@@ -143,6 +143,33 @@ const fetchCourse = async (slug: string): Promise<CourseData | null> => {
     return course;
   } catch {
     return null;
+  }
+};
+
+/* -------------------------------------------------------------
+   Optimized enrollment check
+------------------------------------------------------------- */
+const checkEnrollment = async (
+  courseId: string,
+  userId: string | undefined
+): Promise<boolean> => {
+  if (!userId) return false;
+
+  try {
+    const res = await fetch("/api/user/enrollments", {
+      cache: "no-store", // Don't cache enrollment status
+    });
+    
+    if (!res.ok) return false;
+    
+    const { enrollments } = await res.json();
+    return enrollments?.some(
+      (e: any) =>
+        e.courseId === courseId &&
+        (e.status === "ACTIVE" || e.status === "COMPLETED")
+    ) ?? false;
+  } catch {
+    return false;
   }
 };
 
@@ -167,70 +194,59 @@ export default function CoursePage() {
   const isAdminOrJyotishi = userRole === "ADMIN" || userRole === "JYOTISHI";
 
   /* ---------------------------------------------------------
-     Scroll to top – only once
-  --------------------------------------------------------- */
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  /* ---------------------------------------------------------
-     Load course + enrollment in parallel
+     Load course and check enrollment - OPTIMIZED
   --------------------------------------------------------- */
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      if (!slug || authStatus === "loading") return;
+      if (!slug) return;
 
       try {
         setLoading(true);
         setError(null);
 
-        const [c, enrollRes] = await Promise.all([
-          fetchCourse(slug),
-          userId
-            ? fetch("/api/user/enrollments").then((r) =>
-                r.ok ? r.json() : null
-              )
-            : Promise.resolve(null),
-        ]);
+        // Fetch course first (this is cached)
+        const c = await fetchCourse(slug);
 
         if (cancelled) return;
         if (!c) throw new Error("Course not found");
 
         setCourse(c);
 
-        if (enrollRes?.enrollments) {
-          const enrolled = enrollRes.enrollments.some(
-            (e: any) =>
-              e.courseId === c.id &&
-              (e.status === "ACTIVE" || e.status === "COMPLETED")
-          );
-          setIsEnrolled(enrolled);
+        // Only check enrollment if user is authenticated and not admin/jyotishi
+        if (userId && authStatus === "authenticated" && !isAdminOrJyotishi) {
+          const enrolled = await checkEnrollment(c.id, userId);
+          if (!cancelled) setIsEnrolled(enrolled);
         }
       } catch (e) {
-        if (!cancelled) setError("Failed to load course");
-        console.log(e);
+        if (!cancelled) {
+          setError("Failed to load course");
+          console.error(e);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
-    load();
+    // Only load when slug is available
+    if (slug) {
+      load();
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [slug, userId, authStatus]);
+  }, [slug, userId, authStatus, isAdminOrJyotishi]);
 
   /* ---------------------------------------------------------
-     Price calculation – memoised, runs once
+     Price calculation – memoised
   --------------------------------------------------------- */
   const priceInfo = useMemo(() => {
     if (!course) return null;
     const orig = parseFloat(course.originalPrice || course.priceINR || "0");
     const fin = parseFloat(course.finalPrice || course.priceINR || "0");
     const disc = parseFloat(course.discountAmount || "0");
-    // const hasDiscount = (course.hasAssignedCoupon ?? false) && disc > 0;
     const hasDiscount = fin < orig && disc > 0;
 
     return {
@@ -244,7 +260,7 @@ export default function CoursePage() {
   /* ---------------------------------------------------------
      Loading / error
   --------------------------------------------------------- */
-  if (loading || authStatus === "loading") {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -258,7 +274,7 @@ export default function CoursePage() {
   if (error || !course) notFound();
 
   /* ---------------------------------------------------------
-     Render – 100 % identical to original
+     Render
   --------------------------------------------------------- */
   return (
     <div className="min-h-screen bg-slate-50">
@@ -421,7 +437,7 @@ export default function CoursePage() {
                           key={i}
                           className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200"
                         >
-                          <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5" />
+                          <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                           <span className="text-gray-800 text-sm">{text}</span>
                         </div>
                       );
@@ -458,7 +474,7 @@ export default function CoursePage() {
                       >
                         <AccordionTrigger className="hover:no-underline px-4 py-3 hover:bg-gray-50">
                           <div className="flex items-center gap-3 text-left">
-                            <Target className="h-4 w-4 text-blue-600" />
+                            <Target className="h-4 w-4 text-blue-600 flex-shrink-0" />
                             <span className="font-semibold text-gray-900">
                               {item.title}
                             </span>
@@ -492,7 +508,7 @@ export default function CoursePage() {
                           key={i}
                           className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 border border-gray-200"
                         >
-                          <BookOpen className="h-5 w-5 text-blue-600 mt-0.5" />
+                          <BookOpen className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                           <span className="text-gray-800 text-sm">{c}</span>
                         </div>
                       ))}
@@ -574,39 +590,37 @@ export default function CoursePage() {
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     <div className="text-center space-y-3">
-  {priceInfo?.hasDiscount ? (
-    <div className="space-y-3">
-      {/* Original & Discounted Price */}
-      <div className="flex items-end justify-center gap-3">
-        <span className="text-xl text-gray-500 line-through font-medium">
-          ₹{priceInfo.originalPrice.toLocaleString("en-IN")}
-        </span>
-        <span className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-          ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
-        </span>
-      </div>
+                      {priceInfo?.hasDiscount ? (
+                        <div className="space-y-3">
+                          {/* Original & Discounted Price */}
+                          <div className="flex items-end justify-center gap-3">
+                            <span className="text-xl text-gray-500 line-through font-medium">
+                              ₹{priceInfo.originalPrice.toLocaleString("en-IN")}
+                            </span>
+                            <span className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                              ₹{priceInfo.displayPrice.toLocaleString("en-IN")}
+                            </span>
+                          </div>
 
-      {/* Savings Chip */}
-      <div className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold
-        bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md">
-        You Save ₹{priceInfo.discountAmount.toLocaleString("en-IN")}
-      </div>
-    </div>
-  ) : (
-    <div className="space-y-3">
-      <span className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent block">
-        ₹{priceInfo?.displayPrice.toLocaleString("en-IN")}
-      </span>
+                          {/* Savings Chip */}
+                          <div className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md">
+                            You Save ₹
+                            {priceInfo.discountAmount.toLocaleString("en-IN")}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <span className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent block">
+                            ₹{priceInfo?.displayPrice.toLocaleString("en-IN")}
+                          </span>
 
-      {/* Best Price Tag */}
-      <div className="inline-block text-blue-700 text-sm font-medium 
-          bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-        Best Price
-      </div>
-    </div>
-  )}
-</div>
-
+                          {/* Best Price Tag */}
+                          <div className="inline-block text-blue-700 text-sm font-medium bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                            Best Price
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     <Button
                       onClick={() => setShowCheckout(true)}
