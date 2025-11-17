@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Calendar, Eye, AlertCircle, Loader2, User } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface BlogPost {
   id: string;
@@ -38,6 +38,86 @@ const formatDate = (dateString: string) => {
   });
 };
 
+// AutoScrollSection Component
+function AutoScrollSection({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<NodeJS.Timeout>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const cards = container.children;
+    if (cards.length <= 1) return;
+
+    const startAutoScroll = () => {
+      autoScrollRef.current = setInterval(() => {
+        setCurrentIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % cards.length;
+          scrollToIndex(nextIndex);
+          return nextIndex;
+        });
+      }, 3000); // Scroll every 3 seconds
+    };
+
+    const stopAutoScroll = () => {
+      if (autoScrollRef.current) {
+        clearInterval(autoScrollRef.current);
+      }
+    };
+
+    const scrollToIndex = (index: number) => {
+      if (container && cards[index]) {
+        const card = cards[index] as HTMLElement;
+        const scrollLeft = card.offsetLeft - container.offsetLeft;
+        container.scrollTo({
+          left: scrollLeft,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    // Start auto-scroll
+    startAutoScroll();
+
+    // Pause auto-scroll on hover/touch
+    container.addEventListener('mouseenter', stopAutoScroll);
+    container.addEventListener('mouseleave', startAutoScroll);
+    container.addEventListener('touchstart', stopAutoScroll);
+    container.addEventListener('touchend', () => {
+      setTimeout(startAutoScroll, 5000); // Resume after 5 seconds of no touch
+    });
+
+    return () => {
+      stopAutoScroll();
+      container.removeEventListener('mouseenter', stopAutoScroll);
+      container.removeEventListener('mouseleave', startAutoScroll);
+      container.removeEventListener('touchstart', stopAutoScroll);
+      container.removeEventListener('touchend', startAutoScroll);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={scrollContainerRef}
+      className={`flex overflow-x-auto gap-6 pb-6 snap-x snap-mandatory scroll-smooth hide-scrollbar ${className}`}
+      style={{
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch',
+      }}
+    >
+      {children}
+      <style jsx>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export function Blogs() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +129,7 @@ export function Blogs() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('/api/blogs?limit=3');
+        const response = await fetch('/api/blogs?limit=6');
         
         if (!response.ok) {
           throw new Error(`Failed to fetch blogs: ${response.status}`);
@@ -153,12 +233,17 @@ export function Blogs() {
           </p>
         </div>
 
-        {/* Blog Cards Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-12">
+        {/* Horizontal Scroll with Auto-scroll for both mobile and desktop */}
+        <AutoScrollSection className="mb-12">
           {blogPosts.map((post) => (
-            <BlogCard key={post.id} post={post} />
+            <div
+              key={post.id}
+              className="w-[85vw] sm:w-[400px] lg:w-[350px] flex-shrink-0 snap-start"
+            >
+              <BlogCard post={post} />
+            </div>
           ))}
-        </div>
+        </AutoScrollSection>
 
         {/* View All CTA */}
         <div className="text-center">
@@ -180,8 +265,6 @@ export function Blogs() {
 
 // Blog Card Component
 function BlogCard({ post }: { post: BlogPost }) {
-  // const [imageLoaded, setImageLoaded] = useState(false);
-
   return (
     <Card className="group h-full bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col hover:border-blue-200">
       {/* Golden Top Accent */}

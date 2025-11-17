@@ -1,3 +1,4 @@
+"use client"
 import { CoursesCatalog } from "@/components/courses-catalog";
 import { FAQs } from "@/components/faqs";
 import { Blogs } from "@/components/blogs";
@@ -19,8 +20,89 @@ import {
 } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import HeroSection from "@/components/hero";
+import { useRef, useEffect, useState } from "react";
 
-export default async function Page() {
+// AutoScrollSection Component
+function AutoScrollSection({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<NodeJS.Timeout>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const cards = container.children;
+    if (cards.length <= 1) return;
+
+    const startAutoScroll = () => {
+      autoScrollRef.current = setInterval(() => {
+        setCurrentIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % cards.length;
+          scrollToIndex(nextIndex);
+          return nextIndex;
+        });
+      }, 1000); // Scroll every 3 seconds
+    };
+
+    const stopAutoScroll = () => {
+      if (autoScrollRef.current) {
+        clearInterval(autoScrollRef.current);
+      }
+    };
+
+    const scrollToIndex = (index: number) => {
+      if (container && cards[index]) {
+        const card = cards[index] as HTMLElement;
+        const scrollLeft = card.offsetLeft - container.offsetLeft;
+        container.scrollTo({
+          left: scrollLeft,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    // Start auto-scroll
+    startAutoScroll();
+
+    // Pause auto-scroll on hover/touch
+    container.addEventListener('mouseenter', stopAutoScroll);
+    container.addEventListener('mouseleave', startAutoScroll);
+    container.addEventListener('touchstart', stopAutoScroll);
+    container.addEventListener('touchend', () => {
+      setTimeout(startAutoScroll, 5000); // Resume after 5 seconds of no touch
+    });
+
+    return () => {
+      stopAutoScroll();
+      container.removeEventListener('mouseenter', stopAutoScroll);
+      container.removeEventListener('mouseleave', startAutoScroll);
+      container.removeEventListener('touchstart', stopAutoScroll);
+      container.removeEventListener('touchend', startAutoScroll);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={scrollContainerRef}
+      className={`flex overflow-x-auto gap-6 pb-6 snap-x snap-mandatory scroll-smooth hide-scrollbar ${className}`}
+      style={{
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch',
+      }}
+    >
+      {children}
+      <style jsx>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default function Page() {
   return (
     <>
       <div className="flex flex-col gap-20">
@@ -28,7 +110,7 @@ export default async function Page() {
 
         <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
           {/* Why Choose Us Section */}
-          <section className="py-2">
+          <section className="py-2 max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 text-gray-600 mb-4">
                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
@@ -44,7 +126,7 @@ export default async function Page() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <AutoScrollSection>
               {[
                 {
                   icon: Users,
@@ -81,9 +163,8 @@ export default async function Page() {
               ].map((item, index) => (
                 <Card
                   key={index}
-                  className="group border border-gray-200 bg-white hover:shadow-xl transition-all duration-300 hover:border-gray-300 shadow-md relative overflow-hidden"
+                  className="group border border-gray-200 bg-white hover:shadow-xl transition-all duration-300 hover:border-gray-300 shadow-md relative overflow-hidden w-[85vw] sm:w-[400px] lg:w-[350px] flex-shrink-0 snap-start"
                 >
-                  {/* Top Border Gradient */}
                   <div
                     className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${item.gradient}`}
                   ></div>
@@ -105,15 +186,15 @@ export default async function Page() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+            </AutoScrollSection>
           </section>
 
           {/* Courses Catalog */}
           <CoursesCatalog />
 
           {/* Curriculum Focus Section */}
-          <section className="py-4">
-            <div className="text-center mb-12">
+          <section className="py-4 max-w-7xl mx-auto">
+            <div className="text-center mb-12 ">
               <div className="inline-flex items-center gap-2 text-gray-600 mb-4">
                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
@@ -128,7 +209,7 @@ export default async function Page() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <AutoScrollSection>
               {[
                 {
                   icon: Star,
@@ -185,9 +266,8 @@ export default async function Page() {
               ].map((item, index) => (
                 <Card
                   key={index}
-                  className="border border-gray-200 bg-white hover:shadow-xl transition-all duration-300 shadow-md relative overflow-hidden"
+                  className="border border-gray-200 bg-white hover:shadow-xl transition-all duration-300 shadow-md relative overflow-hidden w-[85vw] sm:w-[450px] lg:w-[400px] flex-shrink-0 snap-start"
                 >
-                  {/* Top Border Gradient */}
                   <div
                     className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${item.gradient}`}
                   ></div>
@@ -218,11 +298,11 @@ export default async function Page() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+            </AutoScrollSection>
           </section>
 
           {/* Learning Methodology */}
-          <section className="py-16 bg-gray-50 rounded-2xl">
+          <section className="py-16 bg-gray-50 rounded-2xl max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 text-gray-600 mb-4">
                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
@@ -238,7 +318,7 @@ export default async function Page() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <AutoScrollSection className="mx-auto">
               {[
                 {
                   icon: Users,
@@ -264,9 +344,8 @@ export default async function Page() {
               ].map((item, index) => (
                 <Card
                   key={index}
-                  className="border border-gray-200 bg-white text-center hover:shadow-xl transition-all duration-300 shadow-md relative overflow-hidden"
+                  className="border border-gray-200 bg-white text-center hover:shadow-xl transition-all duration-300 shadow-md relative overflow-hidden w-[85vw] sm:w-[400px] lg:w-[350px] flex-shrink-0 snap-start"
                 >
-                  {/* Top Border Gradient */}
                   <div
                     className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${item.gradient}`}
                   ></div>
@@ -286,7 +365,7 @@ export default async function Page() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+            </AutoScrollSection>
           </section>
 
           <FAQs />
@@ -295,7 +374,6 @@ export default async function Page() {
 
           {/* CTA Section */}
           <section className="py-16 bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900 rounded-2xl mb-10 relative overflow-hidden">
-            {/* Background Pattern */}
             <div className="absolute inset-0 opacity-5">
               <div
                 className="absolute inset-0"
@@ -308,7 +386,6 @@ export default async function Page() {
               ></div>
             </div>
 
-            {/* Golden Top Border */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
 
             <div className="max-w-3xl mx-auto text-center px-6 relative z-10">
