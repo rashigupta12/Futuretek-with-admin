@@ -9,12 +9,12 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
-import React, { useState } from "react";
-// import toast, { Toaster } from "react-hot-toast";
+import React, { useState, useEffect } from "react";
 
 export default function AddJyotishiPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,17 +29,47 @@ export default function AddJyotishiPage() {
   const [mobileError, setMobileError] = useState("");
   const [jyotishiCode, setJyotishiCode] = useState("");
 
+  // Auto-generate code when name changes
+  useEffect(() => {
+    const generateCode = async () => {
+      if (name.trim().length >= 2) {
+        setGeneratingCode(true);
+        try {
+          const res = await fetch("/api/admin/jyotishi/generate-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name.trim() }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setJyotishiCode(data.jyotishiCode);
+          } else {
+            console.error("Failed to generate code");
+          }
+        } catch (error) {
+          console.error("Error generating code:", error);
+        } finally {
+          setGeneratingCode(false);
+        }
+      } else {
+        setJyotishiCode("");
+      }
+    };
+
+    // Debounce the code generation
+    const timeoutId = setTimeout(generateCode, 500);
+    return () => clearTimeout(timeoutId);
+  }, [name]);
+
   const validateMobile = (phone: string) => {
     const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
 
     if (!phone) {
-      return ""; // Optional field
+      return "";
     }
 
-    // Indian mobile number patterns - ensure exactly 10 digits after optional prefix
     const indianPattern = /^(\+91|0)?[6-9]\d{9}$/;
-
-    // Check if the cleaned number has exactly 10 digits (excluding optional prefix)
     const digitsOnly = cleanPhone.replace(/^(\+91|0)/, "");
 
     if (digitsOnly.length !== 10) {
@@ -53,87 +83,83 @@ export default function AddJyotishiPage() {
     return "";
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  // Validate required fields
-  if (!name || !email || !password || !commissionRate || !jyotishiCode) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Missing Fields',
-      text: 'Name, Email, Password, Commission Rate, and Jyotishi Code are required.',
-    });
-    return;
-  }
-
-  const mobileValidationError = validateMobile(mobile);
-  if (mobileValidationError) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Invalid Mobile',
-      text: mobileValidationError,
-    });
-    setLoading(false);
-    return;
-  }
-
-  setLoading(true);
-
-  const payload = {
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    password,
-    mobile: mobile.trim() || null,
-    jyotishiCode: jyotishiCode.trim().toUpperCase(),
-    commissionRate: parseFloat(Number(commissionRate).toFixed(2)),
-    bankAccountNumber: bankAccountNumber.trim() || null,
-    bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
-    bankAccountHolderName: bankAccountHolderName.trim() || null,
-    panNumber: panNumber.trim().toUpperCase() || null,
-    bio: bio.trim() || null,
-  };
-
-  try {
-    const res = await fetch("/api/admin/jyotishi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Jyotishi account created successfully!',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      router.push("/dashboard/admin/agent");
-    } else {
-      const err = await res.json();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name || !email || !password || !commissionRate || !jyotishiCode) {
       Swal.fire({
         icon: 'error',
-        title: 'Error',
-        text: err.error || 'Failed to create jyotishi account',
+        title: 'Missing Fields',
+        text: 'Name, Email, Password, Commission Rate, and Jyotishi Code are required.',
       });
+      return;
     }
-  } catch (err) {
-    console.error("Submission error:", err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Unexpected Error',
-      text: 'An unexpected error occurred while creating the account',
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+
+    const mobileValidationError = validateMobile(mobile);
+    if (mobileValidationError) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Mobile',
+        text: mobileValidationError,
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    const payload = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      mobile: mobile.trim() || null,
+      jyotishiCode: jyotishiCode.trim().toUpperCase(),
+      commissionRate: parseFloat(Number(commissionRate).toFixed(2)),
+      bankAccountNumber: bankAccountNumber.trim() || null,
+      bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
+      bankAccountHolderName: bankAccountHolderName.trim() || null,
+      panNumber: panNumber.trim().toUpperCase() || null,
+      bio: bio.trim() || null,
+    };
+
+    try {
+      const res = await fetch("/api/admin/jyotishi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Jyotishi account created successfully!',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        router.push("/dashboard/admin/agent");
+      } else {
+        const err = await res.json();
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: err.error || 'Failed to create jyotishi account',
+        });
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Unexpected Error',
+        text: 'An unexpected error occurred while creating the account',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
-      {/* <Toaster/> */}
       <div className="w-full mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <Link
             href="/dashboard/admin/agent"
@@ -157,7 +183,6 @@ export default function AddJyotishiPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* ── Personal Info ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
               <CardTitle className="text-xl text-gray-900">
@@ -235,7 +260,7 @@ export default function AddJyotishiPage() {
                     setMobileError(error);
                   }}
                   placeholder="+91 98765 43210"
-                  maxLength={15} // Add this line
+                  maxLength={15}
                   className={`border-gray-300 focus:border-blue-500 ${
                     mobileError ? "border-red-500 focus:border-red-500" : ""
                   }`}
@@ -247,19 +272,26 @@ export default function AddJyotishiPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="jyotishiCode" className="text-sm text-gray-700">
-                  Jyotishi Code *
+                  Jyotishi Code * (Auto-generated)
                 </Label>
-                <Input
-                  id="jyotishiCode"
-                  type="text"
-                  value={jyotishiCode}
-                  onChange={(e) =>
-                    setJyotishiCode(e.target.value.toUpperCase())
-                  }
-                  placeholder="JYO001"
-                  required
-                  className="border-gray-300 focus:border-blue-500 font-mono uppercase"
-                />
+                <div className="relative">
+                  <Input
+                    id="jyotishiCode"
+                    type="text"
+                    value={jyotishiCode}
+                    readOnly
+                    placeholder="Enter name to generate code..."
+                    className="border-gray-300 bg-gray-50 font-mono uppercase pr-20"
+                  />
+                  {generatingCode && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Code is automatically generated based on the name
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -299,7 +331,6 @@ export default function AddJyotishiPage() {
             </CardContent>
           </Card>
 
-          {/* ── Banking Details ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50 border-b">
               <CardTitle className="text-xl text-gray-900">
@@ -371,11 +402,10 @@ export default function AddJyotishiPage() {
             </CardContent>
           </Card>
 
-          {/* ── Submit Buttons ── */}
           <div className="flex gap-3 pt-6">
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !jyotishiCode || generatingCode}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8"
             >
               {loading ? "Creating…" : "Create Jyotishi"}
