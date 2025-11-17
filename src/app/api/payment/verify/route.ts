@@ -290,7 +290,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 3: Get course and user details
+    // Step 3: Get course and user details (WITH commission rate)
     const [course] = await db
       .select()
       .from(CoursesTable)
@@ -332,6 +332,9 @@ export async function POST(req: NextRequest) {
         { status: 404 }
       );
     }
+
+    // ✅ Get course commission rate from database
+    const courseCommissionRate = parseFloat(course.commissionPercourse || "0");
 
     // Step 4: Start database transaction
     let enrollment;
@@ -378,7 +381,6 @@ export async function POST(req: NextRequest) {
         if (existingPayment.jyotishiId && parseFloat(existingPayment.commissionAmount) > 0) {
           const [jyotishi] = await db
             .select({ 
-              commissionRate: UsersTable.commissionRate,
               name: UsersTable.name,
               role: UsersTable.role 
             })
@@ -387,19 +389,30 @@ export async function POST(req: NextRequest) {
             .limit(1);
 
           if (jyotishi?.role === "JYOTISHI") {
+            // ✅ FIXED: Use course commission rate from database, not user's rate
+            // The commission was already calculated correctly in create-order
+            // We just need to store it with the course commission rate as snapshot
+            
+            console.log('💰 Creating commission record:', {
+              jyotishiId: existingPayment.jyotishiId,
+              courseCommissionRate: `${courseCommissionRate}%`,
+              commissionAmount: existingPayment.commissionAmount,
+              saleAmount: existingPayment.finalAmount
+            });
+
             await db.insert(CommissionsTable).values({
               jyotishiId: existingPayment.jyotishiId,
               paymentId: existingPayment.id,
               courseId: courseId,
               studentId: userId,
               couponId: existingPayment.couponId,
-              commissionRate: jyotishi?.commissionRate || "0",
+              commissionRate: courseCommissionRate.toString(), // ✅ Use course rate
               saleAmount: existingPayment.finalAmount,
-              commissionAmount: existingPayment.commissionAmount,
+              commissionAmount: existingPayment.commissionAmount, // Already calculated correctly
               status: "PENDING",
             });
 
-            console.log('💰 Commission created for Jyotishi');
+            console.log('✅ Commission created for Jyotishi with course rate:', `${courseCommissionRate}%`);
           }
         }
       }

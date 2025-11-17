@@ -19,6 +19,7 @@ interface Activity {
   time: string;
   type: "enrollment" | "certificate" | "blog" | "payment";
   color: "blue" | "amber" | "indigo" | "emerald";
+  createdAt: Date; // Add actual timestamp for sorting
   metadata?: {
     userName?: string;
     courseName?: string;
@@ -59,6 +60,7 @@ export async function GET() {
         id: enrollment.id,
         action: `New enrollment in ${enrollment.courseName}`,
         time: getRelativeTime(new Date(enrollment.enrolledAt)),
+        createdAt: new Date(enrollment.enrolledAt),
         type: "enrollment",
         color: "blue",
         metadata: {
@@ -87,6 +89,7 @@ export async function GET() {
         id: request.id,
         action: `Certificate request from ${request.userName}`,
         time: getRelativeTime(new Date(request.requestedAt)),
+        createdAt: new Date(request.requestedAt),
         type: "certificate",
         color: "amber",
         metadata: {
@@ -115,6 +118,7 @@ export async function GET() {
           id: blog.id,
           action: `New blog post: ${blog.title}`,
           time: getRelativeTime(new Date(blog.publishedAt)),
+          createdAt: new Date(blog.publishedAt),
           type: "blog",
           color: "indigo",
           metadata: {
@@ -149,6 +153,7 @@ export async function GET() {
         id: payment.id,
         action: `Payment received - ${formattedAmount}`,
         time: getRelativeTime(new Date(payment.createdAt)),
+        createdAt: new Date(payment.createdAt),
         type: "payment",
         color: "emerald",
         metadata: {
@@ -158,14 +163,9 @@ export async function GET() {
       });
     });
 
-    // Sort all activities by time (most recent first)
+    // Sort all activities by timestamp (most recent first)
     const sortedActivities = activities
-      .sort((a, b) => {
-        // Convert relative time back to timestamp for sorting
-        const aTime = parseRelativeTime(a.time);
-        const bTime = parseRelativeTime(b.time);
-        return aTime - bTime;
-      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, 10); // Return only top 10 most recent
 
     return NextResponse.json(sortedActivities);
@@ -191,23 +191,4 @@ function getRelativeTime(date: Date): string {
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
   return date.toLocaleDateString();
-}
-
-// Helper function to parse relative time for sorting
-function parseRelativeTime(timeStr: string): number {
-  const now = Date.now();
-  
-  if (timeStr === "Just now") return now;
-  
-  const match = timeStr.match(/(\d+)\s+(minute|hour|day)s?\s+ago/);
-  if (match) {
-    const value = parseInt(match[1]);
-    const unit = match[2];
-    
-    if (unit === "minute") return now - (value * 60000);
-    if (unit === "hour") return now - (value * 3600000);
-    if (unit === "day") return now - (value * 86400000);
-  }
-  
-  return now - 604800000; // Default to 1 week ago
 }

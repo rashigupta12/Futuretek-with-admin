@@ -2,13 +2,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 import { CoursesTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get("status");
+    const forJyotishi = searchParams.get("forJyotishi"); // New parameter
 
     const allowedStatuses = [
       "REGISTRATION_OPEN",
@@ -23,20 +24,36 @@ export async function GET(req: NextRequest) {
 
     let courses;
 
+    // Build where conditions
+    const conditions = [];
+    
+    // Add status filter if provided
     if (statusParam && allowedStatuses.includes(statusParam as StatusType)) {
+      conditions.push(eq(CoursesTable.status, statusParam as StatusType));
+    }
+    
+    // ✅ NEW: Add commission filter for Jyotishi
+    if (forJyotishi === "true") {
+      conditions.push(isNotNull(CoursesTable.commissionPercourse));
+    }
+
+    // Execute query with conditions
+    if (conditions.length > 0) {
       courses = await db
         .select()
         .from(CoursesTable)
-        .where(eq(CoursesTable.status, statusParam as StatusType));
+        .where(and(...conditions));
     } else {
       courses = await db.select().from(CoursesTable);
     }
 
-    // Convert numeric strings to numbers
+    // Convert numeric strings to numbers and include commission info
     courses = courses.map((c: any) => ({
       ...c,
       priceINR: Number(c.priceINR),
       priceUSD: Number(c.priceUSD),
+      commissionPercourse: c.commissionPercourse ? Number(c.commissionPercourse) : null,
+      hasCommission: c.commissionPercourse !== null && c.commissionPercourse !== undefined,
     }));
 
     return NextResponse.json({ courses }, { status: 200 });

@@ -1,4 +1,4 @@
-//src/app/(protected)/dashboard/admin/courses/edit/[slug]/page.tsx
+// src/app/(protected)/dashboard/admin/courses/edit/[slug]/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import Swal from "sweetalert2"
+import Swal from "sweetalert2";
 import {
   DateInput,
   DynamicStringList,
@@ -39,6 +39,7 @@ type Course = {
   disclaimer: string | null;
   maxStudents: number | null;
   currentEnrollments: number;
+  commissionPercourse: number | null; // ← NEW
   features: string[];
   whyLearn: { title: string; description: string }[];
   courseContent: string[];
@@ -74,6 +75,7 @@ export default function EditCoursePage() {
   const [disclaimer, setDisclaimer] = useState("");
   const [maxStudents, setMaxStudents] = useState("");
   const [currentEnrollments, setCurrentEnrollments] = useState("0");
+  const [commissionPercourse, setCommissionPercourse] = useState(""); // ← NEW
 
   // ── Arrays ───────────────────────────────────────────────────────
   const [features, setFeatures] = useState<string[]>([""]);
@@ -114,7 +116,7 @@ export default function EditCoursePage() {
       setStatus(data.status);
       setThumbnailUrl(data.thumbnailUrl || "");
 
-      // Format dates to YYYY-MM-DD for date inputs
+      // Format dates to YYYY-MM-DD
       setStartDate(data.startDate ? data.startDate.split("T")[0] : "");
       setEndDate(data.endDate ? data.endDate.split("T")[0] : "");
       setRegistrationDeadline(
@@ -126,8 +128,11 @@ export default function EditCoursePage() {
       setDisclaimer(data.disclaimer || "");
       setMaxStudents(data.maxStudents ? String(data.maxStudents) : "");
       setCurrentEnrollments(String(data.currentEnrollments));
+      setCommissionPercourse(
+        data.commissionPercourse !== null ? String(data.commissionPercourse) : ""
+      ); // ← NEW
 
-      // Arrays - ensure at least one empty item if empty
+      // Arrays
       setFeatures(data.features?.length > 0 ? data.features : [""]);
       setWhyLearn(
         data.whyLearn?.length > 0
@@ -140,7 +145,11 @@ export default function EditCoursePage() {
       setRelatedTopics(data.topics?.length > 0 ? data.topics : [""]);
     } catch (error) {
       console.error("Failed to fetch course:", error);
-      alert("Course not found");
+      Swal.fire({
+        icon: "error",
+        title: "Not Found",
+        text: "Course not found",
+      });
       router.back();
     } finally {
       setLoading(false);
@@ -171,6 +180,7 @@ export default function EditCoursePage() {
       disclaimer: disclaimer || null,
       maxStudents: maxStudents ? Number(maxStudents) : null,
       currentEnrollments: Number(currentEnrollments),
+      commissionPercourse: commissionPercourse ? Number(commissionPercourse) : null, // ← NEW
 
       features: features.filter((f) => f.trim()),
       whyLearn: whyLearn.filter((w) => w.title.trim() && w.description.trim()),
@@ -185,34 +195,34 @@ export default function EditCoursePage() {
         body: JSON.stringify(payload),
       });
 
-    if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Course updated successfully!',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      router.push("/dashboard/admin/courses");
-    } else {
-      const err = await res.json();
+      if (res.ok) {
+        await Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: "Course updated successfully!",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        router.push("/dashboard/admin/courses");
+      } else {
+        const err = await res.json();
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: err.error || "Failed to update course",
+        });
+      }
+    } catch (err) {
+      console.error(err);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: err.error || 'Failed to update course',
+        icon: "error",
+        title: "Unexpected Error",
+        text: "An unexpected error occurred",
       });
+    } finally {
+      setSaving(false);
     }
-  } catch (err) {
-    console.error(err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Unexpected Error',
-      text: 'An unexpected error occurred',
-    });
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   if (loading) {
     return (
@@ -223,7 +233,7 @@ export default function EditCoursePage() {
   }
 
   return (
-    <div className="p-6 mx-auto">
+    <div className="p-6 mx-auto max-w-7xl">
       <Link
         href="/dashboard/admin/courses"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4"
@@ -232,7 +242,7 @@ export default function EditCoursePage() {
         Back to Courses
       </Link>
 
-      <h1 className="text-2xl font-bold mb-2">Edit Course</h1>
+      <h1 className="text-3xl font-bold mb-6">Edit Course</h1>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* ── Basic Info ── */}
@@ -312,6 +322,15 @@ export default function EditCoursePage() {
               />
             </Field>
 
+            <Field label="Commission per Course (%)">
+              <TextInput
+                type="number"
+                value={commissionPercourse}
+                onChange={setCommissionPercourse}
+                placeholder="15.5"
+              />
+            </Field>
+
             <Field label="Thumbnail URL">
               <TextInput
                 value={thumbnailUrl}
@@ -320,11 +339,7 @@ export default function EditCoursePage() {
               />
             </Field>
 
-            <DateInput
-              label="Start Date"
-              value={startDate}
-              onChange={setStartDate}
-            />
+            <DateInput label="Start Date" value={startDate} onChange={setStartDate} />
             <DateInput label="End Date" value={endDate} onChange={setEndDate} />
             <DateInput
               label="Registration Deadline"
@@ -351,15 +366,6 @@ export default function EditCoursePage() {
                 placeholder="Enter course description..."
                 minHeight="300px"
               />
-              {/* <Field label="Description *">
-  <Textarea
-    rows={5}
-    required
-    value={description}
-    onChange={(e) => setDescription(e.target.value)}
-    placeholder="Enter course description..."
-  />
-</Field> */}
             </Field>
 
             <Field label="Why Learn Intro">
@@ -442,7 +448,7 @@ export default function EditCoursePage() {
         />
 
         {/* ── Submit ── */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-6">
           <Button type="submit" disabled={saving}>
             {saving ? "Saving…" : "Save Changes"}
           </Button>

@@ -1,6 +1,7 @@
 // src/app/(protected)/dashboard/admin/page.tsx
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 interface DashboardStats {
@@ -66,13 +67,17 @@ export default function AdminDashboard() {
       }
     }
 
-    async function fetchRecentActivity() {
+ async function fetchRecentActivity() {
       try {
         setActivitiesLoading(true);
         const response = await fetch("/api/admin/recent-activity");
         if (response.ok) {
           const data = await response.json();
-          setActivities(data);
+          // Sort activities by timestamp in descending order (latest first)
+          const sortedData = data.sort((a: Activity, b: Activity) => {
+            return new Date(b.time).getTime() - new Date(a.time).getTime();
+          });
+          setActivities(sortedData);
         } else {
           console.error("Failed to fetch recent activity");
         }
@@ -114,6 +119,7 @@ export default function AdminDashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Total Users */}
+        <Link href="/dashboard/admin/users">
         <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-2xl shadow-sm">
@@ -142,9 +148,12 @@ export default function AdminDashboard() {
               </div>
             </>
           )}
+          
         </div>
+        </Link>
 
         {/* Active Courses */}
+        <Link href="/dashboard/admin/courses">
         <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl shadow-sm">
@@ -171,8 +180,10 @@ export default function AdminDashboard() {
             </>
           )}
         </div>
+        </Link>
 
         {/* Total Revenue */}
+        <Link href="/dashboard/admin/payments">
         <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-2xl shadow-sm">
@@ -202,8 +213,10 @@ export default function AdminDashboard() {
             </>
           )}
         </div>
-
+</Link>
         {/* Pending Certificates */}
+
+        <Link href="/dashboard/admin/certificates/requests">
         <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center text-2xl shadow-sm">
@@ -229,6 +242,7 @@ export default function AdminDashboard() {
             </>
           )}
         </div>
+        </Link>
       </div>
 
       {/* Recent Activity */}

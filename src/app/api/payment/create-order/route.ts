@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get course
+    // ✅ Get course WITH commission rate
     const [course] = await db
       .select()
       .from(CoursesTable)
@@ -49,6 +49,16 @@ export async function POST(req: NextRequest) {
     if (!course) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
+
+    // ✅ Get course commission rate from database
+    const courseCommissionRate = parseFloat(course.commissionPercourse || "0");
+    
+    console.log('Course commission rate:', {
+      courseId: course.id,
+      courseTitle: course.title,
+      commissionPercourse: course.commissionPercourse,
+      commissionRate: courseCommissionRate
+    });
 
     // Calculate base amount based on payment type
     const baseAmount = paymentType === "FOREX" 
@@ -92,7 +102,6 @@ export async function POST(req: NextRequest) {
           discountValue: CouponsTable.discountValue,
           createdByJyotishiId: CouponsTable.createdByJyotishiId,
           jyotishiRole: UsersTable.role,
-          jyotishiCommissionRate: UsersTable.commissionRate,
           jyotishiName: UsersTable.name,
         })
         .from(CouponsTable)
@@ -152,10 +161,17 @@ export async function POST(req: NextRequest) {
           jyotishiDiscountAmount += discountAmount;
           jyotishiId = coupon.createdByJyotishiId;
 
-          // Calculate commission ONLY for Jyotishi coupons
-          if (coupon.jyotishiCommissionRate) {
-            // Commission is 20% of price after admin discount
-            commissionAmount = (priceAfterAdminDiscount * parseFloat(coupon.jyotishiCommissionRate)) / 100;
+          // ✅ FIXED: Calculate commission using course commission rate from DB
+          // Commission is calculated on price AFTER admin discount, BEFORE jyotishi discount
+          if (courseCommissionRate > 0) {
+            commissionAmount = (priceAfterAdminDiscount * courseCommissionRate) / 100;
+            
+            console.log('💰 Commission calculation:', {
+              priceAfterAdminDiscount,
+              courseCommissionRate: `${courseCommissionRate}%`,
+              commissionAmount,
+              jyotishiId
+            });
           }
         } else {
           adminDiscountAmount += discountAmount;
@@ -187,7 +203,8 @@ export async function POST(req: NextRequest) {
         jyotishiDiscountAmount,
         totalDiscountAmount,
         subtotal,
-        commissionAmount
+        commissionAmount,
+        commissionRate: `${courseCommissionRate}%`
       });
     }
 
@@ -243,13 +260,12 @@ export async function POST(req: NextRequest) {
         total_discount: totalDiscountAmount.toString(),
         subtotal: subtotal.toString(),
         gst: gstAmount.toString(),
-        commission: commissionAmount.toString()
+        commission: commissionAmount.toString(),
+        commission_rate: courseCommissionRate.toString()
       }
     });
 
     // Create payment record
-    // Note: For multiple coupons, we store the first coupon ID in couponId field
-    // Full coupon details are stored in Razorpay order notes and can be retrieved from there
     const [payment] = await db
       .insert(PaymentsTable)
       .values({
@@ -261,7 +277,7 @@ export async function POST(req: NextRequest) {
         gstAmount: gstAmount.toString(),
         discountAmount: totalDiscountAmount.toString(),
         finalAmount: finalAmount.toString(),
-        couponId: couponIds.length > 0 ? couponIds[0] : null, // Store first coupon ID
+        couponId: couponIds.length > 0 ? couponIds[0] : null,
         jyotishiId: jyotishiId,
         commissionAmount: commissionAmount.toString(),
         razorpayOrderId: order.id,
@@ -273,6 +289,8 @@ export async function POST(req: NextRequest) {
     console.log('Payment created:', {
       paymentId: payment.id,
       finalAmount,
+      commissionAmount,
+      commissionRate: `${courseCommissionRate}%`,
       appliedCoupons: appliedCoupons.map(c => c.code)
     });
 
@@ -284,13 +302,14 @@ export async function POST(req: NextRequest) {
         invoiceNumber,
         paymentId: payment.id,
         commission: commissionAmount > 0 ? commissionAmount : null,
+        commissionRate: courseCommissionRate,
         discount: totalDiscountAmount,
         adminDiscount: adminDiscountAmount,
         jyotishiDiscount: jyotishiDiscountAmount,
         priceAfterAdminDiscount,
         subtotal: subtotal,
         gstAmount: gstAmount,
-        appliedCoupons // Return array of all applied coupons
+        appliedCoupons
       },
       { status: 200 }
     );

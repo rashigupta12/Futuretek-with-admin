@@ -75,6 +75,8 @@ export async function POST(req: NextRequest) {
       whyLearn,
       courseContent,
       relatedTopics,
+      commissionPercourse,
+      
       sessions,
     } = body;
 
@@ -106,6 +108,7 @@ export async function POST(req: NextRequest) {
       disclaimer: disclaimer || null,
       maxStudents: maxStudents || null,
       currentEnrollments: currentEnrollments || 0,
+      commissionPercourse: commissionPercourse|| null
     };
 
     // Insert course

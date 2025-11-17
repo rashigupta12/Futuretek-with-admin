@@ -43,8 +43,7 @@ export default function AddCoursePage() {
   const [whyLearnIntro, setWhyLearnIntro] = useState("");
   const [whatYouLearn, setWhatYouLearn] = useState("");
   const [disclaimer, setDisclaimer] = useState("");
-  // const [maxStudents, setMaxStudents] = useState("");
-  // const [currentEnrollments, setCurrentEnrollments] = useState("0");
+  const [commissionPercourse, setCommissionPercourse] = useState(""); // ← NEW
 
   // ── Arrays ───────────────────────────────────────────────────────
   const [features, setFeatures] = useState<string[]>([""]);
@@ -87,33 +86,11 @@ export default function AddCoursePage() {
     return Object.values(errors).every((error) => !error);
   };
 
-  // // Validate sessions
-  // const validateSessions = () => {
-  //   if (sessions.length === 0) return true;
-    
-  //   for (const session of sessions) {
-  //     if (!session.title.trim()) {
-  //       alert(`Session ${session.sessionNumber} must have a title`);
-  //       return false;
-  //     }
-  //     if (!session.sessionDate) {
-  //       alert(`Session ${session.sessionNumber} must have a date`);
-  //       return false;
-  //     }
-  //     if (!session.sessionTime) {
-  //       alert(`Session ${session.sessionNumber} must have a time`);
-  //       return false;
-  //     }
-  //   }
-  //   return true;
-  // };
-
-  // Call validateDates when dates change
   useEffect(() => {
     validateDates();
   }, [registrationDeadline, startDate, endDate]);
 
-  // Auto-generate sessions when totalSessions changes
+  // Auto-generate sessions
   useEffect(() => {
     if (totalSessions && sessions.length === 0) {
       const total = parseInt(totalSessions);
@@ -141,21 +118,21 @@ export default function AddCoursePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateDates()) {
-// Replace: alert("Please fix the date validation errors before submitting");
-Swal.fire({
-  icon: 'warning',
-  title: 'Validation Error',
-  text: 'Please fix the date validation errors before submitting',
-});      return;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Validation Error',
+        text: 'Please fix the date validation errors before submitting',
+      });
+      return;
     }
     setLoading(true);
 
     const payload = {
       slug,
       title,
-      tagline: tagline,
+      tagline,
       description,
       instructor: instructor || null,
       duration: duration || null,
@@ -170,8 +147,7 @@ Swal.fire({
       whyLearnIntro: whyLearnIntro || null,
       whatYouLearn: whatYouLearn || null,
       disclaimer: disclaimer || null,
-      // maxStudents: maxStudents ? Number(maxStudents) : null,
-      // currentEnrollments: Number(currentEnrollments),
+      commissionPercourse: commissionPercourse ? Number(commissionPercourse) : null, // ← NEW
 
       features: features.filter((f) => f.trim()),
       whyLearn: whyLearn.filter((w) => w.title.trim() && w.description.trim()),
@@ -180,7 +156,6 @@ Swal.fire({
       sessions: sessions.map(session => ({
         ...session,
         duration: Number(session.duration),
-        // Remove temporary ID for new sessions
         id: session.id.startsWith('temp-') ? undefined : session.id,
       })),
     };
@@ -193,39 +168,36 @@ Swal.fire({
       });
 
       if (res.ok) {
-        // Replace: alert("Course created successfully!");
-Swal.fire({
-  icon: 'success',
-  title: 'Course Created!',
-  text: 'Course has been created successfully',
-  timer: 2000,
-  showConfirmButton: false
-}).then(() => {
-  router.push("/dashboard/admin/courses");
-});
+        Swal.fire({
+          icon: 'success',
+          title: 'Course Created!',
+          text: 'Course has been created successfully',
+          timer: 2000,
+          showConfirmButton: false
+        }).then(() => {
+          router.push("/dashboard/admin/courses");
+        });
       } else {
         const err = await res.json();
-// Replace: alert(err.error || "Failed to create course");
-Swal.fire({
-  icon: 'error',
-  title: 'Error',
-  text: err.error || 'Failed to create course',
-});
-
-// Replace: alert("Unexpected error");
-Swal.fire({
-  icon: 'error',
-  title: 'Error',
-  text: 'An unexpected error occurred',
-});      }
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: err.error || 'Failed to create course',
+        });
+      }
     } catch (err) {
       console.error(err);
-      alert("Unexpected error");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'An unexpected error occurred',
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  // Auto-generate slug
   useEffect(() => {
     if (title) {
       const generatedSlug = title
@@ -350,6 +322,15 @@ Swal.fire({
                 />
               </Field>
 
+              <Field label="Commission per Course (%)">
+                <TextInput
+                  type="number"
+                  value={commissionPercourse}
+                  onChange={setCommissionPercourse}
+                  placeholder="15.5"
+                />
+              </Field>
+
               <Field label="Thumbnail URL">
                 <TextInput
                   value={thumbnailUrl}
@@ -434,32 +415,6 @@ Swal.fire({
               </Field>
             </CardContent>
           </Card>
-
-          {/* ── Capacity ── */}
-          {/* <Card className="border border-gray-200 hover:shadow-md transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50 border-b">
-              <CardTitle className="text-xl text-gray-900">Capacity</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Max Students">
-                <TextInput
-                  type="number"
-                  value={maxStudents}
-                  onChange={setMaxStudents}
-                  placeholder="50"
-                />
-              </Field>
-
-              <Field label="Current Enrollments">
-                <TextInput
-                  type="number"
-                  value={currentEnrollments}
-                  onChange={setCurrentEnrollments}
-                  placeholder="0"
-                />
-              </Field>
-            </CardContent>
-          </Card> */}
 
           {/* ── Dynamic Lists ── */}
           <DynamicStringList
