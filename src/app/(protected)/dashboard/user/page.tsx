@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, BookOpen, Clock, TrendingUp, Trophy } from "lucide-react";
+import { ArrowRight, BookOpen, Trophy } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -40,7 +40,7 @@ export default function UserDashboardHome() {
 
       try {
         setLoading(true);
-        
+
         // Fetch dashboard stats
         const statsResponse = await fetch("/api/user/dashboard-stats");
         if (statsResponse.ok) {
@@ -59,7 +59,7 @@ export default function UserDashboardHome() {
 
       try {
         setCoursesLoading(true);
-        
+
         // Fetch active courses
         const coursesResponse = await fetch("/api/user/active-courses");
         if (coursesResponse.ok) {
@@ -124,7 +124,7 @@ export default function UserDashboardHome() {
         </Card>
 
         {/* Hours Learned */}
-        <Card className="border border-blue-100 bg-gradient-to-br from-white to-blue-50/30 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-300">
+        {/* <Card className="border border-blue-100 bg-gradient-to-br from-white to-blue-50/30 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-700 flex items-center gap-2">
               <div className="p-1.5 bg-blue-100 rounded-lg">
@@ -150,7 +150,7 @@ export default function UserDashboardHome() {
               </>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Certificates */}
         <Card className="border border-yellow-100 bg-gradient-to-br from-white to-yellow-50/30 shadow-sm hover:shadow-lg hover:border-yellow-200 transition-all duration-300">
@@ -182,7 +182,7 @@ export default function UserDashboardHome() {
         </Card>
 
         {/* Learning Streak */}
-        <Card className="border border-blue-100 bg-gradient-to-br from-white to-blue-50/30 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-300">
+        {/* <Card className="border border-blue-100 bg-gradient-to-br from-white to-blue-50/30 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-700 flex items-center gap-2">
               <div className="p-1.5 bg-yellow-100 rounded-lg">
@@ -208,15 +208,25 @@ export default function UserDashboardHome() {
               </>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Active Courses */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-blue-900">Continue Learning</h2>
-          <Button asChild variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-            <Link href="/dashboard/user/courses" className="flex items-center gap-1">
+          <h2 className="text-xl font-semibold text-blue-900">
+            Continue Learning
+          </h2>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+          >
+            <Link
+              href="/dashboard/user/courses"
+              className="flex items-center gap-1"
+            >
               View All
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -250,7 +260,10 @@ export default function UserDashboardHome() {
               <p className="text-gray-600 mb-6">
                 Start your learning journey by enrolling in a course
               </p>
-              <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">
+              <Button
+                asChild
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+              >
                 <Link href="/courses">Browse Courses</Link>
               </Button>
             </CardContent>
@@ -258,10 +271,13 @@ export default function UserDashboardHome() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {activeCourses.map((course) => (
-              <Card key={course.id} className="border border-blue-100 bg-white hover:shadow-lg hover:border-blue-200 transition-all duration-300 relative overflow-hidden group">
+              <Card
+                key={course.id}
+                className="border border-blue-100 bg-white hover:shadow-lg hover:border-blue-200 transition-all duration-300 relative overflow-hidden group"
+              >
                 {/* Golden Top Border */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
-                
+
                 <CardHeader className="pb-3 pt-5">
                   <CardTitle className="text-base font-semibold line-clamp-1 text-blue-900">
                     {course.title}
@@ -284,9 +300,9 @@ export default function UserDashboardHome() {
                       </p>
                     </div>
                   </div>
-                  <Button 
-                    asChild 
-                    className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm" 
+                  <Button
+                    asChild
+                    className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm"
                     size="sm"
                   >
                     <Link href={`/dashboard/user/courses/${course.slug}`}>
@@ -305,10 +321,17 @@ export default function UserDashboardHome() {
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-blue-900">Ready for your next course?</h3>
-              <p className="text-slate-600 text-sm mt-1">Explore our comprehensive astrological programs</p>
+              <h3 className="text-lg font-semibold text-blue-900">
+                Ready for your next course?
+              </h3>
+              <p className="text-slate-600 text-sm mt-1">
+                Explore our comprehensive astrological programs
+              </p>
             </div>
-            <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all">
+            <Button
+              asChild
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all"
+            >
               <Link href="/courses" className="flex items-center gap-2">
                 Browse Courses
                 <ArrowRight className="h-4 w-4" />
