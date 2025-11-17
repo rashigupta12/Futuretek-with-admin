@@ -119,7 +119,7 @@ export default function JyotishisPage() {
       await Swal.fire({
         icon: 'success',
         title: 'Success!',
-        text: `Jyotishi ${!currentStatus ? "activated" : "deactivated"} successfully`,
+        text: `Agent ${!currentStatus ? "activated" : "deactivated"} successfully`,
         timer: 2000,
         showConfirmButton: false
       });

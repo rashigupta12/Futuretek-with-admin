@@ -23,7 +23,7 @@ import {
 import { Session } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import useSWR from "swr";
 import { FuturetekLogo } from "./FutureTekLogo";
 
@@ -69,14 +69,51 @@ function NavLink({
 
 function CoursesDropdown({ courses, loading }: { courses: Course[]; loading: boolean }) {
   const [open, setOpen] = useState(false);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isMobile) {
+      // Mobile behavior: toggle dropdown on click
+      e.preventDefault();
+      setOpen(!open);
+      return;
+    }
+
+    // Desktop behavior: handle single/double click
+    if (clickTimeoutRef.current) {
+      // This is a double click
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      window.location.href = "/courses";
+    } else {
+      // This is a single click
+      e.preventDefault();
+      clickTimeoutRef.current = setTimeout(() => {
+        setOpen(!open);
+        clickTimeoutRef.current = null;
+      }, 300); // 300ms delay to detect double click
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div
       className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={() => !isMobile && setOpen(true)}
+      onMouseLeave={() => !isMobile && setOpen(false)}
     >
-      <button className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+      <button 
+        className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+        onClick={handleClick}
+      >
         Courses
         <ChevronDown
           className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -96,6 +133,7 @@ function CoursesDropdown({ courses, loading }: { courses: Course[]; loading: boo
                   key={course.id}
                   href={`/courses/${course.slug}`}
                   className="block px-4 py-2.5 hover:bg-blue-50 rounded-md text-sm text-slate-700 hover:text-blue-700"
+                
                 >
                   {course.title}
                 </NavLink>
@@ -112,21 +150,47 @@ function Sidebar({
   session,
   handleLogout,
   courses,
-  // loading,
 }: {
   session: Session | null;
   handleLogout: () => void;
   courses: Course[];
-  loading: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [coursesOpen, setCoursesOpen] = useState(false);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const menuItems = [
-    { href: "/courses", label: "Courses", icon: BookOpen },
     { href: "/about", label: "About", icon: Info },
     { href: "/career", label: "Career", icon: Briefcase },
+    { href: "/blogs", label: "Blogs", icon: BookOpen },
     { href: "/contact", label: "Contact Us", icon: Mail },
   ];
+
+  const handleCoursesClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    if (clickTimeoutRef.current) {
+      // This is a double click
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      setIsOpen(false);
+      window.location.href = "/courses";
+    } else {
+      // This is a single click
+      clickTimeoutRef.current = setTimeout(() => {
+        setCoursesOpen(!coursesOpen);
+        clickTimeoutRef.current = null;
+      }, 300);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -179,6 +243,38 @@ function Sidebar({
               </>
             )}
 
+            {/* Courses with double-click behavior */}
+            <Button
+              variant="ghost"
+              className="w-full justify-between gap-3 h-11 hover:bg-blue-50 hover:text-blue-700"
+              onClick={handleCoursesClick}
+            >
+              <div className="flex items-center gap-3">
+                <BookOpen className="h-5 w-5" />
+                <span className="font-medium">Courses</span>
+              </div>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-200 ${coursesOpen ? "rotate-180" : ""}`}
+              />
+            </Button>
+
+            {coursesOpen && (
+              <div className="pl-4 space-y-1 border-l-2 border-blue-100 ml-5">
+                {courses.map((course) => (
+                  <Button
+                    key={course.id}
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start h-10 text-sm hover:bg-blue-50 hover:text-blue-700"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Link href={`/courses/${course.slug}`}>{course.title}</Link>
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {/* Other menu items */}
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -196,25 +292,6 @@ function Sidebar({
                 </Button>
               );
             })}
-
-            {courses.length > 0 && (
-              <div className="pt-2">
-                <p className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Courses
-                </p>
-                {courses.map((course) => (
-                  <Button
-                    key={course.id}
-                    asChild
-                    variant="ghost"
-                    className="w-full justify-start pl-12 h-10 text-sm hover:bg-blue-50 hover:text-blue-700"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Link href={`/courses/${course.slug}`}>{course.title}</Link>
-                  </Button>
-                ))}
-              </div>
-            )}
           </div>
         </nav>
 
@@ -293,7 +370,6 @@ export function SiteHeader() {
             session={session ?? null}
             handleLogout={handleLogout}
             courses={courses}
-            loading={isLoading}
           />
           <Link href="/" prefetch={true}>
             <FuturetekLogo width={180} height={54} />
