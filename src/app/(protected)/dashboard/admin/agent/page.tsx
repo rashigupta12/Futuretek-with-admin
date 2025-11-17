@@ -52,7 +52,7 @@ export default function JyotishisPage() {
     const res = await fetch(url);
     
     if (!res.ok) {
-      throw new Error('Failed to fetch jyotishis');
+      throw new Error('Failed to fetch agent');
     }
     
     const data = await res.json();
@@ -75,11 +75,11 @@ export default function JyotishisPage() {
 
     setJyotishis(mapped);
   } catch (err) {
-    console.error("Failed to fetch jyotishis:", err);
+    console.error("Failed to fetch agent:", err);
     Swal.fire({
       icon: 'error',
       title: 'Load Failed',
-      text: 'Failed to load jyotishis. Please refresh the page.',
+      text: 'Failed to load agent. Please refresh the page.',
     });
   } finally {
     setLoading(false);
@@ -127,7 +127,7 @@ export default function JyotishisPage() {
       Swal.fire({
         icon: 'error',
         title: 'Update Failed',
-        text: 'Failed to update jyotishi status',
+        text: 'Failed to update agent status',
       });
     }
   } catch (err) {

@@ -126,7 +126,7 @@ export default function CouponTypesPage() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Coupon Types</h2>
           <p className="text-muted-foreground mt-1">
-            Manage coupon type templates that Jyotishis can use to create individual coupons.
+            Manage coupon type templates that agent can use to create individual coupons.
           </p>
         </div>
         <Button asChild>

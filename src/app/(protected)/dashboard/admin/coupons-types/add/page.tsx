@@ -103,7 +103,7 @@ export default function AddCouponTypePage() {
 
       <h1 className="text-2xl font-bold mb-2">Add New Coupon Type</h1>
       <p className="text-muted-foreground mb-6">
-        Create a new coupon type template that Jyotishis can use to generate individual coupons.
+        Create a new coupon type template that agent can use to generate individual coupons.
       </p>
 
       <div className="space-y-6">
@@ -175,8 +175,8 @@ export default function AddCouponTypePage() {
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   {discountType === "PERCENTAGE"
-                    ? "Jyotishis can set percentage discounts (e.g., 10%, 20%)"
-                    : "Jyotishis can set fixed amount discounts (e.g., ₹500, ₹1000)"}
+                    ? "Agent can set percentage discounts (e.g., 10%, 20%)"
+                    : "Agent can set fixed amount discounts (e.g., ₹500, ₹1000)"}
                 </p>
               </div>
 
@@ -200,8 +200,8 @@ export default function AddCouponTypePage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   {discountType === "PERCENTAGE"
-                    ? "Maximum percentage Jyotishis can offer"
-                    : "Maximum amount Jyotishis can discount"}
+                    ? "Maximum percentage agent can offer"
+                    : "Maximum amount agent can discount"}
                 </p>
               </div>
             </div>
