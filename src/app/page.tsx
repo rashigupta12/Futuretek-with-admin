@@ -1,3 +1,4 @@
+/*eslint-disable  @typescript-eslint/no-unused-vars*/
 "use client"
 import { CoursesCatalog } from "@/components/courses-catalog";
 import { FAQs } from "@/components/faqs";
