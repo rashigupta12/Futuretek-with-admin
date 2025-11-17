@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import React, { useState } from "react";
 import { useCurrentUser } from "@/hooks/auth";
+import RichTextEditor from "@/components/courses/RichTextEditor";
 
 export default function AddBlogPage() {
   const router = useRouter();
@@ -39,67 +40,75 @@ export default function AddBlogPage() {
     setTags(tags.filter((_, i) => i !== index));
   };
 
- const handleTagChange = (index: number, value: string) => {
-  const newTags = [...tags];
-  const capitalized = value.charAt(0).toUpperCase() + value.slice(1);
-  newTags[index] = capitalized;
-  setTags(newTags);
-};
-
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  setLoading(true);
-
-  const payload = {
-    slug,
-    title,
-    excerpt: excerpt || null,
-    content,
-    thumbnailUrl: thumbnailUrl || null,
-    authorId: authorId || "default-author-id",
-    tags: tags.filter((t) => t.trim()),
-    isPublished,
+  const handleTagChange = (index: number, value: string) => {
+    const newTags = [...tags];
+    const capitalized = value.charAt(0).toUpperCase() + value.slice(1);
+    newTags[index] = capitalized;
+    setTags(newTags);
+  };
+  const generateSlug = (text: string) => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "") // Remove special characters
+      .replace(/[\s_-]+/g, "-") // Replace spaces and underscores with hyphens
+      .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
   };
 
-  try {
-    const res = await fetch("/api/admin/blogs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    if (res.ok) {
-      // Replace: alert("Blog created successfully!");
-      await Swal.fire({
-        icon: 'success',
-        title: 'Blog Created!',
-        text: 'Blog post has been created successfully',
-        timer: 2000,
-        showConfirmButton: false
+    setLoading(true);
+
+    const payload = {
+      slug,
+      title,
+      excerpt: excerpt || null,
+      content,
+      thumbnailUrl: thumbnailUrl || null,
+      authorId: authorId || "default-author-id",
+      tags: tags.filter((t) => t.trim()),
+      isPublished,
+    };
+
+    try {
+      const res = await fetch("/api/admin/blogs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-      router.push("/dashboard/admin/blogs");
-    } else {
-      const err = await res.json();
-      // Replace: alert(err.error || "Failed to create blog");
+
+      if (res.ok) {
+        // Replace: alert("Blog created successfully!");
+        await Swal.fire({
+          icon: "success",
+          title: "Blog Created!",
+          text: "Blog post has been created successfully",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        router.push("/dashboard/admin/blogs");
+      } else {
+        const err = await res.json();
+        // Replace: alert(err.error || "Failed to create blog");
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: err.error || "Failed to create blog",
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      // Replace: alert("Unexpected error");
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: err.error || 'Failed to create blog',
+        icon: "error",
+        title: "Error",
+        text: "An unexpected error occurred",
       });
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-    // Replace: alert("Unexpected error");
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'An unexpected error occurred',
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6 w-full">
@@ -148,6 +157,9 @@ export default function AddBlogPage() {
                       const capitalized =
                         value.charAt(0).toUpperCase() + value.slice(1);
                       setTitle(capitalized);
+                      if (value.trim()) {
+                        setSlug(generateSlug(value));
+                      }
                     }}
                     placeholder="Understanding Vedic Astrology"
                     required
@@ -208,17 +220,14 @@ export default function AddBlogPage() {
               <CardTitle className="text-xl text-gray-900">Content *</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <Textarea
-                rows={15}
-                required
+              <RichTextEditor
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your blog content here. You can use HTML for formatting..."
-                className="font-mono text-sm border-gray-300 focus:border-blue-500"
+                onChange={setContent}
+                placeholder="Write your blog content here..."
+                minHeight="400px"
               />
               <p className="text-xs text-gray-500 mt-2">
-                HTML content is supported. Use proper formatting for better
-                readability.
+                Use the toolbar above to format your content with rich text.
               </p>
             </CardContent>
           </Card>
