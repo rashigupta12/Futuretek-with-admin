@@ -140,13 +140,13 @@ export default function AddJyotishiPage() {
             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Jyotishi
+            Back to astrologers
           </Link>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Add New Jyotishi
+                Add New Astrologer
               </h1>
               <p className="text-gray-600">
                 Create a new astrologer account with commission and banking

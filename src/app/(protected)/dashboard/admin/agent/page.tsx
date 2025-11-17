@@ -168,7 +168,7 @@ export default function JyotishisPage() {
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search jyotishis..."
+              placeholder="Search astrologer..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -194,7 +194,7 @@ export default function JyotishisPage() {
           <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg whitespace-nowrap">
             <Link href="/dashboard/admin/agent/add" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              Add AStrologer
+              Add Astrologer
             </Link>
           </Button>
         </div>
