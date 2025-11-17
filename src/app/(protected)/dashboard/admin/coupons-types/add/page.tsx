@@ -5,13 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/auth";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import React, { useEffect, useState } from "react";
 
 export default function AddCouponTypePage() {
@@ -42,17 +48,17 @@ export default function AddCouponTypePage() {
       } else {
         const error = await res.json();
         Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: error.error || 'Failed to generate type code',
+          icon: "error",
+          title: "Error",
+          text: error.error || "Failed to generate type code",
         });
       }
     } catch (err) {
       console.error("Failed to fetch next code:", err);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to generate type code. Please refresh the page.',
+        icon: "error",
+        title: "Error",
+        text: "Failed to generate type code. Please refresh the page.",
       });
     } finally {
       setLoadingCode(false);
@@ -64,18 +70,18 @@ export default function AddCouponTypePage() {
 
     if (!typeCode) {
       Swal.fire({
-        icon: 'error',
-        title: 'Missing Code',
-        text: 'Type code is required. Please refresh the page if it didn\'t generate.',
+        icon: "error",
+        title: "Missing Code",
+        text: "Type code is required. Please refresh the page if it didn't generate.",
       });
       return;
     }
 
     if (!typeName || !discountType || !maxDiscountLimit) {
       Swal.fire({
-        icon: 'error',
-        title: 'Missing Fields',
-        text: 'Please fill in all required fields.',
+        icon: "error",
+        title: "Missing Fields",
+        text: "Please fill in all required fields.",
       });
       return;
     }
@@ -100,9 +106,9 @@ export default function AddCouponTypePage() {
 
       if (res.ok) {
         await Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: 'Coupon type created successfully!',
+          icon: "success",
+          title: "Success!",
+          text: "Coupon type created successfully!",
           timer: 2000,
           showConfirmButton: false,
         });
@@ -110,17 +116,17 @@ export default function AddCouponTypePage() {
       } else {
         const err = await res.json();
         Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: err.error || 'Failed to create coupon type',
+          icon: "error",
+          title: "Error",
+          text: err.error || "Failed to create coupon type",
         });
       }
     } catch (err) {
       console.error(err);
       Swal.fire({
-        icon: 'error',
-        title: 'Unexpected Error',
-        text: 'An unexpected error occurred',
+        icon: "error",
+        title: "Unexpected Error",
+        text: "An unexpected error occurred",
       });
     } finally {
       setLoading(false);
@@ -139,7 +145,8 @@ export default function AddCouponTypePage() {
 
       <h1 className="text-2xl font-bold mb-2">Add New Coupon Type</h1>
       <p className="text-muted-foreground mb-6">
-        Create a new coupon type template that agents can use to generate individual coupons.
+        Create a new coupon type template that agents can use to generate
+        individual coupons.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -157,7 +164,9 @@ export default function AddCouponTypePage() {
                     id="typeCode"
                     value={typeCode}
                     readOnly
-                    placeholder={loadingCode ? "Generating..." : "Auto-generated code"}
+                    placeholder={
+                      loadingCode ? "Generating..." : "Auto-generated code"
+                    }
                     className="bg-gray-50 font-mono text-lg font-bold pr-10"
                   />
                   {loadingCode && (
@@ -213,7 +222,9 @@ export default function AddCouponTypePage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="FIXED_AMOUNT">Fixed Amount (₹)</SelectItem>
+                    <SelectItem value="FIXED_AMOUNT">
+                      Fixed Amount (₹)
+                    </SelectItem>
                     <SelectItem value="PERCENTAGE">Percentage (%)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -251,17 +262,12 @@ export default function AddCouponTypePage() {
                 </p>
               </div>
             </div>
-
-     
           </CardContent>
         </Card>
 
         {/* Submit Actions */}
         <div className="flex gap-4 pt-4">
-          <Button 
-            type="submit" 
-            disabled={loading || loadingCode || !typeCode}
-          >
+          <Button type="submit" disabled={loading || loadingCode || !typeCode}>
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

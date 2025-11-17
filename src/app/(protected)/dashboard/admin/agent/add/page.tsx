@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
@@ -15,6 +15,7 @@ export default function AddJyotishiPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [generatingCode, setGeneratingCode] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,6 +25,9 @@ export default function AddJyotishiPage() {
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankIfscCode, setBankIfscCode] = useState("");
   const [bankAccountHolderName, setBankAccountHolderName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankBranchName, setBankBranchName] = useState("");
+  const [cancelledChequeImage, setCancelledChequeImage] = useState("");
   const [panNumber, setPanNumber] = useState("");
   const [bio, setBio] = useState("");
   const [mobileError, setMobileError] = useState("");
@@ -57,7 +61,6 @@ export default function AddJyotishiPage() {
       }
     };
 
-    // Debounce the code generation
     const timeoutId = setTimeout(generateCode, 500);
     return () => clearTimeout(timeoutId);
   }, [name]);
@@ -81,6 +84,63 @@ export default function AddJyotishiPage() {
     }
 
     return "";
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid File',
+        text: 'Please upload an image file (JPG, PNG, etc.)',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire({
+        icon: 'error',
+        title: 'File Too Large',
+        text: 'Image size should be less than 5MB',
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCancelledChequeImage(reader.result as string);
+        setUploadingImage(false);
+      };
+      reader.onerror = () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Upload Failed',
+          text: 'Failed to process image',
+        });
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Failed',
+        text: 'Failed to upload image',
+      });
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = () => {
+    setCancelledChequeImage("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,6 +177,9 @@ export default function AddJyotishiPage() {
       bankAccountNumber: bankAccountNumber.trim() || null,
       bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
       bankAccountHolderName: bankAccountHolderName.trim() || null,
+      bankName: bankName.trim() || null,
+      bankBranchName: bankBranchName.trim() || null,
+      cancelledChequeImage: cancelledChequeImage || null,
       panNumber: panNumber.trim().toUpperCase() || null,
       bio: bio.trim() || null,
     };
@@ -387,6 +450,34 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="bankName" className="text-sm text-gray-700">
+                  Bank Name
+                </Label>
+                <Input
+                  id="bankName"
+                  type="text"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="State Bank of India"
+                  className="border-gray-300 focus:border-amber-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bankBranchName" className="text-sm text-gray-700">
+                  Bank Branch Name
+                </Label>
+                <Input
+                  id="bankBranchName"
+                  type="text"
+                  value={bankBranchName}
+                  onChange={(e) => setBankBranchName(e.target.value)}
+                  placeholder="Connaught Place, New Delhi"
+                  className="border-gray-300 focus:border-amber-500"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="panNumber" className="text-sm text-gray-700">
                   PAN Number
                 </Label>
@@ -398,6 +489,81 @@ export default function AddJyotishiPage() {
                   placeholder="ABCDE1234F"
                   className="border-gray-300 focus:border-amber-500 font-mono uppercase"
                 />
+              </div>
+
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="cancelledCheque" className="text-sm text-gray-700">
+                  Cancelled Cheque Image
+                </Label>
+                <div className="space-y-3">
+                  {!cancelledChequeImage ? (
+                    <div className="relative">
+                      <Input
+                        id="cancelledCheque"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                      <Label
+                        htmlFor="cancelledCheque"
+                        className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                          uploadingImage
+                            ? "border-gray-300 bg-gray-50"
+                            : "border-gray-300 hover:border-amber-400 hover:bg-amber-50"
+                        }`}
+                      >
+                        {uploadingImage ? (
+                          <div className="flex flex-col items-center">
+                            <div className="animate-spin h-8 w-8 border-3 border-amber-500 border-t-transparent rounded-full mb-2"></div>
+                            <p className="text-sm text-gray-600">Uploading...</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-600">
+                              Click to upload cancelled cheque image
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              PNG, JPG up to 5MB
+                            </p>
+                          </div>
+                        )}
+                      </Label>
+                    </div>
+                  ) : (
+                    <div className="relative border-2 border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start gap-4">
+                        <img
+                          src={cancelledChequeImage}
+                          alt="Cancelled Cheque"
+                          className="w-48 h-32 object-cover rounded-lg"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-700 font-medium mb-1">
+                            Cancelled cheque uploaded successfully
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Image will be saved with the account
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeImage}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Upload a clear image of a cancelled cheque for bank verification
+                </p>
               </div>
             </CardContent>
           </Card>
