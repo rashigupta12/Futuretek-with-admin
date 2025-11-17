@@ -100,12 +100,12 @@ export async function POST(req: NextRequest) {
     // Generate PDF using pdf-lib
     const pdfBuffer = await generateInvoiceWithPDFLib({ payment, user, course });
 
-  return new NextResponse(new Uint8Array(pdfBuffer), {
-  headers: {
-    "Content-Type": "application/pdf",
-    "Content-Disposition": `attachment; filename="Invoice-${invoiceNumber}.pdf"`,
-  },
-});
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="Invoice-${invoiceNumber}.pdf"`,
+      },
+    });
 
   } catch (error) {
     console.error("Invoice download error:", error);
@@ -123,18 +123,17 @@ async function generateInvoiceWithPDFLib(data: {
 }): Promise<Buffer> {
   const { payment, user, course } = data;
 
-let PDFDocument, rgb, StandardFonts;
+  let PDFDocument, rgb, StandardFonts;
 
-try {
-  const pdfLib = await import("pdf-lib");
-  PDFDocument = pdfLib.PDFDocument;
-  rgb = pdfLib.rgb;
-  StandardFonts = pdfLib.StandardFonts;
-} catch (err) {
-  console.error("❌ pdf-lib failed to load:", err);
-  throw new Error("PDF library could not be loaded");
-}
-
+  try {
+    const pdfLib = await import("pdf-lib");
+    PDFDocument = pdfLib.PDFDocument;
+    rgb = pdfLib.rgb;
+    StandardFonts = pdfLib.StandardFonts;
+  } catch (err) {
+    console.error("❌ pdf-lib failed to load:", err);
+    throw new Error("PDF library could not be loaded");
+  }
 
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
@@ -146,75 +145,94 @@ try {
   // Set initial coordinates
   let y = 800;
   const leftMargin = 50;
-  const rightMargin = 400;
+  const pageWidth = 595.28;
+  const rightAlign = pageWidth - 50;
 
   // Colors
-  const blue = rgb(0.149, 0.388, 0.922); // #2563eb
-  const gray = rgb(0.42, 0.45, 0.5); // #6b7280
-  const green = rgb(0.02, 0.59, 0.41); // #059669
-  const darkGray = rgb(0.17, 0.24, 0.31); // #2d3748
+  const black = rgb(0, 0, 0);
+  const blue = rgb(0.149, 0.388, 0.922);
+  const gray = rgb(0.4, 0.4, 0.4);
+  // const lightGray = rgb(0.9, 0.9, 0.9);
+  const tableHeaderBg = rgb(0.95, 0.95, 0.95);
 
-  // Header Section
-  page.drawText('FUTURETEK', {
+  // Logo placeholder (you'll need to embed an actual image)
+  // For now, we'll use text as a placeholder
+  page.drawText('FutureTek', {
     x: leftMargin,
     y,
-    size: 24,
+    size: 20,
     font: boldFont,
     color: blue,
   });
 
+  // INVOICE header (right aligned)
   page.drawText('INVOICE', {
-    x: 400,
+    x: rightAlign - 80,
     y,
-    size: 20,
+    size: 24,
     font: boldFont,
-    color: darkGray,
-  });
-  y -= 30;
-
-  // Invoice Number and Date
-  page.drawText(`Invoice #: ${payment.invoiceNumber}`, {
-    x: 400,
-    y,
-    size: 10,
-    font: font,
-    color: gray,
-  });
-
-  page.drawText(`Date: ${new Date(payment.createdAt).toLocaleDateString('en-IN')}`, {
-    x: 400,
-    y: y - 15,
-    size: 10,
-    font: font,
-    color: gray,
-  });
-  y -= 50;
-
-  // Company Info
-  page.drawText('Education & Training', {
-    x: leftMargin,
-    y,
-    size: 12,
-    font: font,
-    color: gray,
-  });
-  y -= 20;
-
-  page.drawText('Email: support@futuretek.com', {
-    x: leftMargin,
-    y,
-    size: 10,
-    font: font,
-    color: gray,
+    color: black,
   });
   y -= 15;
 
-  page.drawText('Phone: +91 XXXXXXXXXX', {
-    x: leftMargin,
+  // Invoice details (right aligned)
+  page.drawText(`Invoice #:`, {
+    x: rightAlign - 150,
     y,
     size: 10,
     font: font,
-    color: gray,
+    color: black,
+  });
+  page.drawText(payment.invoiceNumber, {
+    x: rightAlign - 80,
+    y,
+    size: 10,
+    font: font,
+    color: black,
+  });
+  y -= 15;
+
+  page.drawText(`Date:`, {
+    x: rightAlign - 150,
+    y,
+    size: 10,
+    font: font,
+    color: black,
+  });
+  page.drawText(new Date(payment.createdAt).toLocaleDateString('en-IN'), {
+    x: rightAlign - 80,
+    y,
+    size: 10,
+    font: font,
+    color: black,
+  });
+  
+  // Company address (left side)
+  y = 755;
+  page.drawText('Address: B-204, The Crescent, F-2, Sector 50,', {
+    x: leftMargin,
+    y,
+    size: 9,
+    font: font,
+    color: black,
+  });
+  y -= 12;
+
+  page.drawText('Noida, UP 201301', {
+    x: leftMargin,
+    y,
+    size: 9,
+    font: font,
+    color: black,
+  });
+  y -= 12;
+
+  page.drawText('Email: billing@futuretek.com', {
+    x: leftMargin,
+    y,
+    size: 9,
+    font: font,
+    color: black,
   });
   y -= 40;
 
@@ -222,239 +240,223 @@ try {
   page.drawText('Bill To:', {
     x: leftMargin,
     y,
-    size: 14,
+    size: 11,
     font: boldFont,
-    color: darkGray,
-  });
-  y -= 20;
-
-  page.drawText(user.name, {
-    x: leftMargin,
-    y,
-    size: 12,
-    font: boldFont,
+    color: black,
   });
   y -= 15;
+
+  page.drawText(user.name || 'Customer Name', {
+    x: leftMargin,
+    y,
+    size: 10,
+    font: font,
+    color: black,
+  });
+  y -= 12;
 
   page.drawText(user.email, {
     x: leftMargin,
     y,
     size: 10,
     font: font,
-    color: gray,
+    color: black,
   });
-  y -= 15;
-
-  if (payment.billingAddress) {
-    page.drawText(payment.billingAddress, {
-      x: leftMargin,
-      y,
-      size: 10,
-      font: font,
-      color: gray,
-    });
-    y -= 15;
-  }
-
-  if (user.gstNumber) {
-    page.drawText(`GST No: ${user.gstNumber}`, {
-      x: leftMargin,
-      y,
-      size: 10,
-      font: font,
-      color: gray,
-    });
-    y -= 15;
-  }
-  y -= 20;
+  y -= 30;
 
   // Table Header
+  const tableTop = y;
+  const descColX = leftMargin;
+  // const qtyColX = 300;
+  const priceColX = 350;
+  const totalColX = 470;
+  const tableWidth = rightAlign - leftMargin;
+  const rowHeight = 25;
+
+  // Draw table header background
+  page.drawRectangle({
+    x: leftMargin,
+    y: tableTop - 20,
+    width: tableWidth,
+    height: rowHeight,
+    color: tableHeaderBg,
+  });
+
+  // Table headers
+  page.drawText('Description', {
+    x: descColX + 5,
+    y: tableTop - 15,
+    size: 10,
+    font: boldFont,
+    color: black,
+  });
+
+  // page.drawText('Quantity', {
+  //   x: qtyColX,
+  //   y: tableTop - 15,
+  //   size: 10,
+  //   font: boldFont,
+  //   color: black,
+  // });
+
+  page.drawText('Unit Price', {
+    x: priceColX,
+    y: tableTop - 15,
+    size: 10,
+    font: boldFont,
+    color: black,
+  });
+
+  page.drawText('Total', {
+    x: totalColX,
+    y: tableTop - 15,
+    size: 10,
+    font: boldFont,
+    color: black,
+  });
+
+  // Draw table lines
+  y = tableTop - 20;
   page.drawLine({
     start: { x: leftMargin, y },
-    end: { x: 545, y },
-    thickness: 2,
+    end: { x: rightAlign, y },
+    thickness: 1,
     color: gray,
   });
-  y -= 20;
 
-  page.drawText('Description', {
-    x: leftMargin,
-    y,
-    size: 12,
-    font: boldFont,
-    color: darkGray,
-  });
+  y -= rowHeight;
 
-  page.drawText('Amount', {
-    x: rightMargin,
-    y,
-    size: 12,
-    font: boldFont,
-    color: darkGray,
-  });
-  y -= 30;
-
-  // Course Item
-  page.drawText(course.title, {
-    x: leftMargin,
-    y,
-    size: 12,
-    font: boldFont,
-  });
-
-  page.drawText(`RS.${parseFloat(payment.amount).toLocaleString('en-IN')}`, {
-    x: rightMargin,
-    y,
-    size: 12,
+  // Table content row
+  const courseTitle = course.title.length > 35 ? course.title.substring(0, 35) + '...' : course.title;
+  page.drawText(courseTitle, {
+    x: descColX + 5,
+    y: y + 8,
+    size: 10,
     font: font,
-  });
-  y -= 25;
-
-  if (course.description) {
-    const descLines = wrapText(course.description, 60);
-    descLines.forEach(line => {
-      page.drawText(line, {
-        x: leftMargin + 10,
-        y,
-        size: 9,
-        font: font,
-        color: gray,
-      });
-      y -= 12;
-    });
-    y -= 10;
-  }
-
-  // Discount
-  if (parseFloat(payment.discountAmount) > 0) {
-    page.drawText('Discount', {
-      x: leftMargin,
-      y,
-      size: 11,
-      font: font,
-      color: green,
-    });
-
-    page.drawText(`-Rs.${parseFloat(payment.discountAmount).toLocaleString('en-IN')}`, {
-      x: rightMargin,
-      y,
-      size: 11,
-      font: font,
-      color: green,
-    });
-    y -= 25;
-  }
-
-  // Subtotal
-  page.drawText('Subtotal', {
-    x: leftMargin,
-    y,
-    size: 12,
-    font: boldFont,
+    color: black,
   });
 
-  const subtotal = parseFloat(payment.amount) - parseFloat(payment.discountAmount || '0');
-  page.drawText(`Rs.${subtotal.toLocaleString('en-IN')}`, {
-    x: rightMargin,
-    y,
-    size: 12,
-    font: boldFont,
-  });
-  y -= 25;
+  // page.drawText('1', {
+  //   x: qtyColX + 20,
+  //   y: y + 8,
+  //   size: 10,
+  //   font: font,
+  //   color: black,
+  // });
 
-  // GST
-  page.drawText('GST (18%)', {
-    x: leftMargin,
-    y,
-    size: 12,
+  page.drawText(`Rs.${parseFloat(payment.amount).toFixed(2)}`, {
+    x: priceColX,
+    y: y + 8,
+    size: 10,
     font: font,
+    color: black,
   });
 
-  page.drawText(`Rs.${parseFloat(payment.gstAmount).toLocaleString('en-IN')}`, {
-    x: rightMargin,
-    y,
-    size: 12,
+  page.drawText(`Rs.${parseFloat(payment.amount).toFixed(2)}`, {
+    x: totalColX,
+    y: y + 8,
+    size: 10,
     font: font,
+    color: black,
   });
-  y -= 30;
 
-  // Total
+  // Bottom line of table
   page.drawLine({
-    start: { x: leftMargin, y: y + 5 },
-    end: { x: 545, y: y + 5 },
+    start: { x: leftMargin, y },
+    end: { x: rightAlign, y },
     thickness: 1,
-    color: blue,
+    color: gray,
+  });
+
+  y -= 40;
+
+  // Summary section (right aligned)
+  const summaryX = 350;
+  const valueX = 480;
+
+  page.drawText('Subtotal:', {
+    x: summaryX,
+    y,
+    size: 10,
+    font: font,
+    color: black,
+  });
+  const subtotal = parseFloat(payment.amount);
+  page.drawText(`Rs.${subtotal.toFixed(2)}`, {
+    x: valueX,
+    y,
+    size: 10,
+    font: font,
+    color: black,
   });
   y -= 20;
 
-  page.drawText('Total Amount', {
-    x: leftMargin,
+  page.drawText('Discount:', {
+    x: summaryX,
     y,
-    size: 16,
-    font: boldFont,
-    color: blue,
+    size: 10,
+    font: font,
+    color: black,
   });
-
-  page.drawText(`Rs.${parseFloat(payment.finalAmount).toLocaleString('en-IN')}`, {
-    x: rightMargin,
+  const discount = parseFloat(payment.discountAmount || '0');
+  page.drawText(`-Rs.${discount.toFixed(2)}`, {
+    x: valueX,
     y,
-    size: 16,
+    size: 10,
+    font: font,
+    color: black,
+  });
+  y -= 20;
+
+  page.drawText('Tax (0%):', {
+    x: summaryX,
+    y,
+    size: 10,
+    font: font,
+    color: black,
+  });
+  const tax = parseFloat(payment.gstAmount || '0');
+  page.drawText(`Rs.${tax.toFixed(2)}`, {
+    x: valueX,
+    y,
+    size: 10,
+    font: font,
+    color: black,
+  });
+  y -= 25;
+
+  // Grand Total
+  page.drawText('Grand Total:', {
+    x: summaryX,
+    y,
+    size: 12,
     font: boldFont,
-    color: blue,
+    color: black,
+  });
+  const grandTotal = parseFloat(payment.finalAmount);
+  page.drawText(`Rs.${grandTotal.toFixed(2)}`, {
+    x: valueX,
+    y,
+    size: 12,
+    font: boldFont,
+    color: black,
   });
   y -= 50;
 
-  // Payment Details
-  page.drawText('Payment Details', {
-    x: leftMargin,
-    y,
-    size: 14,
-    font: boldFont,
-    color: darkGray,
-  });
-  y -= 25;
-
-  page.drawText('Payment Method: Razorpay', {
-    x: leftMargin,
-    y,
-    size: 11,
-    font: font,
-  });
-  y -= 20;
-
-  if (payment.razorpayPaymentId) {
-    page.drawText(`Transaction ID: ${payment.razorpayPaymentId}`, {
-      x: leftMargin,
-      y,
-      size: 10,
-      font: font,
-      color: gray,
-    });
-    y -= 20;
-  }
-
   // Footer
-  y = 50;
-  page.drawText('Thank you for your purchase!', {
-    x: leftMargin,
+  y = 100;
+  const centerX = pageWidth / 2;
+  page.drawText('Thank you for your business!', {
+    x: centerX - 80,
     y,
-    size: 12,
+    size: 10,
     font: boldFont,
-    color: gray,
-  });
-  y -= 20;
-
-  page.drawText('This is a computer-generated invoice and does not require a signature.', {
-    x: leftMargin,
-    y,
-    size: 9,
-    font: font,
-    color: gray,
+    color: black,
   });
   y -= 15;
 
-  page.drawText('For any queries, please contact support@futuretek.com', {
-    x: leftMargin,
+  page.drawText('For any questions, contact us at billing@futuretek.com', {
+    x: centerX - 130,
     y,
     size: 9,
     font: font,
@@ -467,20 +469,20 @@ try {
 }
 
 // Helper function to wrap text
-function wrapText(text: string, maxLength: number): string[] {
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
+// function wrapText(text: string, maxLength: number): string[] {
+//   const words = text.split(' ');
+//   const lines: string[] = [];
+//   let currentLine = '';
 
-  for (const word of words) {
-    if ((currentLine + word).length > maxLength) {
-      if (currentLine) lines.push(currentLine.trim());
-      currentLine = word + ' ';
-    } else {
-      currentLine += word + ' ';
-    }
-  }
+//   for (const word of words) {
+//     if ((currentLine + word).length > maxLength) {
+//       if (currentLine) lines.push(currentLine.trim());
+//       currentLine = word + ' ';
+//     } else {
+//       currentLine += word + ' ';
+//     }
+//   }
 
-  if (currentLine) lines.push(currentLine.trim());
-  return lines;
-}
+//   if (currentLine) lines.push(currentLine.trim());
+//   return lines;
+// }
