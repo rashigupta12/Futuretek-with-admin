@@ -302,11 +302,11 @@ export default function ViewJyotishiPage() {
     return (
       <div className="container mx-auto p-8 text-center">
         <h2 className="text-2xl font-bold text-red-600 mb-4">
-          Jyotishi Not Found
+          Astrologer Not Found
         </h2>
         <Button asChild className="bg-blue-600 hover:bg-blue-700">
           <Link href="/dashboard/admin/agent">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Jyotishi List
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Astrologer List
           </Link>
         </Button>
       </div>
@@ -340,7 +340,7 @@ export default function ViewJyotishiPage() {
                   className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Back to Jyotishis
+                  Back to Astrologer List 
                 </Link>
                 <Badge variant="outline" className="text-xs bg-white">
                   ADMIN VIEW

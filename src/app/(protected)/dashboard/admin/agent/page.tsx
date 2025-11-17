@@ -156,7 +156,7 @@ export default function JyotishisPage() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex-1">
           <h2 className="text-3xl font-bold bg-blue-700 bg-clip-text text-transparent">
-            Jyotishi Management
+            Astrologers Management
           </h2>
           <p className="text-gray-600 mt-2">
             Manage astrologers, commissions, and account status.
@@ -194,7 +194,7 @@ export default function JyotishisPage() {
           <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg whitespace-nowrap">
             <Link href="/dashboard/admin/agent/add" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              Add Jyotishi
+              Add AStrologer
             </Link>
           </Button>
         </div>
@@ -208,7 +208,7 @@ export default function JyotishisPage() {
               <Users className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="text-sm font-medium text-blue-600">Total Jyotishis</p>
+              <p className="text-sm font-medium text-blue-600">Total Astrologers</p>
               <p className="text-2xl font-bold text-gray-900">{jyotishis.length}</p>
             </div>
           </div>
@@ -262,16 +262,16 @@ export default function JyotishisPage() {
         {loading ? (
           <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600 mt-4">Loading jyotishis...</p>
+            <p className="text-gray-600 mt-4">Loading Astrologer...</p>
           </div>
         ) : filteredJyotishis.length === 0 ? (
           <div className="p-12 text-center">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No jyotishis found</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Astrologers found</h3>
             <p className="text-gray-600 mb-6">
               {searchTerm || activeFilter !== "ALL" 
                 ? "Try adjusting your search or filter criteria" 
-                : "Add your first jyotishi to get started!"}
+                : "Add your first Astrolger to get started!"}
             </p>
             {(searchTerm || activeFilter !== "ALL") ? (
               <Button 
@@ -287,7 +287,7 @@ export default function JyotishisPage() {
               <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
                 <Link href="/dashboard/admin/agent/add" className="flex items-center gap-2">
                   <Plus className="h-4 w-4" />
-                  Add New Jyotishi
+                  Add New Astrologer
                 </Link>
               </Button>
             )}
@@ -298,7 +298,7 @@ export default function JyotishisPage() {
 <thead className="bg-blue-500 text-white border-b border-blue-600">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
-                    Jyotishi Details
+                    Astrologer Details
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Status
