@@ -5,7 +5,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
-import { ArrowRight, ChevronDown, HelpCircle } from 'lucide-react'
+import { ArrowRight, HelpCircle } from 'lucide-react'
 
 const faqs = [
   {
@@ -47,10 +47,36 @@ export function FAQs() {
         {/* FAQ Grid - Left: Questions, Right: CTA */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-start">
           {/* Left Column - FAQ Questions */}
-          <div className="lg:col-span-2 space-y-4">
-            {faqs.map((faq, index) => (
-              <FAQItem key={index} faq={faq} index={index} />
-            ))}
+          <div className="lg:col-span-2">
+            <Accordion type="single" collapsible className="space-y-4">
+              {faqs.map((faq, index) => (
+                <div key={index} className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-300 overflow-hidden">
+                  <AccordionItem value={`item-${index}`} className="border-0">
+                    <AccordionTrigger
+                      className={cn(
+                        "px-6 py-5 text-left font-semibold text-gray-900 hover:text-blue-700 transition-all duration-200",
+                        "flex items-start gap-4 data-[state=open]:pb-3 hover:no-underline"
+                      )}
+                    >
+                      {/* <div className="relative flex items-center justify-center">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-blue-200 transition-all duration-300">
+                          <span className="text-sm font-bold text-blue-700">
+                            {index + 1}
+                          </span>
+                        </div>
+                      </div> */}
+                      <span className="flex-1 pr-4 text-base text-left">{faq.question}</span>
+                      {/* <ChevronDown className="h-5 w-5 text-gray-400 group-data-[state=open]:rotate-180 group-data-[state=open]:text-blue-600 transition-transform duration-300 flex-shrink-0" /> */}
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6 text-gray-600 leading-relaxed">
+                      <div className="pl-12 pr-4 text-sm">
+                        {faq.answer}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </div>
+              ))}
+            </Accordion>
           </div>
 
           {/* Right Column - Contact CTA */}
@@ -76,8 +102,6 @@ export function FAQs() {
                     Our support team is here to help you find the perfect course for your journey into astrology and ancient sciences.
                   </p>
 
-                 
-
                   {/* CTA Button */}
                   <a
                     href="/contact"
@@ -93,37 +117,5 @@ export function FAQs() {
         </div>
       </div>
     </section>
-  )
-}
-
-function FAQItem({ faq, index }: { faq: typeof faqs[0]; index: number }) {
-  return (
-    <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-300 overflow-hidden">
-      <Accordion type="single" collapsible>
-        <AccordionItem value={`item-${index}`} className="border-0">
-          <AccordionTrigger
-            className={cn(
-              "px-6 py-5 text-left font-semibold text-gray-900 hover:text-blue-700 transition-all duration-200",
-              "flex items-start gap-4 data-[state=open]:pb-3"
-            )}
-          >
-            <div className="relative flex items-center justify-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:from-blue-100 group-hover:to-blue-200 transition-all duration-300">
-                <span className="text-sm font-bold text-blue-700">
-                  {index + 1}
-                </span>
-              </div>
-            </div>
-            <span className="flex-1 pr-4 text-base">{faq.question}</span>
-            <ChevronDown className="h-5 w-5 text-gray-400 group-data-[state=open]:rotate-180 group-data-[state=open]:text-blue-600 transition-transform duration-300 flex-shrink-0" />
-          </AccordionTrigger>
-          <AccordionContent className="px-6 pb-6 text-gray-600 leading-relaxed">
-            <div className="pl-12 pr-4 text-sm">
-              {faq.answer}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
   )
 }

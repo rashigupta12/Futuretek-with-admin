@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {/* Preload critical resources */}
           <link rel="preconnect" href="/api" />
           <link rel="dns-prefetch" href="/api" />
-          <link rel="preload" href="/images/hero-bg.jpg" as="image" />
+          {/* <link rel="preload" href="/images/hero-bg.jpg" as="image" /> */}
           <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         </head>
         <body className={cn("flex min-h-svh flex-col antialiased", inter.className)}>

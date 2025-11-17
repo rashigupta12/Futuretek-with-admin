@@ -99,13 +99,13 @@ const HeroSection = () => {
               </motion.button>
             </Link>
 
-            <Link href="/auth/login">
+            <Link href="/contact">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.96 }}
                 className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg shadow-lg"
               >
-                Enroll now
+                Schedule Consultation
               </motion.button>
             </Link>
           </motion.div>

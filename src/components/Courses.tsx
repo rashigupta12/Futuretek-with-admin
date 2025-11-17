@@ -15,8 +15,6 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Crown,
   Loader2,
@@ -26,7 +24,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 
 interface Course {
   id: string;
@@ -86,7 +84,6 @@ export function CoursesCatalog() {
   const userRole = session?.user?.role as string | undefined;
 
   const [courses, setCourses] = useState<Course[]>([]);
-  
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(
     new Set()
   );
@@ -96,12 +93,7 @@ export function CoursesCatalog() {
   const [loading, setLoading] = useState(true);
   const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const scrollRefs = {
-    UPCOMING: useRef<HTMLDivElement>(null),
-    REGISTRATION_OPEN: useRef<HTMLDivElement>(null),
-    ONGOING: useRef<HTMLDivElement>(null),
-  };
+  const [activeCategory, setActiveCategory] = useState<string>("ALL");
 
   // Fetch discount details in background after courses are loaded
   const fetchDiscountDetails = useCallback(async (courses: Course[]) => {
@@ -286,21 +278,6 @@ export function CoursesCatalog() {
     return div.textContent || div.innerText || "";
   }, []);
 
- const scroll = useCallback((
-  direction: "left" | "right",
-  category: keyof typeof scrollRefs
-) => {
-  const container = scrollRefs[category].current;
-  if (container) {
-    const cardWidth = 280; // Match mobile card width
-    const scrollAmount = cardWidth + 16; // card width + gap
-    container.scrollBy({
-      left: direction === "left" ? -scrollAmount : scrollAmount,
-      behavior: "smooth",
-    });
-  }
-}, []);
-
   const getDisplayPrice = useCallback((course: Course) => {
     const priceData = coursePrices[course.id];
 
@@ -345,6 +322,16 @@ export function CoursesCatalog() {
       isLoading: !priceData, // Still loading if no price data available
     };
   }, [coursePrices]);
+
+  // Get current active courses based on selected category
+  const getActiveCourses = () => {
+    if (activeCategory === "ALL") {
+      return courses;
+    }
+    return courseCategories.find(cat => cat.type === activeCategory)?.courses || [];
+  };
+
+  const activeCourses = getActiveCourses();
 
   // Show loading state only for initial load
   if (status === "loading" || loading) {
@@ -421,7 +408,7 @@ export function CoursesCatalog() {
   }
 
   return (
-    <section className="py-12 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30 relative overflow-hidden max-w-7xl mx-auto">
+    <section className="py-12 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30 relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute top-0 left-0 w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-20 animate-pulse"></div>
       <div
@@ -443,7 +430,7 @@ export function CoursesCatalog() {
 
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-amber-700 bg-clip-text text-transparent mb-4">
             Featured Courses
           </h2>
@@ -453,238 +440,296 @@ export function CoursesCatalog() {
           </p>
         </div>
 
-        {/* Course Categories */}
-        {courseCategories.map((category) => {
-          if (category.courses.length === 0) return null;
+        {/* Category Filter - Mobile */}
+        <div className="md:hidden mb-6">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <button
+              onClick={() => setActiveCategory("ALL")}
+              className={`flex-shrink-0 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                activeCategory === "ALL"
+                  ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+              }`}
+            >
+              All Courses
+            </button>
+            {courseCategories.map((category) => (
+              <button
+                key={category.type}
+                onClick={() => setActiveCategory(category.type)}
+                className={`flex-shrink-0 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-1 ${
+                  activeCategory === category.type
+                    ? `bg-gradient-to-r ${category.gradient} text-white shadow-md`
+                    : "bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                }`}
+              >
+                <div className="h-4 w-4 flex items-center justify-center">
+                  {category.icon}
+                </div>
+                <span className="truncate">{category.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-          const showScrollControls = category.courses.length > 1;
-          const scrollRef = scrollRefs[category.type];
+        {/* Category Filter - Desktop */}
+        <div className="hidden md:flex items-center justify-center gap-2 mb-8">
+          <button
+            onClick={() => setActiveCategory("ALL")}
+            className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+              activeCategory === "ALL"
+                ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg"
+                : "bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+            }`}
+          >
+            All Courses
+          </button>
+          {courseCategories.map((category) => (
+            <button
+              key={category.type}
+              onClick={() => setActiveCategory(category.type)}
+              className={`px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
+                activeCategory === category.type
+                  ? `bg-gradient-to-r ${category.gradient} text-white shadow-lg`
+                  : "bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+              }`}
+            >
+              {category.icon}
+              {category.title}
+            </button>
+          ))}
+        </div>
 
-          return (
-            <div key={category.type} className="mb-12 last:mb-0">
-              {/* Category Header */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`p-2 rounded-xl bg-gradient-to-r ${category.gradient} text-white shadow-md`}
-                  >
-                    {category.icon}
+        {/* Courses Display */}
+        {activeCategory === "ALL" ? (
+          // Show all courses organized by category
+          <div className="space-y-12">
+            {courseCategories.map((category) => {
+              if (category.courses.length === 0) return null;
+
+              return (
+                <div key={category.type} className="space-y-6">
+                  {/* Category Header */}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-xl bg-gradient-to-r ${category.gradient} text-white shadow-md`}
+                    >
+                      {category.icon}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {category.title}
+                      </h3>
+                      <p className="text-gray-600 text-sm">
+                        {category.description}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">
-                      {category.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm">
-                      {category.description}
-                    </p>
+
+                  {/* Courses Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {category.courses.map((course) => renderCourseCard(course))}
                   </div>
                 </div>
-
-               {showScrollControls && (
-  <div className="flex md:hidden gap-2">
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => scroll("left", category.type)}
-      className="h-8 w-8 p-0 border-blue-200 hover:bg-blue-50 text-blue-600"
-    >
-      <ChevronLeft className="h-3 w-3" />
-    </Button>
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => scroll("right", category.type)}
-      className="h-8 w-8 p-0 border-blue-200 hover:bg-blue-50 text-blue-600"
-    >
-      <ChevronRight className="h-3 w-3" />
-    </Button>
-  </div>
-)}
+              );
+            })}
+          </div>
+        ) : (
+          // Show filtered courses for specific category
+          <div className="space-y-6">
+            {/* Category Header */}
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2 rounded-xl bg-gradient-to-r ${
+                  courseCategories.find(cat => cat.type === activeCategory)?.gradient || "from-gray-600 to-gray-800"
+                } text-white shadow-md`}
+              >
+                {courseCategories.find(cat => cat.type === activeCategory)?.icon || <TrendingUp className="h-4 w-4" />}
               </div>
-
-              {/* Courses Container */}
-<div className="relative -mx-4 px-4 md:mx-0 md:px-0">
-  <div
-    ref={scrollRef}
-    className={
-      showScrollControls
-        ? "flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scroll-smooth hide-scrollbar md:grid md:grid-cols-1 md:sm:grid-cols-2 md:lg:grid-cols-3 md:xl:grid-cols-4 md:gap-4"
-        : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-    }
-    style={
-      showScrollControls
-        ? {
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
-            WebkitOverflowScrolling: "touch",
-          }
-        : {}
-    }
-  >
-                  <style jsx>{`
-                    .hide-scrollbar::-webkit-scrollbar {
-                      display: none;
-                    }
-                  `}</style>
-                  {category.courses.map((course) => {
-                    const isEnrolled = userId
-                      ? enrolledCourseIds.has(course.id)
-                      : false;
-                    const priceInfo = getDisplayPrice(course);
-
-                    return (
-                 <Card
-  key={course.id}
-  className={`flex flex-col group hover:shadow-lg transition-all duration-300 border border-blue-100 bg-white overflow-hidden relative hover:-translate-y-1 shadow-sm ${
-    showScrollControls
-      ? "w-[280px] flex-shrink-0 snap-start md:w-auto md:flex-shrink-initial"
-      : ""
-  }`}
->
-                        <CardHeader className="pb-2 pt-4">
-                          <CardTitle className="line-clamp-2 text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight">
-                            {course.title}
-                          </CardTitle>
-                        </CardHeader>
-
-                        <CardContent className="flex-1 pb-3">
-                          <CardDescription className="line-clamp-3 text-sm text-gray-600 leading-relaxed mb-4 min-h-[60px]">
-                            {getPlainText(course.description)}
-                          </CardDescription>
-
-                          {/* Applied Coupons - Show only when discount data is loaded */}
-                          {priceInfo.hasAnyDiscount && (
-                            <div className="mb-2">
-                              <div className="inline-flex items-center gap-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-2 py-1 rounded text-xs font-medium">
-                                <Sparkles className="h-3 w-3" />
-                                <span>Discount Applied</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Loading state for price */}
-                          {priceInfo.isLoading && (
-                            <div className="mb-2">
-                              <div className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                <span>Checking discounts...</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Price Section */}
-                          <div className="space-y-2 bg-gradient-to-br from-blue-50/50 to-amber-50/30 rounded-lg p-3 border border-blue-100">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <Users className="h-3 w-3 flex-shrink-0" />
-                                <span>
-                                  {course.currentEnrollments} enrolled
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                {priceInfo.hasDiscount ? (
-                                  <div className="space-y-1">
-                                    <div className="flex items-center justify-end gap-1">
-                                      <span className="font-bold text-gray-900 text-base">
-                                        ₹
-                                        {priceInfo.displayPrice.toLocaleString(
-                                          "en-IN"
-                                        )}
-                                      </span>
-                                      <span className="text-xs text-gray-500 line-through">
-                                        ₹
-                                        {priceInfo.originalPrice.toLocaleString(
-                                          "en-IN"
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs font-semibold">
-                                      <Sparkles className="h-2.5 w-2.5" />
-                                      Save ₹
-                                      {priceInfo.discountAmount.toLocaleString(
-                                        "en-IN"
-                                      )}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="font-bold text-gray-900 text-base">
-                                    ₹
-                                    {priceInfo.displayPrice.toLocaleString(
-                                      "en-IN"
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-
-                        <CardFooter className="pt-3 border-t border-blue-50 bg-gradient-to-br from-gray-50/30 to-transparent">
-                          <div className="flex gap-2 w-full">
-                            <Button
-                              asChild
-                              size="sm"
-                              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm hover:shadow-md transition-all duration-300 h-9 text-xs font-semibold border-0 rounded-md"
-                            >
-                              <Link
-                                href={`/courses/${course.slug}`}
-                                className="flex items-center justify-center gap-1"
-                              >
-                                View Details
-                                <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                              </Link>
-                            </Button>
-
-                            {isEnrolled ? (
-                              <Button
-                                disabled
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 border-green-200 bg-green-50 text-green-700 cursor-not-allowed h-9 text-xs font-semibold rounded-md"
-                              >
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Enrolled
-                              </Button>
-                            ) : isAdminOrJyotishi ? (
-                              <Button
-                                disabled
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 border-amber-200 bg-amber-50 text-amber-700 cursor-not-allowed h-9 text-xs font-semibold rounded-md"
-                              >
-                                <Crown className="h-3 w-3 mr-1" />
-                                Staff
-                              </Button>
-                            ) : (
-                              <Button
-                                asChild
-                                size="sm"
-                                className="flex-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-sm hover:shadow-md transition-all duration-300 h-9 text-xs font-semibold border-0 rounded-md"
-                              >
-                                <Link
-                                  href={
-                                    userId
-                                      ? `/courses/${course.slug}?enroll=true`
-                                      : `/auth/login?callbackUrl=/courses/${course.slug}?enroll=true`
-                                  }
-                                  className="flex items-center justify-center gap-1"
-                                >
-                                  Enroll Now
-                                  <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                                </Link>
-                              </Button>
-                            )}
-                          </div>
-                        </CardFooter>
-                      </Card>
-                    );
-                  })}
-                </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {courseCategories.find(cat => cat.type === activeCategory)?.title}
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  {courseCategories.find(cat => cat.type === activeCategory)?.description}
+                </p>
               </div>
             </div>
-          );
-        })}
+
+            {/* Courses Grid */}
+            {activeCourses.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {activeCourses.map((course) => renderCourseCard(course))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-white rounded-2xl border border-blue-100">
+                <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                  No courses found
+                </h4>
+                <p className="text-gray-600 mb-4">
+                  There are no courses available in this category at the moment.
+                </p>
+                <Button
+                  onClick={() => setActiveCategory("ALL")}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                >
+                  View All Courses
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
+
+  function renderCourseCard(course: Course) {
+    const isEnrolled = userId
+      ? enrolledCourseIds.has(course.id)
+      : false;
+    const priceInfo = getDisplayPrice(course);
+
+    return (
+      <Card
+        className="flex flex-col group hover:shadow-lg transition-all duration-300 border border-blue-100 bg-white overflow-hidden relative hover:-translate-y-1 shadow-sm h-full"
+      >
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="line-clamp-2 text-base font-semibold text-gray-900 group-hover:text-blue-700 transition-colors leading-tight">
+            {course.title}
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="flex-1 pb-3">
+          <CardDescription className="line-clamp-3 text-sm text-gray-600 leading-relaxed mb-4 min-h-[60px]">
+            {getPlainText(course.description)}
+          </CardDescription>
+
+          {/* Applied Coupons - Show only when discount data is loaded */}
+          {priceInfo.hasAnyDiscount && (
+            <div className="mb-2">
+              <div className="inline-flex items-center gap-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-2 py-1 rounded text-xs font-medium">
+                <Sparkles className="h-3 w-3" />
+                <span>Discount Applied</span>
+              </div>
+            </div>
+          )}
+
+          {/* Loading state for price */}
+          {priceInfo.isLoading && (
+            <div className="mb-2">
+              <div className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Checking discounts...</span>
+              </div>
+            </div>
+          )}
+
+          {/* Price Section */}
+          <div className="space-y-2 bg-gradient-to-br from-blue-50/50 to-amber-50/30 rounded-lg p-3 border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Users className="h-3 w-3 flex-shrink-0" />
+                <span>
+                  {course.currentEnrollments} enrolled
+                </span>
+              </div>
+              <div className="text-right">
+                {priceInfo.hasDiscount ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-end gap-1">
+                      <span className="font-bold text-gray-900 text-base">
+                        ₹
+                        {priceInfo.displayPrice.toLocaleString(
+                          "en-IN"
+                        )}
+                      </span>
+                      <span className="text-xs text-gray-500 line-through">
+                        ₹
+                        {priceInfo.originalPrice.toLocaleString(
+                          "en-IN"
+                        )}
+                      </span>
+                    </div>
+                    <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs font-semibold">
+                      <Sparkles className="h-2.5 w-2.5" />
+                      Save ₹
+                      {priceInfo.discountAmount.toLocaleString(
+                        "en-IN"
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="font-bold text-gray-900 text-base">
+                    ₹
+                    {priceInfo.displayPrice.toLocaleString(
+                      "en-IN"
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="pt-3 border-t border-blue-50 bg-gradient-to-br from-gray-50/30 to-transparent">
+          <div className="flex gap-2 w-full">
+            <Button
+              asChild
+              size="sm"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm hover:shadow-md transition-all duration-300 h-9 text-xs font-semibold border-0 rounded-md"
+            >
+              <Link
+                href={`/courses/${course.slug}`}
+                className="flex items-center justify-center gap-1"
+              >
+                View Details
+                <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </Button>
+
+            {isEnrolled ? (
+              <Button
+                disabled
+                size="sm"
+                variant="outline"
+                className="flex-1 border-green-200 bg-green-50 text-green-700 cursor-not-allowed h-9 text-xs font-semibold rounded-md"
+              >
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Enrolled
+              </Button>
+            ) : isAdminOrJyotishi ? (
+              <Button
+                disabled
+                size="sm"
+                variant="outline"
+                className="flex-1 border-amber-200 bg-amber-50 text-amber-700 cursor-not-allowed h-9 text-xs font-semibold rounded-md"
+              >
+                <Crown className="h-3 w-3 mr-1" />
+                Staff
+              </Button>
+            ) : (
+              <Button
+                asChild
+                size="sm"
+                className="flex-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-sm hover:shadow-md transition-all duration-300 h-9 text-xs font-semibold border-0 rounded-md"
+              >
+                <Link
+                  href={
+                    userId
+                      ? `/courses/${course.slug}?enroll=true`
+                      : `/auth/login?callbackUrl=/courses/${course.slug}?enroll=true`
+                  }
+                  className="flex items-center justify-center gap-1"
+                >
+                  Enroll Now
+                  <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
 }

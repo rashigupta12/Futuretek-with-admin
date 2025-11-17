@@ -1,6 +1,10 @@
+/*eslint-disable  @typescript-eslint/no-unused-vars*/
+"use client";
+
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Star, Quote, Users, Award, ThumbsUp } from 'lucide-react'
+import { useRef, useEffect, useState } from 'react'
 
 const testimonials = [
   {
@@ -24,7 +28,108 @@ const testimonials = [
     rating: 5,
     course: 'Vastu Shastra'
   },
+  {
+    name: 'Rajesh K.',
+    avatar: '/placeholder.svg?height=40&width=40',
+    testimonial: 'The Astro-Vastu integration course gave me a holistic approach to space optimization. Amazing content!',
+    rating: 5,
+    course: 'Astro-Vastu Integration'
+  },
+  {
+    name: 'Lisa T.',
+    avatar: '/placeholder.svg?height=40&width=40',
+    testimonial: 'Professional instructors and well-structured curriculum. The KP Astrology course exceeded my expectations.',
+    rating: 5,
+    course: 'KP Astrology'
+  },
+  {
+    name: 'David L.',
+    avatar: '/placeholder.svg?height=40&width=40',
+    testimonial: 'Practical approach with real-world applications. The Financial Astrology course is worth every penny.',
+    rating: 5,
+    course: 'Financial Astrology'
+  },
 ]
+
+// AutoScrollSection Component
+function AutoScrollSection({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef<NodeJS.Timeout>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const cards = container.children;
+    if (cards.length <= 1) return;
+
+    const startAutoScroll = () => {
+      autoScrollRef.current = setInterval(() => {
+        setCurrentIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % cards.length;
+          scrollToIndex(nextIndex);
+          return nextIndex;
+        });
+      }, 1000); // Scroll every 3 seconds
+    };
+    const stopAutoScroll = () => {
+      if (autoScrollRef.current) {
+        clearInterval(autoScrollRef.current);
+      }
+    };
+
+    const scrollToIndex = (index: number) => {
+      if (container && cards[index]) {
+        const card = cards[index] as HTMLElement;
+        const scrollLeft = card.offsetLeft - container.offsetLeft;
+        container.scrollTo({
+          left: scrollLeft,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    // Start auto-scroll
+    startAutoScroll();
+
+    // Pause auto-scroll on hover/touch
+    container.addEventListener('mouseenter', stopAutoScroll);
+    container.addEventListener('mouseleave', startAutoScroll);
+    container.addEventListener('touchstart', stopAutoScroll);
+    container.addEventListener('touchend', () => {
+      setTimeout(startAutoScroll, 5000); // Resume after 5 seconds of no touch
+    });
+
+    return () => {
+      stopAutoScroll();
+      container.removeEventListener('mouseenter', stopAutoScroll);
+      container.removeEventListener('mouseleave', startAutoScroll);
+      container.removeEventListener('touchstart', stopAutoScroll);
+      container.removeEventListener('touchend', startAutoScroll);
+    };
+  }, []);
+
+  return (
+     <div
+      ref={scrollContainerRef}
+      className={`flex overflow-x-auto gap-6 pb-6 snap-x snap-mandatory scroll-smooth hide-scrollbar ${className}`}
+      style={{
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch',
+      }}
+    >
+      {children}
+      <style jsx>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 
 export function Testimonials() {
   return (
@@ -45,13 +150,13 @@ export function Testimonials() {
           </p>
         </div>
 
-        {/* Testimonials Grid */}
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 mb-16">
+        {/* Testimonials Grid with Auto-scroll */}
+        <AutoScrollSection className="mb-16">
           {testimonials.map((testimonial, index) => (
-            <Card 
-              key={index} 
-              className="group border border-gray-200 bg-white hover:shadow-lg transition-all duration-300 hover:border-gray-300 shadow-md relative overflow-hidden"
-            >
+           <Card 
+  key={index} 
+  className="group border border-gray-200 bg-white hover:shadow-lg transition-all duration-300 hover:border-gray-300 shadow-md relative overflow-hidden w-[85vw] sm:w-[400px] lg:w-[350px] flex-shrink-0 snap-start"
+>
               {/* Top Border Gradient */}
               <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-purple-600"></div>
               
@@ -97,7 +202,7 @@ export function Testimonials() {
               </CardFooter>
             </Card>
           ))}
-        </div>
+        </AutoScrollSection>
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12 border-t border-gray-200">

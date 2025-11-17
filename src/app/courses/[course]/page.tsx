@@ -626,7 +626,7 @@ export default function CoursePage() {
 
                     <Button
                       onClick={() => setShowCheckout(true)}
-                      className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border-0"
+                      className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-base rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border-0"
                     >
                       Enroll Now - ₹
                       {priceInfo?.displayPrice.toLocaleString("en-IN")}
