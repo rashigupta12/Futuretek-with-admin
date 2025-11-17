@@ -5,7 +5,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
-import { ArrowRight, ChevronDown, HelpCircle } from 'lucide-react'
+import { ArrowRight, HelpCircle } from 'lucide-react'
 
 const faqs = [
   {

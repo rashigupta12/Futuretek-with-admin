@@ -1,4 +1,4 @@
-/*eslint-disable @typescript-eslint/no-explicit-any*/
+/*eslint-disable  @typescript-eslint/no-unused-vars*/
 "use client";
 
 import {
@@ -43,6 +43,7 @@ function AutoScrollSection({ children, className = "" }: { children: React.React
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef<NodeJS.Timeout>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  
 
   useEffect(() => {
     const container = scrollContainerRef.current;
