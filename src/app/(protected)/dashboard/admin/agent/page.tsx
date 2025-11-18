@@ -133,37 +133,33 @@ export default function JyotishisPage() {
         body: JSON.stringify({ isActive: !currentStatus }),
       });
 
-      if (res.ok) {
-        setJyotishis((prev) =>
-          prev.map((j) =>
-            j.id === id ? { ...j, isActive: !currentStatus } : j
-          )
-        );
-        await Swal.fire({
-          icon: "success",
-          title: "Success!",
-          text: `Jyotishi ${
-            !currentStatus ? "activated" : "deactivated"
-          } successfully`,
-          timer: 2000,
-          showConfirmButton: false,
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Update Failed",
-          text: "Failed to update agent status",
-        });
-      }
-    } catch (err) {
-      console.error("Toggle error:", err);
+    if (res.ok) {
+      setJyotishis((prev) =>
+        prev.map((j) => (j.id === id ? { ...j, isActive: !currentStatus } : j))
+      );
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: `Agent ${!currentStatus ? "activated" : "deactivated"} successfully`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } else {
       Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "An error occurred while updating the status",
+        icon: 'error',
+        title: 'Update Failed',
+        text: 'Failed to update agent status',
       });
     }
-  };
+  } catch (err) {
+    console.error("Toggle error:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'An error occurred while updating the status',
+    });
+  }
+};
 
   // Search filter
   const filteredJyotishis = jyotishis.filter((j) => {
