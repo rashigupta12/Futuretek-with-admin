@@ -97,7 +97,7 @@ export const CheckoutSidebar = ({
   adminDiscountAmount,
   jyotishiDiscountAmount,
   priceAfterAdminDiscount,
-   commissionPercourse, // ✅ ADD THIS
+  commissionPercourse, // ✅ ADD THIS
 }: CheckoutSidebarProps) => {
   const { data: session } = useSession();
 
@@ -154,14 +154,14 @@ export const CheckoutSidebar = ({
 
   // Total is subtotal + GST
   const total = subtotal + gst;
-const courseCommissionRate = parseFloat(commissionPercourse || "0");
+  const courseCommissionRate = parseFloat(commissionPercourse || "0");
   // Calculate commission
- let commission = 0;
-if (courseJyotishiDiscountAmount > 0 && courseCommissionRate > 0) {
-  commission = coursePriceAfterAdminDiscount * (courseCommissionRate / 100);
-}
+  let commission = 0;
+  if (courseJyotishiDiscountAmount > 0 && courseCommissionRate > 0) {
+    commission = coursePriceAfterAdminDiscount * (courseCommissionRate / 100);
+  }
 
-   const prices = {
+  const prices = {
     originalPrice: courseOriginalPrice,
     discount: courseDiscountAmount,
     subtotal,
@@ -599,18 +599,7 @@ if (courseJyotishiDiscountAmount > 0 && courseCommissionRate > 0) {
                     </span>
                   </div>
 
-                  {prices.commission > 0 &&
-    prices.creatorType === "JYOTISHI" && (
-      <div className="flex justify-between items-center text-xs bg-blue-50 p-2 rounded border border-blue-100">
-        <span className="text-blue-600 flex items-center gap-1">
-          <Users className="h-3 w-3" />
-          Jyotishi Commission ({prices.commissionRate}%) {/* ✅ SHOW ACTUAL RATE */}
-        </span>
-        <span className="text-blue-600 font-medium">
-          ₹{prices.commission.toLocaleString("en-IN")}
-        </span>
-      </div>
-    )}
+               
                   <div className="border-t-2 border-blue-200 pt-3 mt-2">
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-base">Total Amount</span>
