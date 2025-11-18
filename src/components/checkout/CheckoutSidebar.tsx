@@ -9,6 +9,8 @@ import {
   X,
   Users,
   Crown,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -69,11 +71,19 @@ interface AppliedCoupon {
   creatorName?: string;
 }
 
+interface GSTData {
+  legalName?: string;
+  tradeName?: string;
+  address?: string;
+  status?: string;
+  gstin?: string;
+  [key: string]: any;
+}
+
 interface CheckoutSidebarProps {
   course: Course;
   isOpen: boolean;
   onClose: () => void;
-  // CHANGED: Accept array of coupons instead of single coupon
   appliedCoupons?: AppliedCoupon[];
   hasAssignedCoupon?: boolean;
   finalPrice?: string;
@@ -82,7 +92,7 @@ interface CheckoutSidebarProps {
   adminDiscountAmount?: string;
   jyotishiDiscountAmount?: string;
   priceAfterAdminDiscount?: string;
-  commissionPercourse?: string; // ✅ ADD THIS
+  commissionPercourse?: string;
 }
 
 export const CheckoutSidebar = ({
@@ -97,7 +107,7 @@ export const CheckoutSidebar = ({
   adminDiscountAmount,
   jyotishiDiscountAmount,
   priceAfterAdminDiscount,
-  commissionPercourse, // ✅ ADD THIS
+  commissionPercourse,
 }: CheckoutSidebarProps) => {
   const { data: session } = useSession();
 
@@ -108,6 +118,9 @@ export const CheckoutSidebar = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [gstNumber, setGstNumber] = useState("");
   const [isGstValid, setIsGstValid] = useState(false);
+  const [isVerifyingGst, setIsVerifyingGst] = useState(false);
+  const [gstData, setGstData] = useState<GSTData | null>(null);
+  const [gstError, setGstError] = useState("");
 
   // Use prices from props
   const courseOriginalPrice = parseFloat(originalPrice || course.priceINR);
@@ -141,9 +154,66 @@ export const CheckoutSidebar = ({
     return gstRegex.test(gst);
   };
 
+  // Verify GST with API
+  const verifyGSTNumber = async (gstNum: string) => {
+    if (!validateGST(gstNum)) {
+      setGstError("Invalid GST format");
+      setGstData(null);
+      return;
+    }
+
+    setIsVerifyingGst(true);
+    setGstError("");
+    setGstData(null);
+
+    try {
+      const response = await fetch(`/api/gst/${gstNum.trim().toUpperCase()}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "GST verification failed");
+      }
+
+      const data = await response.json();
+      
+      // Handle different response formats from the API
+      const gstDetails: GSTData = {
+        gstin: data.gstin || gstNum,
+        legalName: data.legalName || data.legal_name || data.lgnm,
+        tradeName: data.tradeName || data.trade_name || data.tradeNam,
+        address: data.address || data.pradr?.addr || 
+                 `${data.pradr?.bno || ''} ${data.pradr?.st || ''} ${data.pradr?.loc || ''} ${data.pradr?.dst || ''} ${data.pradr?.stcd || ''}`.trim(),
+        status: data.status || data.sts,
+      };
+
+      setGstData(gstDetails);
+      setIsGstValid(true);
+    } catch (err: any) {
+      console.error("GST verification error:", err);
+      setGstError(err.message || "Failed to verify GST number");
+      setGstData(null);
+      setIsGstValid(false);
+    } finally {
+      setIsVerifyingGst(false);
+    }
+  };
+
   const handleGstChange = (value: string) => {
-    setGstNumber(value);
-    setIsGstValid(validateGST(value));
+    const upperValue = value.toUpperCase();
+    setGstNumber(upperValue);
+    setIsGstValid(validateGST(upperValue));
+    setGstError("");
+    
+    // Clear GST data when user modifies the number
+    if (gstData && upperValue !== gstData.gstin) {
+      setGstData(null);
+    }
+  };
+
+  const handleVerifyGst = () => {
+    if (gstNumber && validateGST(gstNumber)) {
+      verifyGSTNumber(gstNumber);
+    }
   };
 
   // Calculate subtotal (price after all discounts)
@@ -155,6 +225,7 @@ export const CheckoutSidebar = ({
   // Total is subtotal + GST
   const total = subtotal + gst;
   const courseCommissionRate = parseFloat(commissionPercourse || "0");
+  
   // Calculate commission
   let commission = 0;
   if (courseJyotishiDiscountAmount > 0 && courseCommissionRate > 0) {
@@ -168,7 +239,7 @@ export const CheckoutSidebar = ({
     gst,
     total,
     commission,
-    commissionRate: courseCommissionRate, // ✅ ADD THIS
+    commissionRate: courseCommissionRate,
     adminDiscountAmount: courseAdminDiscountAmount,
     jyotishiDiscountAmount: courseJyotishiDiscountAmount,
     priceAfterAdminDiscount: coursePriceAfterAdminDiscount,
@@ -263,6 +334,12 @@ export const CheckoutSidebar = ({
       return;
     }
 
+    // If GST number is entered but not verified, show error
+    if (gstNumber && !gstData) {
+      setError("Please verify your GST number before proceeding");
+      return;
+    }
+
     setIsProcessing(true);
     setStep("processing");
     setError("");
@@ -271,7 +348,6 @@ export const CheckoutSidebar = ({
       const res = await initializeRazorpay();
       if (!res) throw new Error("Failed to load payment gateway");
 
-      // FIXED: Send ALL coupon codes, comma-separated
       const couponCodes =
         appliedCoupons.length > 0
           ? appliedCoupons.map((c) => c.code).join(",")
@@ -283,16 +359,15 @@ export const CheckoutSidebar = ({
         courseId: course.id,
       });
 
-      // Send payment request with ALL coupon codes
       const orderResponse = await fetch("/api/payment/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           courseId: course.id,
-          couponCode: couponCodes, // Send comma-separated codes or null
+          couponCode: couponCodes,
           paymentType: "DOMESTIC",
           billingAddress: null,
-          gstNumber: gstNumber || null,
+          gstNumber: gstData?.gstin || null,
         }),
       });
 
@@ -303,7 +378,6 @@ export const CheckoutSidebar = ({
 
       const orderData = await orderResponse.json();
 
-      // Verify the amount matches what we calculated
       const amountDifference = Math.abs(orderData.amount - prices.total);
       if (amountDifference > 1) {
         console.warn("Amount mismatch detected:", {
@@ -312,13 +386,12 @@ export const CheckoutSidebar = ({
           difference: amountDifference,
         });
 
-        // Use the backend amount to ensure consistency
         prices.total = orderData.amount;
       }
 
       const options: RazorpayOptions = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
-        amount: Math.round(orderData.amount * 100), // Use the amount from backend
+        amount: Math.round(orderData.amount * 100),
         currency: "INR",
         name: "Futuretek",
         description: course.title,
@@ -351,7 +424,8 @@ export const CheckoutSidebar = ({
           final_amount: prices.total.toString(),
           jyotishi_commission: prices.commission.toString(),
           coupons_applied: couponCodes || "",
-          gst_number: gstNumber || "",
+          gst_number: gstData?.gstin || "",
+          gst_legal_name: gstData?.legalName || "",
           user_id: session.user?.id || "",
         },
       };
@@ -440,28 +514,105 @@ export const CheckoutSidebar = ({
             )}
           </div>
 
-          {/* GST Input */}
+          {/* GST Input with Verification */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
               GST Number (Optional)
             </label>
-            <input
-              type="text"
-              value={gstNumber}
-              onChange={(e) => handleGstChange(e.target.value)}
-              placeholder="22AAAAA0000A1Z5"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              disabled={isProcessing}
-            />
-            {gstNumber && !isGstValid && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={gstNumber}
+                onChange={(e) => handleGstChange(e.target.value)}
+                placeholder="22AAAAA0000A1Z5"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                disabled={isProcessing || isVerifyingGst}
+                maxLength={15}
+              />
+              <button
+                onClick={handleVerifyGst}
+                disabled={!isGstValid || isVerifyingGst || isProcessing || !!gstData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
+              >
+                {isVerifyingGst ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Verifying
+                  </>
+                ) : gstData ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Verified
+                  </>
+                ) : (
+                  "Verify"
+                )}
+              </button>
+            </div>
+            
+            {gstNumber && !isGstValid && !isVerifyingGst && (
               <p className="text-xs text-red-600">
-                Please enter a valid GST number
+                Please enter a valid GST number format
               </p>
             )}
-            {isGstValid && (
-              <p className="text-xs text-green-600">
-                ✓ Valid GST number format
-              </p>
+            
+            {gstError && (
+              <div className="flex items-start gap-1.5 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+                <AlertCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                <span>{gstError}</span>
+              </div>
+            )}
+
+            {/* GST Details Display */}
+            {gstData && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2 text-green-700 font-medium text-sm">
+                  <CheckCircle2 className="h-4 w-4" />
+                  GST Verified Successfully
+                </div>
+                
+                {gstData.legalName && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <Building2 className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-gray-600">Legal Name</p>
+                      <p className="font-medium text-gray-800">{gstData.legalName}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {gstData.tradeName && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <Building2 className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-gray-600">Trade Name</p>
+                      <p className="font-medium text-gray-800">{gstData.tradeName}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {gstData.address && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <MapPin className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-gray-600">Address</p>
+                      <p className="font-medium text-gray-800">{gstData.address}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {gstData.status && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`px-2 py-1 rounded-full font-medium ${
+                      gstData.status.toLowerCase() === 'active' 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      Status: {gstData.status}
+                    </span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -491,8 +642,7 @@ export const CheckoutSidebar = ({
                         <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5 text-green-600" />
                         <div>
                           <p className="font-semibold text-sm mb-0.5 text-green-800">
-                            Discount Applied!{" "}
-                            {/* Changed from "Admin Discount Applied!" */}
+                            Discount Applied!
                           </p>
                           <p className="text-xs text-green-700">
                             Coupon{" "}
@@ -516,8 +666,7 @@ export const CheckoutSidebar = ({
                         <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-600" />
                         <div>
                           <p className="font-semibold text-sm mb-0.5 text-blue-800">
-                            Discount Applied!{" "}
-                            {/* Changed from "Jyotishi Discount Applied!" */}
+                            Discount Applied!
                           </p>
                           <p className="text-xs text-blue-700">
                             Coupon{" "}
@@ -599,7 +748,6 @@ export const CheckoutSidebar = ({
                     </span>
                   </div>
 
-               
                   <div className="border-t-2 border-blue-200 pt-3 mt-2">
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-base">Total Amount</span>
@@ -624,7 +772,7 @@ export const CheckoutSidebar = ({
               <div className="space-y-2">
                 <button
                   onClick={handlePayment}
-                  disabled={isProcessing || (gstNumber ? !isGstValid : false)}
+                  disabled={isProcessing || (!!gstNumber && !gstData)}
                   className="w-full py-2.5 bg-blue-700 hover:bg-blue-900 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg text-sm"
                 >
                   {isProcessing ? (
@@ -639,6 +787,12 @@ export const CheckoutSidebar = ({
                     </>
                   )}
                 </button>
+                
+                {gstNumber && !gstData && (
+                  <p className="text-xs text-amber-600 text-center">
+                    Please verify your GST number before proceeding
+                  </p>
+                )}
               </div>
 
               <div className="text-xs text-center text-gray-500 space-y-0.5">

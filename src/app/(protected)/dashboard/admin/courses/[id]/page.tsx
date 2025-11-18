@@ -29,6 +29,8 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ImageUpload } from "@/components/ImageUpload";
+import Image from "next/image";
 
 type Course = {
   id: string;
@@ -1151,6 +1153,15 @@ export default function ViewCoursePage() {
                           <option value="COMPLETED">COMPLETED</option>
                         </select>
                       </div>
+
+                       <div className="pt-4 border-t">
+      <ImageUpload
+        label="Course Thumbnail"
+        value={editData.thumbnailUrl || ""}
+        onChange={(url) => updateEditField("thumbnailUrl", url)}
+        isThumbnail={true}
+      />
+    </div>
                     </div>
                   ) : (
                     <>
@@ -1170,6 +1181,22 @@ export default function ViewCoursePage() {
                           Commission: {displayData.commissionPercourse}%
                         </p>
                       )}
+                      {displayData.thumbnailUrl && (
+      <div className="mt-4">
+        <Label className="text-sm text-gray-600 mb-2 block">Course Thumbnail</Label>
+        <div className="relative w-full rounded-lg overflow-hidden border border-gray-200">
+          <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+            <Image
+              src={displayData.thumbnailUrl}
+              alt={displayData.title}
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          </div>
+        </div>
+      </div>
+    )}
                     </>
                   )}
 

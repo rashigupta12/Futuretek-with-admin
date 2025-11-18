@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Upload, X } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
@@ -15,7 +16,6 @@ export default function AddJyotishiPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [generatingCode, setGeneratingCode] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -86,63 +86,6 @@ export default function AddJyotishiPage() {
     return "";
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Invalid File',
-        text: 'Please upload an image file (JPG, PNG, etc.)',
-      });
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      Swal.fire({
-        icon: 'error',
-        title: 'File Too Large',
-        text: 'Image size should be less than 5MB',
-      });
-      return;
-    }
-
-    setUploadingImage(true);
-
-    try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCancelledChequeImage(reader.result as string);
-        setUploadingImage(false);
-      };
-      reader.onerror = () => {
-        Swal.fire({
-          icon: 'error',
-          title: 'Upload Failed',
-          text: 'Failed to process image',
-        });
-        setUploadingImage(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Upload Failed',
-        text: 'Failed to upload image',
-      });
-      setUploadingImage(false);
-    }
-  };
-
-  const removeImage = () => {
-    setCancelledChequeImage("");
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -150,7 +93,7 @@ export default function AddJyotishiPage() {
       Swal.fire({
         icon: 'error',
         title: 'Missing Fields',
-        text: 'Name, Email, Password, Commission Rate, and Jyotishi Code are required.',
+        text: 'Name, Email, Password, Commission Rate are required.',
       });
       return;
     }
@@ -195,7 +138,7 @@ export default function AddJyotishiPage() {
         await Swal.fire({
           icon: 'success',
           title: 'Success!',
-          text: 'Jyotishi account created successfully!',
+          text: 'Astrologer account created successfully!',
           timer: 2000,
           showConfirmButton: false
         });
@@ -205,7 +148,7 @@ export default function AddJyotishiPage() {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: err.error || 'Failed to create jyotishi account',
+          text: err.error || 'Failed to create Astrolger account',
         });
       }
     } catch (err) {
@@ -335,7 +278,7 @@ export default function AddJyotishiPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="jyotishiCode" className="text-sm text-gray-700">
-                  Jyotishi Code * (Auto-generated)
+                  Astrologer Code * (Auto-generated)
                 </Label>
                 <div className="relative">
                   <Input
@@ -387,7 +330,7 @@ export default function AddJyotishiPage() {
                   rows={3}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="Brief introduction about the jyotishi, expertise, and experience..."
+                  placeholder="Brief introduction about the astrologer, expertise, and experience..."
                   className="border-gray-300 focus:border-blue-500"
                 />
               </div>
@@ -491,78 +434,16 @@ export default function AddJyotishiPage() {
                 />
               </div>
 
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="cancelledCheque" className="text-sm text-gray-700">
-                  Cancelled Cheque Image
-                </Label>
-                <div className="space-y-3">
-                  {!cancelledChequeImage ? (
-                    <div className="relative">
-                      <Input
-                        id="cancelledCheque"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        disabled={uploadingImage}
-                        className="hidden"
-                      />
-                      <Label
-                        htmlFor="cancelledCheque"
-                        className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                          uploadingImage
-                            ? "border-gray-300 bg-gray-50"
-                            : "border-gray-300 hover:border-amber-400 hover:bg-amber-50"
-                        }`}
-                      >
-                        {uploadingImage ? (
-                          <div className="flex flex-col items-center">
-                            <div className="animate-spin h-8 w-8 border-3 border-amber-500 border-t-transparent rounded-full mb-2"></div>
-                            <p className="text-sm text-gray-600">Uploading...</p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                            <p className="text-sm text-gray-600">
-                              Click to upload cancelled cheque image
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              PNG, JPG up to 5MB
-                            </p>
-                          </div>
-                        )}
-                      </Label>
-                    </div>
-                  ) : (
-                    <div className="relative border-2 border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start gap-4">
-                        <img
-                          src={cancelledChequeImage}
-                          alt="Cancelled Cheque"
-                          className="w-48 h-32 object-cover rounded-lg"
-                        />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-700 font-medium mb-1">
-                            Cancelled cheque uploaded successfully
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Image will be saved with the account
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={removeImage}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500">
-                  Upload a clear image of a cancelled cheque for bank verification
+              {/* NEW: AWS Image Upload Component */}
+              <div className="md:col-span-2">
+                <ImageUpload
+                  label="Cancelled Cheque Image"
+                  value={cancelledChequeImage}
+                  onChange={setCancelledChequeImage}
+                  isThumbnail={false}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Upload a clear image of a cancelled cheque for bank verification (max 5MB)
                 </p>
               </div>
             </CardContent>
@@ -574,7 +455,7 @@ export default function AddJyotishiPage() {
               disabled={loading || !jyotishiCode || generatingCode}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8"
             >
-              {loading ? "Creating…" : "Create Jyotishi"}
+              {loading ? "Creating…" : "Create Astrologer"}
             </Button>
             <Button
               type="button"

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { ImageUpload } from "@/components/ImageUpload";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,6 +47,7 @@ export default function AddBlogPage() {
     newTags[index] = capitalized;
     setTags(newTags);
   };
+  
   const generateSlug = (text: string) => {
     return text
       .toLowerCase()
@@ -79,7 +81,6 @@ export default function AddBlogPage() {
       });
 
       if (res.ok) {
-        // Replace: alert("Blog created successfully!");
         await Swal.fire({
           icon: "success",
           title: "Blog Created!",
@@ -90,7 +91,6 @@ export default function AddBlogPage() {
         router.push("/dashboard/admin/blogs");
       } else {
         const err = await res.json();
-        // Replace: alert(err.error || "Failed to create blog");
         Swal.fire({
           icon: "error",
           title: "Error",
@@ -99,7 +99,6 @@ export default function AddBlogPage() {
       }
     } catch (err) {
       console.error(err);
-      // Replace: alert("Unexpected error");
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -199,18 +198,13 @@ export default function AddBlogPage() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="thumbnailUrl" className="text-sm text-gray-700">
-                  Thumbnail URL
-                </Label>
-                <Input
-                  id="thumbnailUrl"
-                  value={thumbnailUrl}
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="border-gray-300 focus:border-blue-500"
-                />
-              </div>
+              {/* NEW: Image Upload Component */}
+              <ImageUpload
+                label="Blog Thumbnail"
+                value={thumbnailUrl}
+                onChange={setThumbnailUrl}
+                isThumbnail={true}
+              />
             </CardContent>
           </Card>
 

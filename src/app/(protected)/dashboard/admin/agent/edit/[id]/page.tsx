@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/*eslint-disable  @typescript-eslint/no-explicit-any*/
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { ImageUpload } from "@/components/ImageUpload";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 import { useEffect, useState } from "react";
 
 type Jyotishi = {
@@ -19,9 +21,14 @@ type Jyotishi = {
   email: string;
   mobile: string;
   commissionRate: number;
+  jyotishiCode: string;
+  bio?: string | null;
   bankAccountNumber?: string | null;
   bankIfscCode?: string | null;
   bankAccountHolderName?: string | null;
+  bankName?: string | null;
+  bankBranchName?: string | null;
+  cancelledChequeImage?: string | null;
   panNumber?: string | null;
   isActive: boolean;
 };
@@ -42,176 +49,162 @@ export default function EditJyotishiPage() {
     }
   }, [id]);
 
- const fetchJyotishi = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    const res = await fetch(`/api/admin/jyotishi/${id}`);
+  const fetchJyotishi = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`/api/admin/jyotishi/${id}`);
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to fetch Jyotishi");
-    }
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to fetch Jyotishi");
+      }
 
-    const data = await res.json();
-    setJyotishi(data.jyotishi);
-  } catch (err: any) {
-    console.error("Failed to fetch jyotishi:", err);
-    setError(err.message || "Jyotishi not found");
-    Swal.fire({
-      icon: 'error',
-      title: 'Load Failed',
-      text: err.message || 'Failed to load jyotishi details',
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
- const handleSave = async () => {
-  if (!jyotishi) return;
-
-  // Basic validation with SweetAlert
-  if (!jyotishi.name.trim()) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Name',
-      text: 'Name is required',
-    });
-    return;
-  }
-  if (!jyotishi.mobile.trim()) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Mobile',
-      text: 'Mobile number is required',
-    });
-    return;
-  }
-  if (jyotishi.commissionRate < 0 || jyotishi.commissionRate > 100) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Invalid Commission Rate',
-      text: 'Commission rate must be between 0 and 100',
-    });
-    return;
-  }
-
-  // Mobile number validation
-  const mobileRegex = /^[6-9]\d{9}$/;
-  if (!mobileRegex.test(jyotishi.mobile.replace(/[\s\-\(\)]/g, ""))) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Invalid Mobile Number',
-      text: 'Please enter a valid 10-digit mobile number starting with 6-9',
-    });
-    return;
-  }
-
-  try {
-    setSaving(true);
-    setError(null);
-
-    const res = await fetch(`/api/admin/jyotishi/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: jyotishi.name.trim(),
-        mobile: jyotishi.mobile.trim(),
-        commissionRate: Number(jyotishi.commissionRate),
-        bankAccountNumber: jyotishi.bankAccountNumber?.trim() || null,
-        bankIfscCode: jyotishi.bankIfscCode?.trim().toUpperCase() || null,
-        bankAccountHolderName: jyotishi.bankAccountHolderName?.trim() || null,
-        panNumber: jyotishi.panNumber?.trim().toUpperCase() || null,
-        isActive: jyotishi.isActive,
-      }),
-    });
-
-    if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Jyotishi updated successfully!',
-        timer: 2000,
-        showConfirmButton: false
+      const data = await res.json();
+      setJyotishi(data.jyotishi);
+    } catch (err: any) {
+      console.error("Failed to fetch jyotishi:", err);
+      setError(err.message || "Jyotishi not found");
+      Swal.fire({
+        icon: "error",
+        title: "Load Failed",
+        text: err.message || "Failed to load jyotishi details",
       });
-      router.push("/dashboard/admin/agent");
-    } else {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to update Jyotishi");
+    } finally {
+      setLoading(false);
     }
-  } catch (err: any) {
-    console.error("Update error:", err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Update Failed',
-      text: err.message || 'An error occurred while updating the jyotishi',
-    });
-  } finally {
-    setSaving(false);
-  }
-};
+  };
+
+  const handleSave = async () => {
+    if (!jyotishi) return;
+
+    // Validation
+    if (!jyotishi.name.trim()) {
+      Swal.fire({ icon: "warning", title: "Missing Name", text: "Name is required" });
+      return;
+    }
+    if (!jyotishi.mobile.trim()) {
+      Swal.fire({ icon: "warning", title: "Missing Mobile", text: "Mobile number is required" });
+      return;
+    }
+    if (jyotishi.commissionRate < 0 || jyotishi.commissionRate > 100) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Commission",
+        text: "Commission rate must be between 0 and 100",
+      });
+      return;
+    }
+
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(jyotishi.mobile.replace(/[\s\-\(\)]/g, ""))) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Mobile",
+        text: "Please enter a valid 10-digit mobile number starting with 6-9",
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const res = await fetch(`/api/admin/jyotishi/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: jyotishi.name.trim(),
+          mobile: jyotishi.mobile.trim(),
+          commissionRate: Number(jyotishi.commissionRate),
+          jyotishiCode: jyotishi.jyotishiCode,
+          bio: jyotishi.bio?.trim() || null,
+          bankAccountNumber: jyotishi.bankAccountNumber?.trim() || null,
+          bankIfscCode: jyotishi.bankIfscCode?.trim().toUpperCase() || null,
+          bankAccountHolderName: jyotishi.bankAccountHolderName?.trim() || null,
+          bankName: jyotishi.bankName?.trim() || null,
+          bankBranchName: jyotishi.bankBranchName?.trim() || null,
+          cancelledChequeImage: jyotishi.cancelledChequeImage || null,
+          panNumber: jyotishi.panNumber?.trim().toUpperCase() || null,
+          isActive: jyotishi.isActive,
+        }),
+      });
+
+      if (res.ok) {
+        await Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: "Jyotishi updated successfully!",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        router.push("/dashboard/admin/agent");
+      } else {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to update Jyotishi");
+      }
+    } catch (err: any) {
+      console.error("Update error:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Update Failed",
+        text: err.message || "An error occurred while updating",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="p-4 flex justify-center items-center min-h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+      <div className="p-8 flex justify-center items-center min-h-96">
+        <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
       </div>
     );
   }
 
   if (error && !jyotishi) {
     return (
-      <div className="p-4 max-w-5xl mx-auto">
+      <div className="p-6 max-w-5xl mx-auto">
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <div className="mt-4">
-          <Button onClick={() => router.back()} variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
-        </div>
+        <Button onClick={() => router.back()} variant="outline" className="mt-4">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
+        </Button>
       </div>
     );
   }
 
-  if (!jyotishi) {
-    return null;
-  }
+  if (!jyotishi) return null;
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Edit Jyotishi</h1>
-          <p className="text-muted-foreground">
-            Manage astrologer profile & commission
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="w-full mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-4">
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Edit Astrologer</h1>
+            <p className="text-gray-600">Update astrologer profile, banking, and commission details</p>
+          </div>
         </div>
-      </div>
 
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {/* Form */}
-      <div className="space-y-6">
-        {/* Personal Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-8">
+          {/* Personal Info */}
+          <Card className="border-gray-200">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
+              <CardTitle>Personal Information</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name *</Label>
                 <Input
@@ -220,25 +213,16 @@ export default function EditJyotishiPage() {
                   onChange={(e) =>
                     setJyotishi({ ...jyotishi, name: e.target.value })
                   }
-                  placeholder="Enter full name"
+                  placeholder="Pandit Rajesh Sharma"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  value={jyotishi.email}
-                  disabled
-                  className="bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Email cannot be changed
-                </p>
+                <Label htmlFor="email">Email Address</Label>
+                <Input id="email" value={jyotishi.email} disabled className="bg-muted" />
+                <p className="text-xs text-muted-foreground">Email cannot be changed</p>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="mobile">Mobile Number *</Label>
                 <Input
@@ -247,8 +231,19 @@ export default function EditJyotishiPage() {
                   onChange={(e) =>
                     setJyotishi({ ...jyotishi, mobile: e.target.value })
                   }
-                  placeholder="98XXXXXXXX"
+                  placeholder="9876543210"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="jyotishiCode">Astrologer Code</Label>
+                <Input
+                  id="jyotishiCode"
+                  value={jyotishi.jyotishiCode}
+                  disabled
+                  className="bg-gray-100 font-mono uppercase"
+                />
+                <p className="text-xs text-muted-foreground">Code is fixed and cannot be changed</p>
               </div>
 
               <div className="space-y-2">
@@ -258,7 +253,7 @@ export default function EditJyotishiPage() {
                   type="number"
                   min="0"
                   max="100"
-                  step="0.5"
+                  step="0.01"
                   value={jyotishi.commissionRate}
                   onChange={(e) =>
                     setJyotishi({
@@ -266,38 +261,44 @@ export default function EditJyotishiPage() {
                       commissionRate: parseFloat(e.target.value) || 0,
                     })
                   }
-                  placeholder="15"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Percentage of course fee paid to Jyotishi
-                </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Bank Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Bank Account Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="bankAccountHolderName">Account Holder Name</Label>
-              <Input
-                id="bankAccountHolderName"
-                value={jyotishi.bankAccountHolderName || ""}
-                onChange={(e) =>
-                  setJyotishi({
-                    ...jyotishi,
-                    bankAccountHolderName: e.target.value || null,
-                  })
-                }
-                placeholder="As per bank records"
-              />
-            </div>
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="bio">Bio / Introduction</Label>
+                <Textarea
+                  id="bio"
+                  rows={4}
+                  value={jyotishi.bio || ""}
+                  onChange={(e) =>
+                    setJyotishi({ ...jyotishi, bio: e.target.value })
+                  }
+                  placeholder="Brief introduction about the astrologer..."
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Banking & Tax */}
+          <Card className="border-gray-200">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-100">
+              <CardTitle>Banking & Tax Details</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="bankAccountHolderName">Account Holder Name</Label>
+                <Input
+                  id="bankAccountHolderName"
+                  value={jyotishi.bankAccountHolderName || ""}
+                  onChange={(e) =>
+                    setJyotishi({
+                      ...jyotishi,
+                      bankAccountHolderName: e.target.value || null,
+                    })
+                  }
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="bankAccountNumber">Account Number</Label>
                 <Input
@@ -309,7 +310,7 @@ export default function EditJyotishiPage() {
                       bankAccountNumber: e.target.value || null,
                     })
                   }
-                  placeholder="1234567890"
+                  className="font-mono"
                 />
               </div>
 
@@ -325,87 +326,113 @@ export default function EditJyotishiPage() {
                     })
                   }
                   placeholder="SBIN0001234"
-                  className="uppercase"
+                  className="uppercase font-mono"
                 />
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Tax Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tax Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="panNumber">PAN Number</Label>
-              <Input
-                id="panNumber"
-                value={jyotishi.panNumber || ""}
-                onChange={(e) =>
-                  setJyotishi({
-                    ...jyotishi,
-                    panNumber: e.target.value.toUpperCase() || null,
-                  })
-                }
-                placeholder="ABCDE1234F"
-                maxLength={10}
-                className="uppercase font-mono"
-              />
-              <p className="text-xs text-muted-foreground">
-                Required for tax compliance and payments
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="space-y-2">
+                <Label htmlFor="bankName">Bank Name</Label>
+                <Input
+                  id="bankName"
+                  value={jyotishi.bankName || ""}
+                  onChange={(e) =>
+                    setJyotishi({ ...jyotishi, bankName: e.target.value || null })
+                  }
+                />
+              </div>
 
-        {/* Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="isActive">
-                  {jyotishi.isActive ? "Active" : "Inactive"}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {jyotishi.isActive
-                    ? "Jyotishi can receive leads and commissions"
-                    : "Account is deactivated"}
+              <div className="space-y-2">
+                <Label htmlFor="bankBranchName">Branch Name</Label>
+                <Input
+                  id="bankBranchName"
+                  value={jyotishi.bankBranchName || ""}
+                  onChange={(e) =>
+                    setJyotishi({
+                      ...jyotishi,
+                      bankBranchName: e.target.value || null,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="panNumber">PAN Number</Label>
+                <Input
+                  id="panNumber"
+                  value={jyotishi.panNumber || ""}
+                  onChange={(e) =>
+                    setJyotishi({
+                      ...jyotishi,
+                      panNumber: e.target.value.toUpperCase() || null,
+                    })
+                  }
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  className="uppercase font-mono"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label>Cancelled Cheque Image</Label>
+                <ImageUpload
+                  label="Cancelled Cheque"
+                  value={jyotishi.cancelledChequeImage || ""}
+                  onChange={(url) =>
+                    setJyotishi({ ...jyotishi, cancelledChequeImage: url })
+                  }
+                  isThumbnail={false}
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Upload a clear image of cancelled cheque (optional, can be updated)
                 </p>
               </div>
-              <Switch
-                id="isActive"
-                checked={jyotishi.isActive}
-                onCheckedChange={(checked) =>
-                  setJyotishi({ ...jyotishi, isActive: checked })
-                }
-              />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-4 pt-4">
-          <Button variant="outline" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </>
-            )}
-          </Button>
+          {/* Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>{jyotishi.isActive ? "Active" : "Inactive"}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {jyotishi.isActive
+                      ? "Can receive leads & commissions"
+                      : "Account deactivated"}
+                  </p>
+                </div>
+                <Switch
+                  checked={jyotishi.isActive}
+                  onCheckedChange={(checked) =>
+                    setJyotishi({ ...jyotishi, isActive: checked })
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-4 pt-6">
+            <Button variant="outline" onClick={() => router.back()}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

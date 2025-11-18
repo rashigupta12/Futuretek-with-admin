@@ -20,6 +20,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { ImageUpload } from "@/components/ImageUpload";
 
 export default function AddCoursePage() {
   const router = useRouter();
@@ -331,13 +332,14 @@ export default function AddCoursePage() {
                 />
               </Field>
 
-              <Field label="Thumbnail URL">
-                <TextInput
-                  value={thumbnailUrl}
-                  onChange={setThumbnailUrl}
-                  placeholder="https://..."
-                />
-              </Field>
+              <div className="md:col-span-2">
+  <ImageUpload
+    label="Thumbnail Image"
+    value={thumbnailUrl}
+    onChange={setThumbnailUrl}
+    isThumbnail={true}
+  />
+</div>
 
               <DateInput
                 label="Start Date"
