@@ -424,7 +424,7 @@ export default function MyCoursesPage() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-600">Progress</span>
                     <span className="font-semibold text-blue-900">{progress}%</span>
@@ -439,7 +439,7 @@ export default function MyCoursesPage() {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                </div>
+                </div> */}
 
                 <div className="flex items-center gap-2 text-sm pt-2">
                   {hasCertificate ? (

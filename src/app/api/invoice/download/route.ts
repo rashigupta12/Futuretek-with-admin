@@ -399,7 +399,7 @@ async function generateInvoiceWithPDFLib(data: {
     color: black,
   });
   const discount = parseFloat(payment.discountAmount || '0');
-  page.drawText(`-Rs.${discount.toFixed(2)}`, {
+  page.drawText(`Rs.${discount.toFixed(2)}`, {
     x: valueX,
     y,
     size: 10,
