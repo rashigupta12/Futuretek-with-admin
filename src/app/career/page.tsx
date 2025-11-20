@@ -1,16 +1,15 @@
 "use client";
+import { SiteFooter } from "@/components/site-footer";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
-  CardTitle,
+  CardTitle
 } from "@/components/ui/card";
-import Link from "next/link";
 import { motion } from "framer-motion";
-import { SiteFooter } from "@/components/site-footer";
-import { Star, Users, GraduationCap, Heart, ArrowRight } from "lucide-react";
+import { ArrowRight, GraduationCap, Heart, Star, Users } from "lucide-react";
+import Link from "next/link";
 
 const openings = [
   {
@@ -87,7 +86,7 @@ export default function CareerPage() {
           </div>
 
           {/* Current Openings */}
-          <section className="mb-20">
+          <section className="text-center mb-20 max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold mb-4 text-slate-800">
                 Current Openings
@@ -98,7 +97,7 @@ export default function CareerPage() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 ">
               {openings.map((job, index) => (
                 <Card
                   key={index}
@@ -131,21 +130,21 @@ export default function CareerPage() {
                       </ul>
                     </div>
                   </CardContent>
-                  <CardFooter>
+                  {/* <CardFooter>
                     <Link href="/auth/login" className="w-full">
                       <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white transition-all duration-300 group">
                         Apply Now
                         <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                       </Button>
                     </Link>
-                  </CardFooter>
+                  </CardFooter> */}
                 </Card>
               ))}
             </div>
           </section>
 
           {/* Why Work With Us – Enhanced */}
-          <section className="mb-20">
+          <section className=" mb-20 max-w-7xl mx-auto">
             <Card className="relative overflow-hidden bg-white border border-slate-200 shadow-lg">
               {/* Simple Golden Border */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
@@ -188,7 +187,7 @@ export default function CareerPage() {
             </Card>
           </section>
           {/* Additional Benefits – Enhanced */}
-          <section className="mb-20">
+          <section className=" mb-12 max-w-7xl mx-auto">
             <Card className="relative overflow-hidden bg-white/90 backdrop-blur-md border-0 shadow-xl">
               {/* Golden Top Border */}
               <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
@@ -276,7 +275,7 @@ export default function CareerPage() {
           </section>
 
           {/* CTA Section */}
-          <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900 text-white text-center relative overflow-hidden">
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900 text-white text-center relative overflow-hidden  max-w-7xl mx-auto">
             {/* Golden Top Border */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
 
@@ -289,7 +288,7 @@ export default function CareerPage() {
                 Futuretek Institute
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/auth/login">
+                <Link href="/contact">
                   <Button className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-slate-900 font-semibold px-8 py-3">
                     Apply Now
                     <ArrowRight className="w-4 h-4 ml-2" />

@@ -492,20 +492,6 @@ export const CheckoutSidebar = ({
                     ₹{courseOriginalPrice.toLocaleString("en-IN")}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {adminCoupon && (
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                      <Crown className="h-3 w-3" />
-                      Admin Discount
-                    </div>
-                  )}
-                  {jyotishiCoupon && (
-                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                      <Users className="h-3 w-3" />
-                      Jyotishi Discount
-                    </div>
-                  )}
-                </div>
               </div>
             ) : (
               <p className="text-xl font-bold text-blue-600">
@@ -644,13 +630,7 @@ export const CheckoutSidebar = ({
                           <p className="font-semibold text-sm mb-0.5 text-green-800">
                             Discount Applied!
                           </p>
-                          <p className="text-xs text-green-700">
-                            Coupon{" "}
-                            <code className="bg-white/80 px-1.5 py-0.5 rounded text-xs font-mono">
-                              {adminCoupon.code}
-                            </code>{" "}
-                            auto-applied
-                          </p>
+                          
                           <p className="text-xs mt-0.5 text-green-600">
                             You save ₹
                             {courseAdminDiscountAmount.toLocaleString("en-IN")}
@@ -668,26 +648,13 @@ export const CheckoutSidebar = ({
                           <p className="font-semibold text-sm mb-0.5 text-blue-800">
                             Discount Applied!
                           </p>
-                          <p className="text-xs text-blue-700">
-                            Coupon{" "}
-                            <code className="bg-white/80 px-1.5 py-0.5 rounded text-xs font-mono">
-                              {jyotishiCoupon.code}
-                            </code>{" "}
-                            auto-applied
-                          </p>
+                          
                           <p className="text-xs mt-0.5 text-blue-600">
                             You save ₹
                             {courseJyotishiDiscountAmount.toLocaleString(
                               "en-IN"
                             )}
                           </p>
-                          <div className="flex items-center gap-1 mt-1 text-blue-600">
-                            <Users className="h-3 w-3" />
-                            <span className="text-xs">
-                              Supports{" "}
-                              {jyotishiCoupon.creatorName || "the Jyotishi"}
-                            </span>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -755,9 +722,6 @@ export const CheckoutSidebar = ({
                         ₹{prices.total.toLocaleString("en-IN")}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 text-center mt-1">
-                      This amount will be charged to Razorpay
-                    </p>
                   </div>
                 </div>
               </div>

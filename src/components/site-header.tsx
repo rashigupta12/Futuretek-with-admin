@@ -205,10 +205,10 @@ function Sidebar({
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="left" className="w-80 p-0 pt-10 flex flex-col">
-        <div className="px-6 py-4">
+      <SheetContent side="left" className="w-80 p-0  flex flex-col">
+        <div className="px-6 pt-4">
           <Link href="/" onClick={() => setIsOpen(false)}>
-            <FuturetekLogo width={180} height={54} />
+            <FuturetekLogo width={180} height={100} />
           </Link>
         </div>
 
@@ -258,17 +258,17 @@ function Sidebar({
               />
             </Button>
 
-            {coursesOpen && (
+           {coursesOpen && (
               <div className="pl-4 space-y-1 border-l-2 border-blue-100 ml-5">
                 {courses.map((course) => (
                   <Button
                     key={course.id}
                     asChild
                     variant="ghost"
-                    className="w-full justify-start h-10 text-sm hover:bg-blue-50 hover:text-blue-700"
+                    className="w-full justify-start h-auto min-h-10 text-sm hover:bg-blue-50 hover:text-blue-700 whitespace-normal text-left py-2"
                     onClick={() => setIsOpen(false)}
                   >
-                    <Link href={`/courses/${course.slug}`}>{course.title}</Link>
+                    <Link href={`/courses/${course.slug}`} className="break-words">{course.title}</Link>
                   </Button>
                 ))}
               </div>
@@ -365,7 +365,7 @@ export function SiteHeader() {
   return (
     <header className="bg-white sticky top-0 z-50 border-b border-slate-200 shadow-sm">
       <div className="mx-auto flex h-16 max-w-screen-xl items-center gap-4 px-4">
-        <div className="mr-10 flex items-center gap-3">
+        <div className="mr-10 flex items-center gap-2">
           <Sidebar
             session={session ?? null}
             handleLogout={handleLogout}
