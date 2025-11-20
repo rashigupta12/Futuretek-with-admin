@@ -83,7 +83,9 @@ export const UsersTable = pgTable(
     bankAccountHolderName: text("bank_account_holder_name"),
     panNumber: text("pan_number"),
     isActive: boolean("is_active").default(true),
-    
+    bankName:text("bank_name"),
+    bankBranchName:text("bank_branch_name"),
+    cancelledChequeImage:text("cancelled_cheque_image"),   
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

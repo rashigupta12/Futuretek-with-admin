@@ -489,7 +489,7 @@ export default function ContactPage() {
           </div>
 
           {/* CTA Section */}
-          <div className="mt-16 text-center bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900 rounded-xl p-8 text-white relative overflow-hidden">
+          <div className="mt-16 text-center bg-gradient-to-br from-slate-800 via-blue-900 to-slate-900 rounded-xl p-8 text-white relative overflow-hidden ">
             {/* Golden Top Border */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-yellow-500 to-yellow-600"></div>
             

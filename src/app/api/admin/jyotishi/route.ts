@@ -414,7 +414,11 @@ export async function POST(req: NextRequest) {
       bankAccountNumber,
       bankIfscCode,
       bankAccountHolderName,
+      bankName,
+      bankBranchName,
+      cancelledChequeImage,
       panNumber,
+      bio,
     } = body;
 
     // Validate required fields
@@ -471,6 +475,9 @@ export async function POST(req: NextRequest) {
         bankAccountNumber,
         bankIfscCode,
         bankAccountHolderName,
+        bankName,
+        bankBranchName,
+        cancelledChequeImage,
         panNumber,
         isActive: true,
         updatedAt: new Date(),

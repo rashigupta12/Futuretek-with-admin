@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import Swal from "sweetalert2"
+import Swal from "sweetalert2";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUpload } from "@/components/ImageUpload";
+import Image from "next/image";
 import {
   ArrowLeft,
   Calendar,
@@ -65,201 +67,201 @@ export default function BlogDetailPage() {
     if (params.id) fetchBlog();
   }, [params.id]);
 
- const fetchBlog = async () => {
-  try {
-    const res = await fetch(`/api/admin/blogs/${params.id}`);
-    if (!res.ok) throw new Error("Not found");
-    const data = await res.json();
+  const fetchBlog = async () => {
+    try {
+      const res = await fetch(`/api/admin/blogs/${params.id}`);
+      if (!res.ok) throw new Error("Not found");
+      const data = await res.json();
 
-    const blogData = {
-      ...data.blog,
-      tags: data.blog.tags || [],
-    };
+      const blogData = {
+        ...data.blog,
+        tags: data.blog.tags || [],
+      };
 
-    setBlog(blogData);
-    
-    // Initialize form data
-    setFormData({
-      title: blogData.title,
-      slug: blogData.slug,
-      excerpt: blogData.excerpt || "",
-      content: blogData.content,
-      thumbnailUrl: blogData.thumbnailUrl || "",
-      isPublished: blogData.isPublished,
-      tags: blogData.tags.length > 0 ? blogData.tags : [""],
-    });
-  } catch (err) {
-    console.error(err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Blog Not Found',
-      text: 'The requested blog post could not be found.',
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
-const handleEditToggle = () => {
-  if (isEditing) {
-    // Check if there are unsaved changes
-    const hasChanges = 
-      formData.title !== blog?.title ||
-      formData.slug !== blog?.slug ||
-      formData.excerpt !== (blog?.excerpt || "") ||
-      formData.content !== blog?.content ||
-      formData.thumbnailUrl !== (blog?.thumbnailUrl || "") ||
-      formData.isPublished !== blog?.isPublished ||
-      JSON.stringify(formData.tags) !== JSON.stringify(blog?.tags || [""]);
-
-    if (hasChanges) {
+      setBlog(blogData);
+      
+      // Initialize form data
+      setFormData({
+        title: blogData.title,
+        slug: blogData.slug,
+        excerpt: blogData.excerpt || "",
+        content: blogData.content,
+        thumbnailUrl: blogData.thumbnailUrl || "",
+        isPublished: blogData.isPublished,
+        tags: blogData.tags.length > 0 ? blogData.tags : [""],
+      });
+    } catch (err) {
+      console.error(err);
       Swal.fire({
-        title: 'Discard Changes?',
-        text: 'You have unsaved changes. Are you sure you want to cancel?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, discard changes',
-        cancelButtonText: 'Continue editing',
-        reverseButtons: true
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Reset form data when canceling edit
-          if (blog) {
-            setFormData({
-              title: blog.title,
-              slug: blog.slug,
-              excerpt: blog.excerpt || "",
-              content: blog.content,
-              thumbnailUrl: blog.thumbnailUrl || "",
-              isPublished: blog.isPublished,
-              tags: blog.tags.length > 0 ? blog.tags : [""],
-            });
+        icon: 'error',
+        title: 'Blog Not Found',
+        text: 'The requested blog post could not be found.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Check if there are unsaved changes
+      const hasChanges = 
+        formData.title !== blog?.title ||
+        formData.slug !== blog?.slug ||
+        formData.excerpt !== (blog?.excerpt || "") ||
+        formData.content !== blog?.content ||
+        formData.thumbnailUrl !== (blog?.thumbnailUrl || "") ||
+        formData.isPublished !== blog?.isPublished ||
+        JSON.stringify(formData.tags) !== JSON.stringify(blog?.tags || [""]);
+
+      if (hasChanges) {
+        Swal.fire({
+          title: 'Discard Changes?',
+          text: 'You have unsaved changes. Are you sure you want to cancel?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Yes, discard changes',
+          cancelButtonText: 'Continue editing',
+          reverseButtons: true
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Reset form data when canceling edit
+            if (blog) {
+              setFormData({
+                title: blog.title,
+                slug: blog.slug,
+                excerpt: blog.excerpt || "",
+                content: blog.content,
+                thumbnailUrl: blog.thumbnailUrl || "",
+                isPublished: blog.isPublished,
+                tags: blog.tags.length > 0 ? blog.tags : [""],
+              });
+            }
+            setIsEditing(false);
           }
-          setIsEditing(false);
-        }
+        });
+        return;
+      }
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSave = async () => {
+    if (!blog) return;
+
+    // Validation
+    if (!formData.title.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Title',
+        text: 'Please enter a blog title',
       });
       return;
     }
-  }
-  setIsEditing(!isEditing);
-};
 
-const handleSave = async () => {
-  if (!blog) return;
-
-  // Validation
-  if (!formData.title.trim()) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Title',
-      text: 'Please enter a blog title',
-    });
-    return;
-  }
-
-  if (!formData.slug.trim()) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Slug',
-      text: 'Please enter a blog slug',
-    });
-    return;
-  }
-
-  if (!formData.content.trim()) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Missing Content',
-      text: 'Please enter blog content',
-    });
-    return;
-  }
-
-  setSaving(true);
-  try {
-    const payload = {
-      ...formData,
-      tags: formData.tags.filter(tag => tag.trim() !== ""),
-    };
-
-    const res = await fetch(`/api/admin/blogs/${blog.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      const updatedBlog = await res.json();
-      setBlog(updatedBlog.blog);
-      setIsEditing(false);
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Blog updated successfully!',
-        timer: 2000,
-        showConfirmButton: false
+    if (!formData.slug.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Slug',
+        text: 'Please enter a blog slug',
       });
-    } else {
-      const err = await res.json();
+      return;
+    }
+
+    if (!formData.content.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Content',
+        text: 'Please enter blog content',
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = {
+        ...formData,
+        tags: formData.tags.filter(tag => tag.trim() !== ""),
+      };
+
+      const res = await fetch(`/api/admin/blogs/${blog.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updatedBlog = await res.json();
+        setBlog(updatedBlog.blog);
+        setIsEditing(false);
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Blog updated successfully!',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        const err = await res.json();
+        Swal.fire({
+          icon: 'error',
+          title: 'Update Failed',
+          text: err.error || 'Failed to update blog',
+        });
+      }
+    } catch (err) {
+      console.error(err);
       Swal.fire({
         icon: 'error',
-        title: 'Update Failed',
-        text: err.error || 'Failed to update blog',
+        title: 'Unexpected Error',
+        text: 'An unexpected error occurred',
       });
+    } finally {
+      setSaving(false);
     }
-  } catch (err) {
-    console.error(err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Unexpected Error',
-      text: 'An unexpected error occurred',
+  };
+
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      html: `You are about to delete <strong>"${blog?.title}"</strong>.<br>This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
     });
-  } finally {
-    setSaving(false);
-  }
-};
 
- const handleDelete = async () => {
-  const result = await Swal.fire({
-    title: 'Are you sure?',
-    html: `You are about to delete <strong>"${blog?.title}"</strong>.<br>This action cannot be undone.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Yes, delete it!',
-    cancelButtonText: 'Cancel',
-    reverseButtons: true
-  });
+    if (!result.isConfirmed) return;
 
-  if (!result.isConfirmed) return;
-
-  try {
-    const res = await fetch(`/api/admin/blogs/${blog?.id}`, { method: "DELETE" });
-    if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Blog deleted successfully',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      router.push("/dashboard/admin/blogs");
-    } else {
+    try {
+      const res = await fetch(`/api/admin/blogs/${blog?.id}`, { method: "DELETE" });
+      if (res.ok) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Blog deleted successfully',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        router.push("/dashboard/admin/blogs");
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Delete Failed',
+          text: 'Failed to delete blog',
+        });
+      }
+    } catch {
       Swal.fire({
         icon: 'error',
-        title: 'Delete Failed',
-        text: 'Failed to delete blog',
+        title: 'Error',
+        text: 'Error deleting blog',
       });
     }
-  } catch {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error deleting blog',
-    });
-  }
-};
+  };
 
   const handleAddTag = () => {
     setFormData(prev => ({
@@ -324,8 +326,6 @@ const handleSave = async () => {
                   ADMIN VIEW
                 </Badge>
               </div>
-
-             
             </div>
 
             {isEditing ? (
@@ -417,24 +417,27 @@ const handleSave = async () => {
               </CardHeader>
               <CardContent className="p-6">
                 {isEditing ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="thumbnailUrl">Thumbnail URL</Label>
-                    <Input
-                      id="thumbnailUrl"
-                      value={formData.thumbnailUrl}
-                      onChange={(e) => setFormData(prev => ({ ...prev, thumbnailUrl: e.target.value }))}
-                      
-                    />
-                  </div>
-                ) : blog.thumbnailUrl ? (
-                  <img
-                    src={blog.thumbnailUrl}
-                    alt={blog.title}
-                    className="w-full h-auto object-cover rounded-lg"
+                  <ImageUpload
+                    label="Blog Thumbnail"
+                    value={formData.thumbnailUrl}
+                    onChange={(url) => setFormData(prev => ({ ...prev, thumbnailUrl: url }))}
+                    isThumbnail={true}
                   />
+                ) : blog.thumbnailUrl ? (
+                  <div className="relative w-full rounded-lg overflow-hidden border border-gray-200">
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <Image
+                        src={blog.thumbnailUrl}
+                        alt={blog.title}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
                 ) : (
-                  <div className="text-center text-gray-500 py-8">
-                    No thumbnail set
+                  <div className="text-center text-gray-500 py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <p>No thumbnail set</p>
                   </div>
                 )}
               </CardContent>
@@ -549,59 +552,55 @@ const handleSave = async () => {
 
                   <Separator />
 
-                
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {isEditing ? (
+                      <>
+                        <Button
+                          onClick={handleSave}
+                          disabled={saving}
+                          className="bg-green-600 hover:bg-green-700 text-white w-full justify-start"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          {saving ? "Saving..." : "Save Changes"}
+                        </Button>
+                        <Button
+                          onClick={handleEditToggle}
+                          variant="outline"
+                          disabled={saving}
+                          className="w-full justify-start"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button asChild variant="outline"
+                        className="w-full justify-start">
+                          <Link href={`/blogs/${blog.slug}`} target="_blank">
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Live
+                          </Link>
+                        </Button>
+                        <Button
+                          onClick={handleEditToggle}
+                          className="bg-blue-600 hover:bg-blue-700 text-white w-full justify-start"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Blog
+                        </Button>
 
-                 <div className="mt-4 flex flex-wrap gap-3">
-  {isEditing ? (
-    <>
-      <Button
-        onClick={handleSave}
-        disabled={saving}
-        className="bg-green-600 hover:bg-green-700 text-white"
-      >
-        <Save className="h-4 w-4 mr-2" />
-        {saving ? "Saving..." : "Save Changes"}
-      </Button>
-      <Button
-        onClick={handleEditToggle}
-        variant="outline"
-        disabled={saving}
-      >
-        <X className="h-4 w-4 mr-2" />
-        Cancel
-      </Button>
-    </>
-  ) : (
-    <>
-      <Button asChild variant="outline"
-      className="w-full justify-start">
-        <Link href={`/blogs/${blog.slug}`} target="_blank">
-          <Eye className="h-4 w-4 mr-2" />
-          View Live
-        </Link>
-      </Button>
-      <Button
-        onClick={handleEditToggle}
-        className="bg-blue-600 hover:bg-blue-700 text-white w-full justify-start"
-      >
-        <Edit className="h-4 w-4 mr-2" />
-        Edit Blog
-      </Button>
-
-    
-
-      <Button
-        variant="destructive"
-        onClick={handleDelete}
-        className="w-full justify-start"
-      >
-        <Trash2 className="h-4 w-4 mr-2" />
-        Delete Blog
-      </Button>
-    </>
-  )}
-</div>
-
+                        <Button
+                          variant="destructive"
+                          onClick={handleDelete}
+                          className="w-full justify-start"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Blog
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

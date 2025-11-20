@@ -354,14 +354,6 @@ export default function CertificateRequestsPage() {
         </div>
       </div>
 
-      {/* Debug info - Remove in production */}
-      {currentCertificateData && (
-        <div className="fixed bottom-4 right-4 bg-yellow-100 border border-yellow-400 p-4 rounded-lg shadow-lg max-w-sm">
-          <p className="text-xs font-semibold mb-2">Debug: Certificate Rendering</p>
-          <p className="text-xs">Data: {JSON.stringify(currentCertificateData).substring(0, 100)}...</p>
-          <p className="text-xs">Ref: {certificateRef.current ? 'Found' : 'Not Found'}</p>
-        </div>
-      )}
 
       <div className="flex justify-between items-center">
         <div>

@@ -428,7 +428,7 @@ export function CoursesCatalog() {
         </div>
       )}
 
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <div className="w-full   relative">
         {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-amber-700 bg-clip-text text-transparent mb-4">
@@ -503,7 +503,7 @@ export function CoursesCatalog() {
         {/* Courses Display */}
         {activeCategory === "ALL" ? (
           // Show all courses organized by category
-          <div className="space-y-12">
+          <div className="space-y-12 mx-auto max-w-7xl">
             {courseCategories.map((category) => {
               if (category.courses.length === 0) return null;
 

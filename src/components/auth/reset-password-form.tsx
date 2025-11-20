@@ -66,10 +66,6 @@ export function ResetPasswordForm() {
           <Link href="/" prefetch={true}>
             <FuturetekLogo width={180} height={54} />
           </Link>
-          <h1 className="text-[#1B2B65] font-extrabold text-2xl tracking-wide">
-            FutureTek
-          </h1>
-          <p className="text-sm text-gray-500 -mt-2">Secure Password Reset</p>
         </div>
 
         <div className="text-center">

@@ -5,16 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
+import { ArrowLeft, Check, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
-import React, { useState } from "react";
-// import toast, { Toaster } from "react-hot-toast";
+import React, { useState, useEffect } from "react";
 
 export default function AddJyotishiPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,22 +25,92 @@ export default function AddJyotishiPage() {
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankIfscCode, setBankIfscCode] = useState("");
   const [bankAccountHolderName, setBankAccountHolderName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankBranchName, setBankBranchName] = useState("");
+  const [cancelledChequeImage, setCancelledChequeImage] = useState("");
   const [panNumber, setPanNumber] = useState("");
   const [bio, setBio] = useState("");
   const [mobileError, setMobileError] = useState("");
   const [jyotishiCode, setJyotishiCode] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+
+  // Password validation state
+  const [passwordValidation, setPasswordValidation] = useState({
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+    hasMinLength: false,
+  });
+
+  // Auto-generate code when name changes
+  useEffect(() => {
+    const generateCode = async () => {
+      if (name.trim().length >= 2) {
+        setGeneratingCode(true);
+        try {
+          const res = await fetch("/api/admin/jyotishi/generate-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name.trim() }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setJyotishiCode(data.jyotishiCode);
+          } else {
+            console.error("Failed to generate code");
+          }
+        } catch (error) {
+          console.error("Error generating code:", error);
+        } finally {
+          setGeneratingCode(false);
+        }
+      } else {
+        setJyotishiCode("");
+      }
+    };
+
+    const timeoutId = setTimeout(generateCode, 500);
+    return () => clearTimeout(timeoutId);
+  }, [name]);
+
+  const validatePassword = (pwd: string) => {
+    const validation = {
+      hasUpperCase: /[A-Z]/.test(pwd),
+      hasLowerCase: /[a-z]/.test(pwd),
+      hasNumber: /[0-9]/.test(pwd),
+      hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd),
+      hasMinLength: pwd.length >= 8,
+    };
+
+    setPasswordValidation(validation);
+
+    if (!pwd) {
+      setPasswordError("");
+      return "";
+    }
+
+    const allValid = Object.values(validation).every(Boolean);
+    
+    if (!allValid) {
+      setPasswordError("Password does not meet all requirements");
+      return "Password does not meet all requirements";
+    }
+
+    setPasswordError("");
+    return "";
+  };
 
   const validateMobile = (phone: string) => {
     const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
 
     if (!phone) {
-      return ""; // Optional field
+      return "";
     }
 
-    // Indian mobile number patterns - ensure exactly 10 digits after optional prefix
     const indianPattern = /^(\+91|0)?[6-9]\d{9}$/;
-
-    // Check if the cleaned number has exactly 10 digits (excluding optional prefix)
     const digitsOnly = cleanPhone.replace(/^(\+91|0)/, "");
 
     if (digitsOnly.length !== 10) {
@@ -53,87 +124,96 @@ export default function AddJyotishiPage() {
     return "";
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  // Validate required fields
-  if (!name || !email || !password || !commissionRate || !jyotishiCode) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Missing Fields',
-      text: 'Name, Email, Password, Commission Rate, and Jyotishi Code are required.',
-    });
-    return;
-  }
-
-  const mobileValidationError = validateMobile(mobile);
-  if (mobileValidationError) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Invalid Mobile',
-      text: mobileValidationError,
-    });
-    setLoading(false);
-    return;
-  }
-
-  setLoading(true);
-
-  const payload = {
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    password,
-    mobile: mobile.trim() || null,
-    jyotishiCode: jyotishiCode.trim().toUpperCase(),
-    commissionRate: parseFloat(Number(commissionRate).toFixed(2)),
-    bankAccountNumber: bankAccountNumber.trim() || null,
-    bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
-    bankAccountHolderName: bankAccountHolderName.trim() || null,
-    panNumber: panNumber.trim().toUpperCase() || null,
-    bio: bio.trim() || null,
-  };
-
-  try {
-    const res = await fetch("/api/admin/jyotishi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Jyotishi account created successfully!',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      router.push("/dashboard/admin/agent");
-    } else {
-      const err = await res.json();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name || !email || !password || !commissionRate || !jyotishiCode) {
       Swal.fire({
         icon: 'error',
-        title: 'Error',
-        text: err.error || 'Failed to create jyotishi account',
+        title: 'Missing Fields',
+        text: 'Name, Email, Password, Commission Rate are required.',
       });
+      return;
     }
-  } catch (err) {
-    console.error("Submission error:", err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Unexpected Error',
-      text: 'An unexpected error occurred while creating the account',
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+
+    const passwordValidationError = validatePassword(password);
+    if (passwordValidationError) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Password',
+        text: 'Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.',
+      });
+      return;
+    }
+
+    const mobileValidationError = validateMobile(mobile);
+    if (mobileValidationError) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Mobile',
+        text: mobileValidationError,
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    const payload = {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      mobile: mobile.trim() || null,
+      jyotishiCode: jyotishiCode.trim().toUpperCase(),
+      commissionRate: parseFloat(Number(commissionRate).toFixed(2)),
+      bankAccountNumber: bankAccountNumber.trim() || null,
+      bankIfscCode: bankIfscCode.trim().toUpperCase() || null,
+      bankAccountHolderName: bankAccountHolderName.trim() || null,
+      bankName: bankName.trim() || null,
+      bankBranchName: bankBranchName.trim() || null,
+      cancelledChequeImage: cancelledChequeImage || null,
+      panNumber: panNumber.trim().toUpperCase() || null,
+      bio: bio.trim() || null,
+    };
+
+    try {
+      const res = await fetch("/api/admin/jyotishi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Astrologer account created successfully!',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        router.push("/dashboard/admin/agent");
+      } else {
+        const err = await res.json();
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: err.error || 'Failed to create Astrolger account',
+        });
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Unexpected Error',
+        text: 'An unexpected error occurred while creating the account',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
-      {/* <Toaster/> */}
       <div className="w-full mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <Link
             href="/dashboard/admin/agent"
@@ -157,7 +237,6 @@ export default function AddJyotishiPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* ── Personal Info ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
               <CardTitle className="text-xl text-gray-900">
@@ -200,7 +279,7 @@ export default function AddJyotishiPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="password" className="text-sm text-gray-700">
                   Password *
                 </Label>
@@ -208,12 +287,81 @@ export default function AddJyotishiPage() {
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    validatePassword(e.target.value);
+                  }}
+                  onFocus={() => setShowPasswordRequirements(true)}
+                  onBlur={() => {
+                    validatePassword(password);
+                  }}
                   placeholder="••••••••"
                   required
-                  minLength={6}
-                  className="border-gray-300 focus:border-blue-500"
+                  className={`border-gray-300 focus:border-blue-500 ${
+                    passwordError && password ? "border-red-500 focus:border-red-500" : ""
+                  }`}
                 />
+                
+                {(showPasswordRequirements || password) && (
+                  <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</p>
+                    
+                    <div className="flex items-center gap-2 text-sm">
+                      {passwordValidation.hasMinLength ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <X className="h-4 w-4 text-gray-400" />
+                      )}
+                      <span className={passwordValidation.hasMinLength ? "text-green-700" : "text-gray-600"}>
+                        At least 8 characters
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      {passwordValidation.hasUpperCase ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <X className="h-4 w-4 text-gray-400" />
+                      )}
+                      <span className={passwordValidation.hasUpperCase ? "text-green-700" : "text-gray-600"}>
+                        One uppercase letter (A-Z)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      {passwordValidation.hasLowerCase ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <X className="h-4 w-4 text-gray-400" />
+                      )}
+                      <span className={passwordValidation.hasLowerCase ? "text-green-700" : "text-gray-600"}>
+                        One lowercase letter (a-z)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      {passwordValidation.hasNumber ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <X className="h-4 w-4 text-gray-400" />
+                      )}
+                      <span className={passwordValidation.hasNumber ? "text-green-700" : "text-gray-600"}>
+                        One number (0-9)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      {passwordValidation.hasSpecialChar ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <X className="h-4 w-4 text-gray-400" />
+                      )}
+                      <span className={passwordValidation.hasSpecialChar ? "text-green-700" : "text-gray-600"}>
+                        One special character (!@#$%^&*...)
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -235,7 +383,7 @@ export default function AddJyotishiPage() {
                     setMobileError(error);
                   }}
                   placeholder="+91 98765 43210"
-                  maxLength={15} // Add this line
+                  maxLength={15}
                   className={`border-gray-300 focus:border-blue-500 ${
                     mobileError ? "border-red-500 focus:border-red-500" : ""
                   }`}
@@ -247,19 +395,26 @@ export default function AddJyotishiPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="jyotishiCode" className="text-sm text-gray-700">
-                  Jyotishi Code *
+                  Astrologer Code * (Auto-generated)
                 </Label>
-                <Input
-                  id="jyotishiCode"
-                  type="text"
-                  value={jyotishiCode}
-                  onChange={(e) =>
-                    setJyotishiCode(e.target.value.toUpperCase())
-                  }
-                  placeholder="JYO001"
-                  required
-                  className="border-gray-300 focus:border-blue-500 font-mono uppercase"
-                />
+                <div className="relative">
+                  <Input
+                    id="jyotishiCode"
+                    type="text"
+                    value={jyotishiCode}
+                    readOnly
+                    placeholder="Enter name to generate code..."
+                    className="border-gray-300 bg-gray-50 font-mono uppercase pr-20"
+                  />
+                  {generatingCode && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Code is automatically generated based on the name
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -292,14 +447,13 @@ export default function AddJyotishiPage() {
                   rows={3}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="Brief introduction about the jyotishi, expertise, and experience..."
+                  placeholder="Brief introduction about the astrologer, expertise, and experience..."
                   className="border-gray-300 focus:border-blue-500"
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* ── Banking Details ── */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-amber-50 to-amber-50 border-b">
               <CardTitle className="text-xl text-gray-900">
@@ -356,6 +510,34 @@ export default function AddJyotishiPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="bankName" className="text-sm text-gray-700">
+                  Bank Name
+                </Label>
+                <Input
+                  id="bankName"
+                  type="text"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="State Bank of India"
+                  className="border-gray-300 focus:border-amber-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bankBranchName" className="text-sm text-gray-700">
+                  Bank Branch Name
+                </Label>
+                <Input
+                  id="bankBranchName"
+                  type="text"
+                  value={bankBranchName}
+                  onChange={(e) => setBankBranchName(e.target.value)}
+                  placeholder="Connaught Place, New Delhi"
+                  className="border-gray-300 focus:border-amber-500"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="panNumber" className="text-sm text-gray-700">
                   PAN Number
                 </Label>
@@ -368,17 +550,28 @@ export default function AddJyotishiPage() {
                   className="border-gray-300 focus:border-amber-500 font-mono uppercase"
                 />
               </div>
+
+              <div className="md:col-span-2">
+                <ImageUpload
+                  label="Cancelled Cheque Image"
+                  value={cancelledChequeImage}
+                  onChange={setCancelledChequeImage}
+                  isThumbnail={false}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Upload a clear image of a cancelled cheque for bank verification (max 5MB)
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          {/* ── Submit Buttons ── */}
           <div className="flex gap-3 pt-6">
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !jyotishiCode || generatingCode || !!passwordError}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8"
             >
-              {loading ? "Creating…" : "Create Jyotishi"}
+              {loading ? "Creating…" : "Create Astrologer"}
             </Button>
             <Button
               type="button"

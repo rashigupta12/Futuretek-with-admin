@@ -163,7 +163,7 @@ export default function AdminLayout({
   subItems: [
     { title: "All Users", href: "/dashboard/admin/users", icon: List },
     { title: "Enrollments", href: "/dashboard/admin/enrollments", icon: Users },
-    { title: "Payments", href: "/dashboard/admin/payments", icon: CreditCard },
+    { title: "Revenue", href: "/dashboard/admin/payments", icon: CreditCard },
   ],
 },
    
