@@ -13,6 +13,7 @@ import {
 import { eq } from "drizzle-orm";
 
 // GET - List all courses
+// src/app/api/admin/courses/route.ts
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -20,7 +21,6 @@ export async function GET(req: NextRequest) {
 
     const query = db.select().from(CoursesTable);
 
-    // Define allowed status values as a type and array
     type CourseStatus = "COMPLETED" | "DRAFT" | "UPCOMING" | "REGISTRATION_OPEN" | "ONGOING" | "ARCHIVED";
     const allowedStatuses: CourseStatus[] = [
       "COMPLETED",
@@ -39,7 +39,14 @@ export async function GET(req: NextRequest) {
       ? query.where(eq(CoursesTable.status, typedStatus))
       : query);
 
-    return NextResponse.json({ courses }, { status: 200 });
+    return NextResponse.json({ courses }, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch courses" },

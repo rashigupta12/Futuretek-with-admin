@@ -29,12 +29,22 @@ declare module "next-auth/jwt" {
   }
 }
 
+// auth.ts
 export const { auth, handlers, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db),
-  session: { strategy: "jwt" },
+  session: { 
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   pages: {
     signIn: "/auth/login",
     error: "/auth/error",
+  },
+  events: {
+    async signOut() {
+      // Clear any server-side caches if needed
+      console.log("User signed out");
+    },
   },
   callbacks: {
     async signIn({ user }) {
@@ -42,10 +52,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (!existingUser || !existingUser?.emailVerified) {
         return false;
       }
-
       return true;
     },
-    async jwt({ token }) {
+    async jwt({ token, trigger }) {
+      // Force token refresh on update
+      if (trigger === "update") {
+        return token;
+      }
+
       if (!token.sub) {
         return token;
       }
@@ -56,7 +70,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       }
 
       token.role = existingUser.role;
-
       return token;
     },
     async session({ session, token }) {

@@ -24,7 +24,7 @@ import { Session } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useState, useTransition, useRef, useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { FuturetekLogo } from "./FutureTekLogo";
 
 type Course = {
@@ -346,22 +346,32 @@ export function SiteHeader() {
   const [isPending, startTransition] = useTransition();
 
   // SWR + Safe Normalization
-  const { data: courses = [], isLoading } = useSWR<Course[]>(
-    "/api/admin/courses",
-    fetcher,
-    {
-      dedupingInterval: 300_000,
-      revalidateOnFocus: false,
-      fallbackData: [],
-    }
-  );
-
-  const handleLogout = () => {
-    startTransition(() => {
-      signOut({ callbackUrl: "/auth/login" });
+ const { data: courses = [], isLoading } = useSWR<Course[]>(
+  "/api/admin/courses",
+  fetcher,
+  {
+    dedupingInterval: 300_000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true, // Add this
+    fallbackData: [],
+  }
+);
+// Add a manual refresh function
+// const refreshCourses = () => {
+//   mutate("/api/admin/courses");
+// };
+const handleLogout = async () => {
+  startTransition(async () => {
+    // Clear SWR cache before logout
+    await mutate(() => true, undefined, { revalidate: false });
+    
+    // Sign out with proper redirect
+    await signOut({ 
+      callbackUrl: "/auth/login",
+      redirect: true 
     });
-  };
-
+  });
+};
   return (
     <header className="bg-white sticky top-0 z-50 border-b border-slate-200 shadow-sm">
       <div className="mx-auto flex h-16 max-w-screen-xl items-center gap-4 px-4">

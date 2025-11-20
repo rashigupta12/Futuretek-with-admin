@@ -2,7 +2,7 @@
 // src/app/(protected)/dashboard/admin/coupons-types/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Search, Edit, Eye, Filter, MoreVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -37,20 +37,26 @@ export default function CouponTypesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [discountTypeFilter, setDiscountTypeFilter] = useState("ALL");
 
-  // Fetch coupon types
-  useEffect(() => {
-    fetchCouponTypes();
-  }, [discountTypeFilter]);
-
-  const fetchCouponTypes = async () => {
+  // Use useCallback to memoize the fetch function
+  const fetchCouponTypes = useCallback(async () => {
     try {
       setLoading(true);
-      const url =
+      const baseUrl =
         discountTypeFilter === "ALL"
           ? "/api/admin/coupon-types"
           : `/api/admin/coupon-types?discountType=${discountTypeFilter}`;
 
-      const res = await fetch(url);
+      // Add cache busting parameter
+      const cacheBuster = `${baseUrl.includes('?') ? '&' : '?'}_=${new Date().getTime()}`;
+      const url = `${baseUrl}${cacheBuster}`;
+
+      const res = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+      
       const data = await res.json();
 
       const mapped: CouponType[] = (data.couponTypes || []).map((ct: any) => ({
@@ -75,25 +81,12 @@ export default function CouponTypesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [discountTypeFilter]);
 
-  // Delete handler
-  // const handleDelete = async (id: string) => {
-  //   if (!confirm("Are you sure you want to delete this coupon type?")) return;
-
-  //   try {
-  //     const res = await fetch(`/api/admin/coupon-types/${id}`, { method: "DELETE" });
-  //     if (res.ok) {
-  //       setCouponTypes((prev) => prev.filter((ct) => ct.id !== id));
-  //       alert("Coupon type deleted successfully");
-  //     } else {
-  //       alert("Failed to delete coupon type");
-  //     }
-  //   } catch (err) {
-  //     console.error("Delete error:", err);
-  //     alert("Error deleting coupon type");
-  //   }
-  // };
+  // Fetch coupon types when component mounts or filter changes
+  useEffect(() => {
+    fetchCouponTypes();
+  }, [fetchCouponTypes]);
 
   // Filter by search
   const filteredCouponTypes = couponTypes.filter((ct) =>
@@ -174,7 +167,9 @@ export default function CouponTypesPage() {
           <div className="p-8 text-center text-muted-foreground">Loading coupon types...</div>
         ) : filteredCouponTypes.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
-            No coupon types found. Create your first coupon type!
+            {searchTerm || discountTypeFilter !== "ALL" 
+              ? "No coupon types match your search criteria."
+              : "No coupon types found. Create your first coupon type!"}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -277,15 +272,6 @@ export default function CouponTypesPage() {
                                 Edit
                               </Button>
                             </Link>
-                            {/* <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10 rounded-none"
-                              onClick={() => handleDelete(couponType.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </Button> */}
                           </div>
                         </PopoverContent>
                       </Popover>

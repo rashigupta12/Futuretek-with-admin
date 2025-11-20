@@ -14,7 +14,12 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { useDebouncedCallback } from "use-debounce";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url, {
+  cache: 'no-store',
+  headers: {
+    'Cache-Control': 'no-cache',
+  }
+}).then((res) => res.json());
 
 type Coupon = {
   id: string;
@@ -64,8 +69,11 @@ export default function MyCouponsPage() {
   const [creatingCoupon, setCreatingCoupon] = useState(false);
   const [maxUsageError, setMaxUsageError] = useState("");
 
-  // Get the API URL with current filters
-  const couponsApiUrl = `/api/jyotishi/coupons?page=${page}&limit=${limit}&status=${statusFilter}`;
+  // Get the API URL with current filters and cache busting
+  const couponsApiUrl = useMemo(() => {
+    const timestamp = Date.now();
+    return `/api/jyotishi/coupons?page=${page}&limit=${limit}&status=${statusFilter}&_=${timestamp}`;
+  }, [page, limit, statusFilter]);
 
   // SWR for coupons with enhanced configuration
   const { data: couponsData, isLoading, mutate } = useSWR(
@@ -74,7 +82,9 @@ export default function MyCouponsPage() {
     { 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 5000 // Reduce deduping interval for faster updates
+      revalidateOnMount: true,
+      dedupingInterval: 0, // Disable deduping for immediate updates
+      refreshInterval: 0, // No auto-refresh, we'll control it manually
     }
   );
 
@@ -176,6 +186,19 @@ export default function MyCouponsPage() {
     };
   }, [selectedType, discountValue, debouncedPreview]);
 
+  // Force refresh function
+  const forceRefresh = useCallback(async () => {
+    // Clear all SWR cache for coupon endpoints
+    await globalMutate(
+      key => typeof key === 'string' && key.startsWith('/api/jyotishi/coupons'),
+      undefined,
+      { revalidate: true }
+    );
+    
+    // Also revalidate the current view
+    await mutate();
+  }, [mutate]);
+
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedType || !discountValue || !validFrom || !validUntil) return;
@@ -220,16 +243,12 @@ export default function MyCouponsPage() {
           icon: 'success',
           title: 'Coupon Created!',
           text: 'Your coupon has been created successfully',
-          timer: 3000,
+          timer: 2000,
           showConfirmButton: false
         });
         
+        // Close sidebar
         setShowSidebar(false);
-        
-        // Enhanced revalidation - multiple approaches
-        await mutate(); // Revalidate current data
-        await globalMutate(couponsApiUrl); // Force re-fetch
-        await globalMutate(/^\/api\/jyotishi\/coupons/); // Revalidate all coupon-related endpoints
         
         // Reset form
         setSelectedType("");
@@ -239,6 +258,14 @@ export default function MyCouponsPage() {
         setValidUntil(undefined);
         setPreviewCode("");
         setMaxUsageError("");
+        
+        // Force refresh with multiple strategies
+        await forceRefresh();
+        
+        // Additional forced revalidation after a short delay
+        setTimeout(() => {
+          forceRefresh();
+        }, 100);
       } else {
         const err = await res.json();
         Swal.fire({
@@ -248,7 +275,8 @@ export default function MyCouponsPage() {
           confirmButtonColor: '#d33',
         });
       }
-    } catch {
+    } catch (error) {
+      console.error('Error creating coupon:', error);
       Swal.fire({
         icon: 'error',
         title: 'Network Error',
@@ -336,13 +364,17 @@ export default function MyCouponsPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="p-8">
-            {[...Array(5)].map((_, i) => (
-              <CouponRowSkeleton key={i} />
-            ))}
+            <table className="w-full">
+              <tbody>
+                {[...Array(5)].map((_, i) => (
+                  <CouponRowSkeleton key={i} />
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : filteredCoupons.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            No coupons. <button onClick={() => setShowSidebar(true)} className="text-blue-600 underline">Create one!</button>
+            No coupons found. <button onClick={() => setShowSidebar(true)} className="text-blue-600 underline">Create one!</button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -527,7 +559,7 @@ export default function MyCouponsPage() {
                   <button
                     type="submit"
                     disabled={creatingCoupon || isDiscountExceeded || !!maxUsageError}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg disabled:opacity-50 hover:from-blue-700 hover:to-blue-800 transition-all"
                   >
                     {creatingCoupon ? "Creating..." : "Create Coupon"}
                   </button>

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Wallet,
   CheckCircle,
@@ -21,10 +21,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { useDebouncedCallback } from "use-debounce";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url, {
+  cache: 'no-store',
+  headers: {
+    'Cache-Control': 'no-cache',
+  }
+}).then((res) => res.json());
 
 type Payout = {
   id: string;
@@ -35,10 +40,6 @@ type Payout = {
   reason?: string;
 };
 
-// type EarningsStats = {
-//   pendingEarnings: number;
-// };
-
 const RowSkeleton = () => <Skeleton className="h-12 w-full rounded-lg" />;
 
 export default function PayoutsPage() {
@@ -46,34 +47,64 @@ export default function PayoutsPage() {
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const limit = 15;
 
-  // SWR: Payouts + Earnings (cached)
+  // Generate unique URLs with timestamps for cache busting
+  const payoutsUrl = useMemo(() => {
+    return `/api/jyotishi/payouts?_=${Date.now()}`;
+  }, []);
+
+  const earningsUrl = useMemo(() => {
+    return `/api/jyotishi/earnings?_=${Date.now()}`;
+  }, []);
+
+  // SWR: Payouts with enhanced revalidation
   const {
     data: payoutsData,
     isLoading: loadingPayouts,
     mutate: mutatePayouts,
-  } = useSWR("/api/jyotishi/payouts", fetcher, {
+  } = useSWR(payoutsUrl, fetcher, {
     revalidateOnFocus: false,
-    dedupingInterval: 60000,
+    revalidateOnReconnect: true,
+    revalidateOnMount: true,
+    dedupingInterval: 0, // Disable deduping for immediate updates
   });
 
-  const { data: earningsData } = useSWR("/api/jyotishi/earnings", fetcher, {
+  // SWR: Earnings with enhanced revalidation
+  const { data: earningsData, mutate: mutateEarnings } = useSWR(earningsUrl, fetcher, {
     revalidateOnFocus: false,
-    dedupingInterval: 60000,
+    revalidateOnReconnect: true,
+    revalidateOnMount: true,
+    dedupingInterval: 0,
   });
 
   const payouts: Payout[] = payoutsData?.payouts || [];
   const available = Number(earningsData?.stats?.pendingEarnings ?? 0);
 
   // Pagination
-  const [page, setPage] = useState(1);
-  const limit = 15;
   const paginated = useMemo(() => {
     const start = (page - 1) * limit;
     return payouts.slice(start, start + limit);
   }, [payouts, page]);
 
   const totalPages = Math.ceil(payouts.length / limit);
+
+  // Force refresh function
+  const forceRefresh = useCallback(async () => {
+    // Clear all SWR cache for payout and earnings endpoints
+    await globalMutate(
+      key => typeof key === 'string' && (key.startsWith('/api/jyotishi/payouts') || key.startsWith('/api/jyotishi/earnings')),
+      undefined,
+      { revalidate: true }
+    );
+    
+    // Also revalidate current data
+    await Promise.all([
+      mutatePayouts(),
+      mutateEarnings()
+    ]);
+  }, [mutatePayouts, mutateEarnings]);
 
   // Debounced amount validation
   const debouncedValidate = useDebouncedCallback((value: string) => {
@@ -84,58 +115,68 @@ export default function PayoutsPage() {
     else setError("");
   }, 300);
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setAmount(val);
     debouncedValidate(val);
-  };
+  }, [debouncedValidate]);
 
   const handleSubmit = async () => {
-  if (error || !amount || Number(amount) > available) return;
+    if (error || !amount || Number(amount) > available) return;
 
-  setSubmitting(true);
-  try {
-    const res = await fetch("/api/jyotishi/payouts/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: Number(amount) }),
-    });
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/jyotishi/payouts/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: Number(amount) }),
+      });
 
-    if (!res.ok) {
-      const err = await res.json();
-      setError(err.error || "Failed");
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.error || "Failed");
+        Swal.fire({
+          icon: 'error',
+          title: 'Request Failed',
+          text: err.error || 'Failed to submit payout request',
+          confirmButtonColor: '#d33',
+        });
+        return;
+      }
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Payout Requested!',
+        text: `₹${Number(amount).toLocaleString()} payout request submitted successfully.`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+      // Close sidebar and reset form
+      setShowSidebar(false);
+      setAmount("");
+      setError("");
+      
+      // Force refresh with multiple strategies
+      await forceRefresh();
+      
+      // Additional forced revalidation after a short delay
+      setTimeout(() => {
+        forceRefresh();
+      }, 100);
+    } catch (err) {
+      console.error('Error submitting payout:', err);
+      setError("Network error");
       Swal.fire({
         icon: 'error',
-        title: 'Request Failed',
-        text: err.error || 'Failed to submit payout request',
+        title: 'Network Error',
+        text: 'Failed to submit payout request. Please check your connection.',
         confirmButtonColor: '#d33',
       });
-      return;
+    } finally {
+      setSubmitting(false);
     }
-
-    setShowSidebar(false);
-    setAmount("");
-    mutatePayouts(); // Refresh payouts
-    
-    await Swal.fire({
-      icon: 'success',
-      title: 'Payout Requested!',
-      text: `₹${Number(amount).toLocaleString()} payout request submitted successfully.`,
-      timer: 3000,
-      showConfirmButton: false
-    });
-  } catch {
-    setError("Network error");
-    Swal.fire({
-      icon: 'error',
-      title: 'Network Error',
-      text: 'Failed to submit payout request. Please check your connection.',
-      confirmButtonColor: '#d33',
-    });
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
   const getStatusIcon = (status: Payout["status"]) => {
     switch (status) {
@@ -162,7 +203,6 @@ export default function PayoutsPage() {
     }
   };
 
-  // FIXED: All stats are numbers
   const stats = useMemo(() => {
     const total = payouts.reduce((s, p) => s + Number(p.amount), 0);
     const paid = payouts
@@ -173,7 +213,7 @@ export default function PayoutsPage() {
     return {
       totalPayouts: payouts.length,
       totalAmount: total,
-      pendingPayouts: pendingCount, // ← number, not array
+      pendingPayouts: pendingCount,
       paidAmount: paid,
     };
   }, [payouts]);
@@ -274,7 +314,9 @@ export default function PayoutsPage() {
               ))}
             </div>
           ) : payouts.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">No payout requests yet.</div>
+            <div className="text-center py-12 text-gray-500">
+              No payout requests yet. <button onClick={() => setShowSidebar(true)} className="text-blue-600 underline">Request one!</button>
+            </div>
           ) : (
             <>
               <Table>
@@ -376,7 +418,6 @@ export default function PayoutsPage() {
                         placeholder="15000"
                         className={`pl-3 pr-12 ${error ? "border-rose-500" : ""}`}
                       />
-                      {/* <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /> */}
                     </div>
                     {error && (
                       <p className="text-sm text-rose-600 mt-1 flex items-center gap-1">

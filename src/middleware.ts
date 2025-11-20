@@ -1,3 +1,4 @@
+// middleware.ts
 import authConfig from "@/auth.config";
 import {
   apiAuthPrefix,
@@ -14,19 +15,29 @@ import { NextResponse } from "next/server";
 const { auth } = NextAuth(authConfig);
 
 export default auth(async (req) => {
-  const { auth, nextUrl } = req;
-  const isLoggedIn = !!auth;
+  const { nextUrl } = req;
+  
+  // Get fresh token from cookies
+  const params: GetTokenParams = { 
+    req, 
+    secret: process.env.AUTH_SECRET!,
+    secureCookie: process.env.NODE_ENV === "production"
+  };
+  
+  const token = await getToken(params);
+  const isLoggedIn = !!token;
 
   console.log("🔍 Middleware check:", {
     path: nextUrl.pathname,
     isLoggedIn,
+    hasToken: !!token,
   });
 
   // 1. Allow API auth routes (NextAuth internal routes)
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
   if (isApiAuthRoute) {
     console.log("✅ API auth route - allowing");
-    return undefined;
+    return NextResponse.next();
   }
 
   // 2. Check public APIs - Allow without authentication
@@ -35,17 +46,14 @@ export default auth(async (req) => {
   );
   if (isPublicApi) {
     console.log("✅ Public API - allowing");
-    return undefined;
+    return NextResponse.next();
   }
 
-  // 3. Check if route is public (including /courses/*)
+  // 3. Check if route is public
   const isPublicRoute = publicRoutes.some((route) => {
     const matches = route instanceof RegExp 
       ? route.test(nextUrl.pathname) 
       : route === nextUrl.pathname;
-    if (matches) {
-      console.log(`✅ Matched public route: ${route}`);
-    }
     return matches;
   });
 
@@ -55,16 +63,16 @@ export default auth(async (req) => {
     console.log("🔐 Auth route detected");
     if (isLoggedIn) {
       console.log("↩️ Logged in user on auth route - redirecting to dashboard");
-      return Response.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
+      return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
     }
     console.log("✅ Allowing auth route");
-    return undefined;
+    return NextResponse.next();
   }
 
   // 5. Allow public routes without authentication
   if (isPublicRoute) {
     console.log("✅ Public route - allowing");
-    return undefined;
+    return NextResponse.next();
   }
 
   // 6. Redirect non-logged-in users to login for protected routes
@@ -72,32 +80,25 @@ export default auth(async (req) => {
     console.log("🚫 Not logged in, redirecting to login");
     const loginUrl = new URL("/auth/login", nextUrl);
     loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
-    return Response.redirect(loginUrl);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // 7. Role-based access control for logged-in users on protected routes
-  console.log("🔐 Checking role-based access");
-  const params: GetTokenParams = { req, secret: process.env.AUTH_SECRET! };
-  if (process.env.NODE_ENV === "production") {
-    params.secureCookie = true;
-  }
-  const token = await getToken(params);
-
-  if (!token || !token.role) {
-    console.log("🚫 No token or role - redirecting to login");
-    return NextResponse.redirect(new URL("/auth/login", req.url));
+  // 7. Role-based access control
+  if (!token.role) {
+    console.log("🚫 No role - redirecting to login");
+    return NextResponse.redirect(new URL("/auth/login", nextUrl));
   }
 
-  // Check if current route requires specific roles
+  // Check protected routes
   for (const pattern in protectedRoutes) {
     const regex = new RegExp(pattern);
     if (regex.test(nextUrl.pathname)) {
       const requiredRoles = protectedRoutes[pattern];
-      console.log(`🔐 Protected route matched: ${pattern}, required roles:`, requiredRoles);
+      console.log(`🔐 Protected route: ${pattern}, required:`, requiredRoles);
       
       if (!requiredRoles.includes(token.role)) {
         console.log(`🚫 User role ${token.role} not authorized`);
-        return NextResponse.redirect(new URL("/auth/login", req.url));
+        return NextResponse.redirect(new URL("/unauthorized", nextUrl));
       }
       
       console.log(`✅ User role ${token.role} authorized`);
@@ -105,14 +106,12 @@ export default auth(async (req) => {
   }
 
   console.log("✅ Allowing request");
-  return undefined;
+  return NextResponse.next();
 });
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
     "/(api|trpc)(.*)",
   ],
 };

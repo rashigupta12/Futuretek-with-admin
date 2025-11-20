@@ -13,7 +13,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BookOpen, Edit, Eye, Filter, MoreVertical, Plus, Search, Trash2, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Course = {
   id: string;
@@ -27,17 +27,13 @@ type Course = {
 };
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
+   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // Fetch courses
-  useEffect(() => {
-    fetchCourses();
-  }, [statusFilter]);
-
-  const fetchCourses = async () => {
+  // Use useCallback to memoize the fetch function
+  const fetchCourses = useCallback(async () => {
     try {
       setLoading(true);
       const url =
@@ -45,7 +41,17 @@ export default function CoursesPage() {
           ? "/api/admin/courses"
           : `/api/admin/courses?status=${statusFilter}`;
 
-      const res = await fetch(url);
+      // Add cache busting parameter
+      const cacheBuster = `?_=${new Date().getTime()}`;
+      const fetchUrl = url.includes('?') ? `${url}&_=${new Date().getTime()}` : `${url}${cacheBuster}`;
+
+      const res = await fetch(fetchUrl, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+      
       const data = await res.json();
 
       const mapped: Course[] = (data.courses || []).map((c: any) => ({
@@ -65,53 +71,60 @@ export default function CoursesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
 
-  // Delete handler
-const handleDelete = async (id: string) => {
-  const courseToDelete = courses.find(c => c.id === id);
-  
-  const result = await Swal.fire({
-    title: 'Are you sure?',
-    html: `You are about to delete <strong>"${courseToDelete?.title}"</strong>.<br>This action cannot be undone.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Yes, delete it!',
-    cancelButtonText: 'Cancel',
-    reverseButtons: true
-  });
+  // Fetch courses on mount and when status filter changes
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
 
-  if (!result.isConfirmed) return;
+  // Delete handler with immediate refresh
+  const handleDelete = async (id: string) => {
+    const courseToDelete = courses.find(c => c.id === id);
+    
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      html: `You are about to delete <strong>"${courseToDelete?.title}"</strong>.<br>This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
+    });
 
-  try {
-    const res = await fetch(`/api/admin/courses/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setCourses((prev) => prev.filter((c) => c.id !== id));
-      await Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Course has been deleted successfully.',
-        timer: 2000,
-        showConfirmButton: false
-      });
-    } else {
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/admin/courses/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Course has been deleted successfully.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        
+        // Immediately refresh the courses list
+        await fetchCourses();
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Delete Failed',
+          text: 'Failed to delete course. Please try again.',
+        });
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
       Swal.fire({
         icon: 'error',
-        title: 'Delete Failed',
-        text: 'Failed to delete course. Please try again.',
+        title: 'Error',
+        text: 'An error occurred while deleting the course.',
       });
     }
-  } catch (err) {
-    console.error("Delete error:", err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'An error occurred while deleting the course.',
-    });
-  }
-};
+  };
 
   // Filter by search
   const filteredCourses = courses.filter((c) =>

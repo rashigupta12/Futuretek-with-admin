@@ -1,7 +1,7 @@
 // src/app/(protected)/dashboard/admin/coupons-types/edit/[id]/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
@@ -30,77 +30,87 @@ export default function EditCouponTypePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const fetchCouponType = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Add cache busting
+      const cacheBuster = `?_=${new Date().getTime()}`;
+      const res = await fetch(`/api/admin/coupon-types/${id}${cacheBuster}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        }
+      });
+      
+      if (!res.ok) {
+        throw new Error("Coupon type not found");
+      }
+      
+      const data = await res.json();
+      setCouponType(data.couponType);
+    } catch (error) {
+      console.error("Failed to fetch coupon type:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Not Found',
+        text: 'Coupon type not found',
+      });
+      router.back();
+    } finally {
+      setLoading(false);
+    }
+  }, [id, router]);
+
   useEffect(() => {
     if (id) {
       fetchCouponType();
     }
-  }, [id]);
+  }, [id, fetchCouponType]);
 
- const fetchCouponType = async () => {
-  try {
-    setLoading(true);
-    const res = await fetch(`/api/admin/coupon-types/${id}`);
+  const handleSave = async () => {
+    if (!couponType) return;
     
-    if (!res.ok) {
-      throw new Error("Coupon type not found");
-    }
-    
-    const data = await res.json();
-    setCouponType(data.couponType);
-  } catch (error) {
-    console.error("Failed to fetch coupon type:", error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Not Found',
-      text: 'Coupon type not found',
-    });
-    router.back();
-  } finally {
-    setLoading(false);
-  }
-};
-
- const handleSave = async () => {
-  if (!couponType) return;
-  
-  try {
-    setSaving(true);
-    const res = await fetch(`/api/admin/coupon-types/${couponType.id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(couponType),
-    });
-
-    if (res.ok) {
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Coupon type updated successfully!',
-        timer: 2000,
-        showConfirmButton: false
+    try {
+      setSaving(true);
+      const res = await fetch(`/api/admin/coupon-types/${couponType.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(couponType),
       });
-      router.push("/dashboard/admin/coupons-types");
-    } else {
-      const error = await res.json();
+
+      if (res.ok) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Coupon type updated successfully!',
+          timer: 2000,
+          showConfirmButton: false
+        });
+        
+        // Force router refresh before navigation
+        router.refresh();
+        router.push("/dashboard/admin/coupons-types");
+      } else {
+        const error = await res.json();
+        Swal.fire({
+          icon: 'error',
+          title: 'Error!',
+          text: error.error || 'Failed to update coupon type',
+        });
+      }
+    } catch (error) {
+      console.error("Update error:", error);
       Swal.fire({
         icon: 'error',
         title: 'Error!',
-        text: error.error || 'Failed to update coupon type',
+        text: 'Error updating coupon type',
       });
+    } finally {
+      setSaving(false);
     }
-  } catch (error) {
-    console.error("Update error:", error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error!',
-      text: 'Error updating coupon type',
-    });
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   if (loading) {
     return (
