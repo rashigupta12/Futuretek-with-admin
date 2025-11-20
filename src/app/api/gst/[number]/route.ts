@@ -87,9 +87,9 @@ export async function GET(
 
     const data = await response.json();
     
-    if (debug) {
-      console.log("RAW GST RESPONSE:", JSON.stringify(data, null, 2));
-    }
+    console.log("RAW GST RESPONSE:", data);
+    
+    if (debug) console.log("GST API response received");
 
     // Validate response structure
     if (!data || typeof data !== 'object') {
@@ -107,53 +107,8 @@ export async function GET(
       );
     }
 
-    // Check if the API returned a flag indicating invalid GSTIN
-    if (data.flag === false || data.sts === "Cancelled") {
-      return NextResponse.json(
-        { error: "This GSTIN is cancelled or invalid" },
-        { status: 422 }
-      );
-    }
-
-    // Transform response to a standardized format
-    // The API may return different field names, so we normalize them
-    const normalizedData = {
-      gstin: data.gstin || cleanGstin,
-      legalName: data.lgnm || data.legalName || data.legal_name || null,
-      tradeName: data.tradeNam || data.tradeName || data.trade_name || null,
-      status: data.sts || data.status || "Unknown",
-      registrationDate: data.rgdt || data.registrationDate || null,
-      constitutionOfBusiness: data.ctb || data.constitutionOfBusiness || null,
-      taxpayerType: data.dty || data.taxpayerType || null,
-      address: null as string | null,
-      stateJurisdiction: data.stj || data.stateJurisdiction || null,
-      centerJurisdiction: data.ctj || data.centerJurisdiction || null,
-      lastUpdatedDate: data.lstupdt || data.lastUpdatedDate || null,
-    };
-
-    // Construct address from pradr (principal address) object if available
-    if (data.pradr) {
-      const addr = data.pradr;
-      const addressParts = [
-        addr.bno,   // Building/Flat number
-        addr.bnm,   // Building name
-        addr.st,    // Street
-        addr.loc,   // Locality
-        addr.dst,   // District
-        addr.stcd,  // State code/name
-        addr.pncd   // Pincode
-      ].filter(Boolean);
-      
-      normalizedData.address = addressParts.join(", ");
-    } else if (data.address) {
-      normalizedData.address = data.address;
-    }
-
-    if (debug) {
-      console.log("NORMALIZED RESPONSE:", JSON.stringify(normalizedData, null, 2));
-    }
-
-    return NextResponse.json(normalizedData);
+    // Return raw data as-is (like your working version)
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error("GST API Error:", error);

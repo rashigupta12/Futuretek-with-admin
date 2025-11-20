@@ -174,20 +174,60 @@ export const CheckoutSidebar = ({
         throw new Error(errorData.error || "GST verification failed");
       }
 
-      const data = await response.json();
+      const apiResponse = await response.json();
       
-      // Handle different response formats from the API
+      // Check if the API returned success
+      if (!apiResponse.flag || apiResponse.message === 'error') {
+        throw new Error(apiResponse.message || "GST verification failed");
+      }
+
+      // Extract the nested data object
+      const gstInfo = apiResponse.data;
+      
+      if (!gstInfo) {
+        throw new Error("Invalid GST data received from API");
+      }
+
+      // Build address from pradr object
+      let address = "";
+      if (gstInfo.pradr?.addr?.bno || gstInfo.pradr?.adr) {
+        // If we have the full formatted address
+        if (gstInfo.pradr.adr) {
+          address = gstInfo.pradr.adr;
+        } else if (gstInfo.pradr.addr) {
+          // Build from individual components
+          const addrComponents = gstInfo.pradr.addr;
+          const parts = [
+            addrComponents.flno,
+            addrComponents.bno && addrComponents.bno !== "0" ? addrComponents.bno : null,
+            addrComponents.bnm,
+            addrComponents.st,
+            addrComponents.loc,
+            addrComponents.dst,
+            addrComponents.stcd,
+            addrComponents.pncd
+          ].filter(Boolean);
+          address = parts.join(", ");
+        }
+      }
+
+      // Normalize the data structure
       const gstDetails: GSTData = {
-        gstin: data.gstin || gstNum,
-        legalName: data.legalName || data.legal_name || data.lgnm,
-        tradeName: data.tradeName || data.trade_name || data.tradeNam,
-        address: data.address || data.pradr?.addr || 
-                 `${data.pradr?.bno || ''} ${data.pradr?.st || ''} ${data.pradr?.loc || ''} ${data.pradr?.dst || ''} ${data.pradr?.stcd || ''}`.trim(),
-        status: data.status || data.sts,
+        gstin: gstInfo.gstin || gstNum,
+        legalName: gstInfo.lgnm,
+        tradeName: gstInfo.tradeNam,
+        address: address || undefined,
+        status: gstInfo.sts,
       };
+
+      // Validate that we have at least the essential data
+      if (!gstDetails.legalName && !gstDetails.tradeName) {
+        throw new Error("Incomplete GST data received");
+      }
 
       setGstData(gstDetails);
       setIsGstValid(true);
+      setGstError("");
     } catch (err: any) {
       console.error("GST verification error:", err);
       setGstError(err.message || "Failed to verify GST number");
@@ -510,7 +550,7 @@ export const CheckoutSidebar = ({
                 type="text"
                 value={gstNumber}
                 onChange={(e) => handleGstChange(e.target.value)}
-                placeholder="22AAAAA0000A1Z5"
+                placeholder="37AADCD4946L2Z8"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 disabled={isProcessing || isVerifyingGst}
                 maxLength={15}
@@ -567,7 +607,7 @@ export const CheckoutSidebar = ({
                   </div>
                 )}
                 
-                {gstData.tradeName && (
+                {gstData.tradeName && gstData.tradeName !== gstData.legalName && (
                   <div className="flex items-start gap-2 text-xs">
                     <Building2 className="h-3 w-3 text-gray-600 mt-0.5 flex-shrink-0" />
                     <div>
