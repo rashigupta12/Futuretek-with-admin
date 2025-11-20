@@ -1,4 +1,5 @@
 /*eslint-disable @typescript-eslint/no-explicit-any */
+/*eslint-disable @typescript-eslint/no-unused-vars */
 // app/(protected)/dashboard/user/courses/page.tsx
 "use client";
 
@@ -381,7 +382,7 @@ export default function MyCoursesPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {enrollments.map((enrollment) => {
           const isCompleted = enrollment.status === "COMPLETED";
-          const progress = getProgress(enrollment);
+          // const progress = getProgress(enrollment);
           const hasCertificate = enrollment.certificateIssued;
           const canRequest = canRequestCertificate(enrollment);
 
