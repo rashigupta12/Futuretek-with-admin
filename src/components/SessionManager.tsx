@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
+import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,18 +29,19 @@ interface SessionManagerProps {
   totalSessions: number;
 }
 
-export default function SessionManager({ 
-  sessions, 
-  setSessions, 
-  totalSessions 
+export default function SessionManager({
+  sessions,
+  setSessions,
+  totalSessions,
 }: SessionManagerProps) {
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Session | null>(null);
 
   const addSession = () => {
-    const newSessionNumber = sessions.length > 0 
-      ? Math.max(...sessions.map(s => s.sessionNumber)) + 1 
-      : 1;
+    const newSessionNumber =
+      sessions.length > 0
+        ? Math.max(...sessions.map((s) => s.sessionNumber)) + 1
+        : 1;
 
     const newSession: Session = {
       id: `temp-${Date.now()}`,
@@ -73,7 +74,20 @@ export default function SessionManager({
   const saveEditing = () => {
     if (!editFormData) return;
 
-    const updatedSessions = sessions.map(session =>
+    if (
+      !editFormData.sessionDate ||
+      !editFormData.sessionTime ||
+      !editFormData.meetingLink
+    ) {
+      Swal.fire({
+        icon: "error",
+        title: "Missing Required Fields",
+        text: "Date, Time, and Meeting Link are required fields.",
+        confirmButtonColor: "#16a34a",
+      });
+      return;
+    }
+    const updatedSessions = sessions.map((session) =>
       session.id === editingSession ? editFormData : session
     );
     setSessions(updatedSessions);
@@ -95,7 +109,7 @@ export default function SessionManager({
       sessionNumber: idx + 1,
     }));
     setSessions(renumberedSessions);
-    
+
     // If we're deleting the session being edited, cancel editing
     if (sessions[index].id === editingSession) {
       cancelEditing();
@@ -103,8 +117,16 @@ export default function SessionManager({
   };
 
   const generateSessionsFromTotal = () => {
-    if (!totalSessions || totalSessions <= 0) return;
-    
+    if (!totalSessions || totalSessions <= 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Invalid Total Sessions",
+        text: "Please set a valid total sessions count first.",
+        confirmButtonColor: "#16a34a",
+      });
+      return;
+    }
+
     const newSessions: Session[] = [];
     for (let i = 1; i <= totalSessions; i++) {
       newSessions.push({
@@ -122,23 +144,27 @@ export default function SessionManager({
       });
     }
     setSessions(newSessions);
+    if (newSessions.length > 0) {
+      setEditingSession(newSessions[0].id);
+      setEditFormData(newSessions[0]);
+    }
   };
 
   const formatTime = (time: string) => {
     if (!time) return "-";
-    const [hours, minutes] = time.split(':');
+    const [hours, minutes] = time.split(":");
     const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const ampm = hour >= 12 ? "PM" : "AM";
     const formattedHour = hour % 12 || 12;
     return `${formattedHour}:${minutes} ${ampm}`;
   };
 
   const formatDate = (date: string) => {
     if (!date) return "-";
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -176,10 +202,9 @@ export default function SessionManager({
           <div className="text-center py-8 text-gray-500">
             <p>No sessions added yet.</p>
             <p className="text-sm mt-2">
-              {totalSessions 
+              {totalSessions
                 ? `Click "Generate ${totalSessions} Sessions" to auto-create sessions or add them manually.`
-                : 'Set "Total Sessions" above to enable auto-generation.'
-              }
+                : 'Set "Total Sessions" above to enable auto-generation.'}
             </p>
           </div>
         ) : (
@@ -231,10 +256,13 @@ export default function SessionManager({
 
                       {/* Session Title */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ? (
+                        {editingSession === session.id ||
+                        session.id.startsWith("temp-") ? (
                           <Input
                             value={editFormData?.title || ""}
-                            onChange={(e) => updateEditFormData("title", e.target.value)}
+                            onChange={(e) =>
+                              updateEditFormData("title", e.target.value)
+                            }
                             placeholder="Session title"
                             className="w-full"
                             required
@@ -246,11 +274,14 @@ export default function SessionManager({
 
                       {/* Date */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ? (
+                        {editingSession === session.id ||
+                        session.id.startsWith("temp-") ? (
                           <Input
                             type="date"
                             value={editFormData?.sessionDate || ""}
-                            onChange={(e) => updateEditFormData("sessionDate", e.target.value)}
+                            onChange={(e) =>
+                              updateEditFormData("sessionDate", e.target.value)
+                            }
                             className="w-full"
                             required
                           />
@@ -261,11 +292,14 @@ export default function SessionManager({
 
                       {/* Time */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ? (
+                        {editingSession === session.id ||
+                        session.id.startsWith("temp-") ? (
                           <Input
                             type="time"
                             value={editFormData?.sessionTime || ""}
-                            onChange={(e) => updateEditFormData("sessionTime", e.target.value)}
+                            onChange={(e) =>
+                              updateEditFormData("sessionTime", e.target.value)
+                            }
                             className="w-full"
                             required
                           />
@@ -276,11 +310,17 @@ export default function SessionManager({
 
                       {/* Duration */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ? (
+                        {editingSession === session.id ||
+                        session.id.startsWith("temp-") ? (
                           <Input
                             type="number"
                             value={editFormData?.duration || 60}
-                            onChange={(e) => updateEditFormData("duration", parseInt(e.target.value) || 60)}
+                            onChange={(e) =>
+                              updateEditFormData(
+                                "duration",
+                                parseInt(e.target.value) || 60
+                              )
+                            }
                             className="w-full"
                             min="1"
                             required
@@ -292,18 +332,22 @@ export default function SessionManager({
 
                       {/* Meeting Link */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ? (
+                        {editingSession === session.id ||
+                        session.id.startsWith("temp-") ? (
                           <Input
                             type="url"
                             value={editFormData?.meetingLink || ""}
-                            onChange={(e) => updateEditFormData("meetingLink", e.target.value)}
+                            onChange={(e) =>
+                              updateEditFormData("meetingLink", e.target.value)
+                            }
                             placeholder="https://zoom.us/j/..."
                             className="w-full"
+                            required
                           />
                         ) : session.meetingLink ? (
-                          <a 
-                            href={session.meetingLink} 
-                            target="_blank" 
+                          <a
+                            href={session.meetingLink}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800 underline break-all"
                           >
@@ -316,10 +360,16 @@ export default function SessionManager({
 
                       {/* Passcode */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ? (
+                        {editingSession === session.id ||
+                        session.id.startsWith("temp-") ? (
                           <Input
                             value={editFormData?.meetingPasscode || ""}
-                            onChange={(e) => updateEditFormData("meetingPasscode", e.target.value)}
+                            onChange={(e) =>
+                              updateEditFormData(
+                                "meetingPasscode",
+                                e.target.value
+                              )
+                            }
                             placeholder="123456"
                             className="w-full"
                           />
@@ -330,18 +380,21 @@ export default function SessionManager({
 
                       {/* Recording URL */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ? (
+                        {editingSession === session.id ||
+                        session.id.startsWith("temp-") ? (
                           <Input
                             type="url"
                             value={editFormData?.recordingUrl || ""}
-                            onChange={(e) => updateEditFormData("recordingUrl", e.target.value)}
+                            onChange={(e) =>
+                              updateEditFormData("recordingUrl", e.target.value)
+                            }
                             placeholder="https://youtube.com/..."
                             className="w-full"
                           />
                         ) : session.recordingUrl ? (
-                          <a 
-                            href={session.recordingUrl} 
-                            target="_blank" 
+                          <a
+                            href={session.recordingUrl}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:text-blue-800 underline break-all"
                           >
@@ -354,12 +407,18 @@ export default function SessionManager({
 
                       {/* Status */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ? (
+                        {editingSession === session.id ||
+                        session.id.startsWith("temp-") ? (
                           <div className="flex items-center">
                             <input
                               type="checkbox"
                               checked={editFormData?.isCompleted || false}
-                              onChange={(e) => updateEditFormData("isCompleted", e.target.checked)}
+                              onChange={(e) =>
+                                updateEditFormData(
+                                  "isCompleted",
+                                  e.target.checked
+                                )
+                              }
                               className="rounded border-gray-300"
                             />
                             <Label className="ml-2 text-sm">Completed</Label>
@@ -380,7 +439,8 @@ export default function SessionManager({
                       {/* Actions */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
                         <div className="flex items-center gap-2">
-                          {editingSession === session.id ? (
+                          {editingSession === session.id ||
+                          session.id.startsWith("temp-") ? (
                             <>
                               <Button
                                 type="button"
@@ -444,7 +504,9 @@ export default function SessionManager({
                       <Textarea
                         id="edit-description"
                         value={editFormData.description}
-                        onChange={(e) => updateEditFormData("description", e.target.value)}
+                        onChange={(e) =>
+                          updateEditFormData("description", e.target.value)
+                        }
                         placeholder="Session details and topics covered..."
                         rows={3}
                         className="mt-1"

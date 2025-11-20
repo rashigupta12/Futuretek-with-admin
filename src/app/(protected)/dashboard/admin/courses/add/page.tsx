@@ -91,30 +91,31 @@ export default function AddCoursePage() {
   }, [registrationDeadline, startDate, endDate]);
 
   // Auto-generate sessions
-  useEffect(() => {
-    if (totalSessions && sessions.length === 0) {
-      const total = parseInt(totalSessions);
-      if (total > 0) {
-        const newSessions: Session[] = [];
-        for (let i = 1; i <= total; i++) {
-          newSessions.push({
-            id: `temp-${Date.now()}-${i}`,
-            sessionNumber: i,
-            title: `Session ${i}`,
-            description: "",
-            sessionDate: "",
-            sessionTime: "",
-            duration: 60,
-            meetingLink: "",
-            meetingPasscode: "",
-            recordingUrl: "",
-            isCompleted: false,
-          });
-        }
-        setSessions(newSessions);
-      }
-    }
-  }, [totalSessions]);
+  // useEffect(() => {
+  //   if (totalSessions && sessions.length === 0) {
+  //     const total = parseInt(totalSessions);
+  //     if (total > 0) {
+  //       const newSessions: Session[] = [];
+  //       for (let i = 1; i <= total; i++) {
+  //         newSessions.push({
+  //           id: `temp-${Date.now()}-${i}`,
+  //           sessionNumber: i,
+  //           title: `Session ${i}`,
+  //           description: "",
+  //           sessionDate: "",
+  //           sessionTime: "",
+  //           duration: 60,
+  //           meetingLink: "",
+  //           meetingPasscode: "",
+  //           recordingUrl: "",
+  //           isCompleted: false,
+  //         });
+  //       }
+  //       setSessions(newSessions);
+  //     }
+  //   }
+  // }, [totalSessions]);
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

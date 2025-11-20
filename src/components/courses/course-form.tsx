@@ -23,34 +23,34 @@ export const Field = ({
   </div>
 );
 
-export const TextInput = ({
-  value,
-  onChange,
-  placeholder,
-  required,
-  type = "text",
-  onCapitalize = false,
-}: {
+interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
   value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  type?: string;
-    onCapitalize?: boolean; 
-}) => (
-  <Input
-    type={type}
-    required={required}
-    value={value}
- onChange={(e) => {
-      let newValue = e.target.value;
-      if (onCapitalize && newValue.length > 0) {
-        newValue = newValue.charAt(0).toUpperCase() + newValue.slice(1);
-      }
-      onChange(newValue);
-    }}    placeholder={placeholder}
-  />
-);
+  onChange: (value: string) => void;
+}
+export const TextInput: React.FC<TextInputProps> = ({ 
+  type, 
+  value, 
+  onChange, 
+  onWheel,
+  ...props 
+}) => {
+  const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    if (type === 'number') {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onWheel={onWheel || handleWheel}
+      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      {...props}
+    />
+  );
+};
 
 export const DateInput = ({
   value,
