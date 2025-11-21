@@ -63,7 +63,7 @@ export function SiteFooter() {
                 { href: "/courses", label: "All Courses" },
                 { href: "/about", label: "About Institute" },
                 { href: "/contact", label: "Contact Us" },
-                { href: "/blog", label: "Blog" },
+                { href: "/blogs", label: "Blog" },
               ].map((link) => (
                 <li key={link.href}>
                   <Link 
@@ -148,18 +148,7 @@ export function SiteFooter() {
               &copy; 2024 Futuretek Institute. All rights reserved.
             </div>
             
-            {/* Links */}
-            <div className="flex items-center gap-6 text-sm">
-              <Link href="/privacy-policy" className="text-slate-400 hover:text-white transition-colors">
-                Privacy Policy
-              </Link>
-              <Link href="/terms-of-service" className="text-slate-400 hover:text-white transition-colors">
-                Terms of Service
-              </Link>
-              <Link href="/refund-policy" className="text-slate-400 hover:text-white transition-colors">
-                Refund Policy
-              </Link>
-            </div>
+            
           </div>
         </div>
       </div>
