@@ -1,11 +1,10 @@
 /*eslint-disable  @typescript-eslint/no-explicit-any*/
+/*eslint-disable  @typescript-eslint/no-unused-vars*/
 "use client";
 
-import { TableContainer } from "@/components/admin/TableContainer";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Filter, Search } from "lucide-react";
+import { BookOpen, Calendar, DollarSign, Search, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -154,126 +153,215 @@ export default function EnrollmentsPage() {
     return matchesSearch && matchesCourse;
   });
 
+  // Calculate stats
+  const totalRevenue = enrollments.reduce((sum, e) => sum + e.payment.amount, 0);
+  const activeEnrollments = enrollments.filter(e => e.status === "ACTIVE").length;
+  const completedEnrollments = enrollments.filter(e => e.status === "COMPLETED").length;
+
   return (
-    <div className="p-4 w-full mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">All Enrollments</h2>
-          <p className="text-muted-foreground mt-1">
+    <div className="space-y-6">
+      {/* Header with Search and Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex-1">
+          <h2 className="text-3xl font-bold bg-blue-700 bg-clip-text text-transparent">
+            Enrollments Management
+          </h2>
+          <p className="text-gray-600 mt-2">
             Track student progress with completed payments ({filtered.length} enrollments)
           </p>
         </div>
-      </div>
 
-      <div className="bg-card rounded-lg border p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search student or course..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={courseFilter} onValueChange={setCourseFilter}>
-              <SelectTrigger className="w-64">
+
+          {/* Course Filter */}
+          {/* <Select value={courseFilter} onValueChange={setCourseFilter}>
+            <SelectTrigger className="w-full sm:w-64 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-400" />
                 <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {courses.map((c) => (
+                <SelectItem key={c.id} value={c.id} className="focus:bg-blue-50">
+                  {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select> */}
         </div>
       </div>
 
-      <TableContainer>
+      {/* Stats Overview - All cards in single row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-600">
+                Total Enrollments
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {enrollments.length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-600">
+                Total Revenue
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                ₹{totalRevenue.toLocaleString("en-IN")}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-600">Active</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {activeEnrollments}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gray-500 rounded-xl flex items-center justify-center">
+              <BookOpen className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Completed</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {completedEnrollments}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading enrollments...</div>
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-4">Loading Enrollments...</p>
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
-            No enrollments found with completed payments.
+          <div className="p-12 text-center">
+            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No enrollments found
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {searchTerm || courseFilter !== "ALL"
+                ? "Try adjusting your search or filter criteria"
+                : "No enrollments found with completed payments."}
+            </p>
+            {searchTerm || courseFilter !== "ALL" ? (
+              <Button
+                onClick={() => {
+                  setSearchTerm("");
+                  setCourseFilter("ALL");
+                }}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+              >
+                Clear Filters
+              </Button>
+            ) : null}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-muted/50 border-b">
+              <thead className="bg-blue-500 text-white border-b border-blue-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Student
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Student Details
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Course
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Status
+               
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Payment
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Paid
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Enrolled
                   </th>
-                  {/* <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Actions
-                  </th> */}
+             
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-gray-100">
                 {filtered.map((e) => (
-                  <tr key={e.id} className="hover:bg-muted/50 transition-colors">
+                  <tr key={e.id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
-                      <Link href={`/dashboard/admin/users/${e.user.id}`} className="font-medium hover:underline">
+                      <Link 
+                        href={`/dashboard/admin/users/${e.user.id}`} 
+                        className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors hover:underline block"
+                      >
                         {e.user.name}
                       </Link>
-                      <div className="text-sm text-muted-foreground">{e.user.email}</div>
+                      <div className="text-sm text-gray-600">{e.user.email}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground">{e.course.title}</td>
+                    
                     <td className="px-6 py-4">
-                      <Badge variant="secondary">{e.status}</Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-foreground">
-                        ₹{e.payment.amount.toLocaleString("en-IN")}
+                      <div className="text-sm font-medium text-gray-900">
+                        {e.course.title}
                       </div>
-                      {/* <Badge variant="default" className="mt-1 text-xs">
+                    </td>
+
+                  
+
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                       
+                        <span className="text-sm font-semibold text-gray-900">
+                          ₹{e.payment.amount.toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                      <div className="text-xs text-green-600 font-medium mt-1">
                         {e.payment.status}
-                      </Badge> */}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {new Date(e.enrolledAt).toLocaleDateString("en-IN")}
-                    </td>
-                    {/* <td className="px-6 py-4 text-right">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9">
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent align="end" className="w-48 p-0">
-                          <Link href={`/dashboard/admin/payments/invoice/${e.payment.invoiceId}`}>
-                            <button className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2">
-                              <Eye className="h-4 w-4" />
-                              View Payment
-                            </button>
-                          </Link>
-                        </PopoverContent>
-                      </Popover>
-                    </td> */}
+
+                   <td className="px-6 py-4">
+  <div className="flex items-center gap-2 text-sm text-gray-600">
+    <Calendar className="h-4 w-4 text-gray-400" />
+    {new Date(e.enrolledAt).toLocaleDateString("en-GB")}
+  </div>
+</td>
+
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </TableContainer>
+      </div>
     </div>
   );
 }

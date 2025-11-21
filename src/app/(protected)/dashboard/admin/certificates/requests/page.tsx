@@ -1,12 +1,14 @@
 /*eslint-disable @typescript-eslint/no-explicit-any */
+/*eslint-disable @typescript-eslint/no-unused-vars */
 // app/dashboard/admin/certificates/requests/page.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Award, Clock, CheckCircle, XCircle, Search, User, Mail, BookOpen } from "lucide-react";
-import CertificateTemplate from "@/components/certificate-template";
-import { generateCertificatePDF } from "@/hooks/generate-certificate-pdf";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/auth";
+import { generateCertificatePDF } from "@/hooks/generate-certificate-pdf";
+import { Award, BookOpen, CheckCircle, Clock, Download, FileText, Mail, Search, XCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 
 interface CertificateRequest {
@@ -307,85 +309,52 @@ export default function CertificateRequestsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    
-    switch (status) {
-      case "PENDING":
-        return `${baseClasses} bg-yellow-100 text-yellow-800`;
-      case "APPROVED":
-        return `${baseClasses} bg-green-100 text-green-800`;
-      case "REJECTED":
-        return `${baseClasses} bg-red-100 text-red-800`;
-      default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return <Clock className="w-3 h-3 mr-1" />;
-      case "APPROVED":
-        return <CheckCircle className="w-3 h-3 mr-1" />;
-      case "REJECTED":
-        return <XCircle className="w-3 h-3 mr-1" />;
-      default:
-        return null;
-    }
-  };
+  // Calculate stats
+  const pendingRequests = requests.filter(r => r.status === "PENDING").length;
+  const approvedRequests = requests.filter(r => r.status === "APPROVED").length;
+  const rejectedRequests = requests.filter(r => r.status === "REJECTED").length;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="p-12 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="text-gray-600 mt-4">Loading Certificate Requests...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Hidden certificate template for PDF generation */}
-      <div className="fixed -left-[9999px] -top-[9999px]" style={{ width: '1200px', minHeight: '800px' }}>
-        <div ref={certificateRef} className="bg-white" style={{ width: '1200px', minHeight: '800px' }}>
-          {currentCertificateData && (
-            <CertificateTemplate data={currentCertificateData} />
-          )}
-        </div>
-      </div>
+   
 
-
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Certificate Requests</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Manage and process certificate requests from students
+      {/* Header with Search and Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex-1">
+          <h2 className="text-3xl font-bold bg-blue-700 bg-clip-text text-transparent">
+            Certificate Requests
+          </h2>
+          <p className="text-gray-600 mt-2">
+            Manage and process certificate requests from students ({filteredRequests.length} requests)
           </p>
         </div>
-        <div className="text-sm text-gray-500">
-          {filteredRequests.length} request(s) found
-        </div>
-      </div>
 
-      {/* Filters and Search */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border">
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search by student name, email, or course..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search requests..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            />
           </div>
+
+          {/* Status Filter */}
           <select
-            className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All Status</option>
             <option value="PENDING">Pending</option>
@@ -395,138 +364,235 @@ export default function CertificateRequestsPage() {
         </div>
       </div>
 
-      {/* Requests List */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      {/* Stats Overview - All cards in single row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+              <FileText className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-600">
+                Total Requests
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {requests.length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
+              <Clock className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-600">
+                Pending
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {pendingRequests}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-600">Approved</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {approvedRequests}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gray-500 rounded-xl flex items-center justify-center">
+              <XCircle className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Rejected</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {rejectedRequests}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Requests Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         {filteredRequests.length === 0 ? (
-          <div className="text-center py-12">
-            <Award className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No requests found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="p-12 text-center">
+            <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No certificate requests found
+            </h3>
+            <p className="text-gray-600 mb-6">
               {searchTerm || selectedStatus !== "all" 
-                ? "Try changing your filters or search term."
+                ? "Try adjusting your search or filter criteria"
                 : "No certificate requests at the moment."}
             </p>
+            {searchTerm || selectedStatus !== "all" ? (
+              <Button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedStatus("all");
+                }}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+              >
+                Clear Filters
+              </Button>
+            ) : null}
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {filteredRequests.map((request) => (
-              <div key={request.id} className="p-6 hover:bg-gray-50">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-blue-500 text-white border-b border-blue-600">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Request Details
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Student
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Course Info
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Requested
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredRequests.map((request) => (
+                  <tr key={request.id} className="hover:bg-blue-50/30 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
                         {request.enrollment.course.title}
-                      </h3>
-                      <span className={getStatusBadge(request.status)}>
-                        {getStatusIcon(request.status)}
+                      </div>
+                      <div className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                        <BookOpen className="h-3 w-3" />
+                        {request.enrollment.course.instructor}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {request.user.name}
+                      </div>
+                      <div className="text-sm text-gray-600 flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {request.user.email}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-600">
+                        Duration: {request.enrollment.course.duration}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Completed: {request.enrollment.completedAt ? 
+                          new Date(request.enrollment.completedAt).toLocaleDateString() : 
+                          'N/A'}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
+                          request.status === "PENDING"
+                            ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                            : request.status === "APPROVED"
+                            ? "bg-green-100 text-green-800 border-green-200"
+                            : "bg-red-100 text-red-800 border-red-200"
+                        }`}
+                      >
+                        {request.status === "PENDING" && <Clock className="w-3 h-3 mr-1" />}
+                        {request.status === "APPROVED" && <CheckCircle className="w-3 h-3 mr-1" />}
+                        {request.status === "REJECTED" && <XCircle className="w-3 h-3 mr-1" />}
                         {request.status}
                       </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <User className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className="font-medium">Student:</span>
-                        <span className="ml-1">{request.user.name}</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Mail className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className="font-medium">Email:</span>
-                        <span className="ml-1">{request.user.email}</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <BookOpen className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className="font-medium">Instructor:</span>
-                        <span className="ml-1">{request.enrollment.course.instructor}</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                        <span className="font-medium">Duration:</span>
-                        <span className="ml-1">{request.enrollment.course.duration}</span>
-                      </div>
-                    </div>
+                    </td>
 
-                    <div className="flex items-center gap-6 text-sm text-gray-600">
-                      <div>
-                        <span className="font-medium">Requested:</span>{" "}
-                        {new Date(request.requestedAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-600">
+                        {new Date(request.requestedAt).toLocaleDateString('en-GB')}
                       </div>
-                      {request.processedAt && (
-                        <div>
-                          <span className="font-medium">Processed:</span>{" "}
-                          {new Date(request.processedAt).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
+                    </td>
 
-                    {request.notes && (
-                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <p className="text-sm text-yellow-800">
-                          <span className="font-medium">Notes:</span> {request.notes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-2 ml-4">
-                    {request.status === "PENDING" && (
-                      <>
-                        <button
-                          onClick={() => handleApprove(request.id, request)}
-                          disabled={processingRequest === request.id}
-                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50"
-                        >
-                          {processingRequest === request.id ? (
-                            <>
-                              <Clock className="w-4 h-4 mr-1 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleReject(request.id)}
-                          className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
-                        </button>
-                      </>
-                    )}
-                    
-                    {request.status === "APPROVED" && (
-                      <button
-                        onClick={() => handleDownloadCertificate(request)}
-                        disabled={processingRequest === request.id}
-                        className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
-                      >
-                        {processingRequest === request.id ? (
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {request.status === "PENDING" && (
                           <>
-                            <Clock className="w-4 h-4 mr-1 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <Award className="w-4 h-4 mr-1" />
-                            Download Certificate
+                            <Button
+                              onClick={() => handleApprove(request.id, request)}
+                              disabled={processingRequest === request.id}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              {processingRequest === request.id ? (
+                                <>
+                                  <Clock className="w-3 h-3 mr-1 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Approve
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              onClick={() => handleReject(request.id)}
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-300 hover:bg-red-50"
+                            >
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Reject
+                            </Button>
                           </>
                         )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                        
+                        {request.status === "APPROVED" && (
+                          <Button
+                            onClick={() => handleDownloadCertificate(request)}
+                            disabled={processingRequest === request.id}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            {processingRequest === request.id ? (
+                              <>
+                                <Clock className="w-3 h-3 mr-1 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-3 h-3 mr-1" />
+                                Download
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

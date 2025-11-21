@@ -4,12 +4,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Swal from 'sweetalert2';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -24,13 +18,13 @@ import {
   Eye as EyeIcon,
   FileText,
   Filter,
-  MoreVertical,
   Plus,
   Search,
-  Trash2,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 type Blog = {
   id: string;
@@ -83,50 +77,50 @@ export default function BlogsPage() {
     }
   };
 
- const handleDelete = async (id: string) => {
-  const blogToDelete = blogs.find(b => b.id === id);
-  
-  const result = await Swal.fire({
-    title: 'Are you sure?',
-    html: `You are about to delete <strong>"${blogToDelete?.title}"</strong>.<br>This action cannot be undone.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Yes, delete it!',
-    cancelButtonText: 'Cancel',
-    reverseButtons: true
-  });
+  const handleDelete = async (id: string) => {
+    const blogToDelete = blogs.find((b) => b.id === id);
 
-  if (!result.isConfirmed) return;
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      html: `You are about to delete <strong>"${blogToDelete?.title}"</strong>.<br>This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
 
-  try {
-    const res = await fetch(`/api/admin/blogs/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setBlogs((prev) => prev.filter((b) => b.id !== id));
-      await Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Blog post has been deleted successfully.',
-        timer: 2000,
-        showConfirmButton: false
-      });
-    } else {
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/admin/blogs/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setBlogs((prev) => prev.filter((b) => b.id !== id));
+        await Swal.fire({
+          icon: "success",
+          title: "Deleted!",
+          text: "Blog post has been deleted successfully.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Delete Failed",
+          text: "Failed to delete blog post. Please try again.",
+        });
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
       Swal.fire({
-        icon: 'error',
-        title: 'Delete Failed',
-        text: 'Failed to delete blog post. Please try again.',
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while deleting the blog post.",
       });
     }
-  } catch (err) {
-    console.error("Delete error:", err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'An error occurred while deleting the blog post.',
-    });
-  }
-};
+  };
 
   const filteredBlogs = blogs.filter((b) =>
     b.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -135,7 +129,7 @@ export default function BlogsPage() {
   const statusOptions = ["ALL", "PUBLISHED", "DRAFT"];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header with Search and Filters */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex-1">
@@ -295,7 +289,7 @@ export default function BlogsPage() {
                   <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Published Date
                   </th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -357,56 +351,40 @@ export default function BlogsPage() {
                       )}
                     </td>
 
-                    <td className="px-6 py-4 text-right">
-                      <Popover>
-                        <PopoverTrigger asChild>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-end ">
+                        {/* View */}
+                        <Link href={`/dashboard/admin/blogs/${blog.slug}`}>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                            className="rounded-full hover:bg-blue-50 hover:text-blue-700"
                           >
-                            <MoreVertical className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          align="end"
-                          className="w-48 p-2 border border-gray-200 shadow-lg"
+                        </Link>
+
+                        {/* Edit */}
+                        <Link href={`/dashboard/admin/blogs/edit/${blog.slug}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full hover:bg-amber-50 hover:text-amber-700"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+
+                        {/* Delete */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full text-red-600 hover:bg-red-50"
+                          onClick={() => handleDelete(blog.id)}
                         >
-                          <div className="flex flex-col space-y-1">
-                            <Link href={`/dashboard/admin/blogs/${blog.slug}`}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start gap-2 rounded-lg hover:bg-blue-50 hover:text-blue-700"
-                              >
-                                <Eye className="h-4 w-4" />
-                                View Details
-                              </Button>
-                            </Link>
-                            <Link
-                              href={`/dashboard/admin/blogs/edit/${blog.slug}`}
-                            >
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start gap-2 rounded-lg hover:bg-amber-50 hover:text-amber-700"
-                              >
-                                <Edit className="h-4 w-4" />
-                                Edit Blog
-                              </Button>
-                            </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-start gap-2 text-red-600 hover:bg-red-50 rounded-lg"
-                              onClick={() => handleDelete(blog.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </Button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

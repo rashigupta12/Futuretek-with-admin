@@ -12,15 +12,18 @@ import {
 } from "@/components/courses/course-form";
 import RichTextEditor from "@/components/courses/RichTextEditor";
 import SessionManager, { Session } from "@/components/SessionManager";
+import { JyotishiSearch } from "@/components/JyotishiSearch";
 
 import Swal from 'sweetalert2';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
+
+const USD_TO_INR_RATE = 83.5; // Default conversion rate
 
 export default function AddCoursePage() {
   const router = useRouter();
@@ -32,10 +35,11 @@ export default function AddCoursePage() {
   const [tagline, setTagline] = useState("");
   const [description, setDescription] = useState("");
   const [instructor, setInstructor] = useState("To be announced");
-  const [duration, setDuration] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("");
   const [totalSessions, setTotalSessions] = useState("");
   const [priceINR, setPriceINR] = useState("");
   const [priceUSD, setPriceUSD] = useState("");
+  const [isUSDManual, setIsUSDManual] = useState(false);
   const [status, setStatus] = useState("DRAFT");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -44,7 +48,11 @@ export default function AddCoursePage() {
   const [whyLearnIntro, setWhyLearnIntro] = useState("");
   const [whatYouLearn, setWhatYouLearn] = useState("");
   const [disclaimer, setDisclaimer] = useState("");
-  const [commissionPercourse, setCommissionPercourse] = useState(""); // ← NEW
+  const [commissionPercourse, setCommissionPercourse] = useState("");
+  
+  // Jyotishi assignment
+  const [assignedJyotishiId, setAssignedJyotishiId] = useState<string | null>(null);
+  const [assignedJyotishiName, setAssignedJyotishiName] = useState<string | null>(null);
 
   // ── Arrays ───────────────────────────────────────────────────────
   const [features, setFeatures] = useState<string[]>([""]);
@@ -91,32 +99,42 @@ export default function AddCoursePage() {
     validateDates();
   }, [registrationDeadline, startDate, endDate]);
 
-  // Auto-generate sessions
-  // useEffect(() => {
-  //   if (totalSessions && sessions.length === 0) {
-  //     const total = parseInt(totalSessions);
-  //     if (total > 0) {
-  //       const newSessions: Session[] = [];
-  //       for (let i = 1; i <= total; i++) {
-  //         newSessions.push({
-  //           id: `temp-${Date.now()}-${i}`,
-  //           sessionNumber: i,
-  //           title: `Session ${i}`,
-  //           description: "",
-  //           sessionDate: "",
-  //           sessionTime: "",
-  //           duration: 60,
-  //           meetingLink: "",
-  //           meetingPasscode: "",
-  //           recordingUrl: "",
-  //           isCompleted: false,
-  //         });
-  //       }
-  //       setSessions(newSessions);
-  //     }
-  //   }
-  // }, [totalSessions]);
-  
+  // Auto-generate slug (greyed out, non-editable)
+  useEffect(() => {
+    if (title) {
+      const generatedSlug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+      setSlug(generatedSlug);
+    } else {
+      setSlug("");
+    }
+  }, [title]);
+
+  // Auto-calculate USD from INR
+  useEffect(() => {
+    if (!isUSDManual && priceINR) {
+      const inrValue = parseFloat(priceINR);
+      if (!isNaN(inrValue)) {
+        const calculatedUSD = (inrValue / USD_TO_INR_RATE).toFixed(2);
+        setPriceUSD(calculatedUSD);
+      }
+    }
+  }, [priceINR, isUSDManual]);
+
+  // Format duration display
+  const formatDuration = () => {
+    const minutes = parseInt(durationMinutes);
+    if (isNaN(minutes)) return "";
+    
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours === 0) return `${mins} minutes`;
+    if (mins === 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
+    return `${hours} hour${hours > 1 ? 's' : ''} ${mins} minutes`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,13 +149,17 @@ export default function AddCoursePage() {
     }
     setLoading(true);
 
+    // Calculate total duration string
+    const durationString = formatDuration() || `${totalSessions} live sessions`;
+
     const payload = {
       slug,
       title,
       tagline,
       description,
       instructor: instructor || null,
-      duration: duration || null,
+      duration: durationString,
+      durationMinutes: durationMinutes ? Number(durationMinutes) : null,
       totalSessions: totalSessions ? Number(totalSessions) : null,
       priceINR: priceINR ? Number(priceINR) : null,
       priceUSD: priceUSD ? Number(priceUSD) : null,
@@ -149,7 +171,8 @@ export default function AddCoursePage() {
       whyLearnIntro: whyLearnIntro || null,
       whatYouLearn: whatYouLearn || null,
       disclaimer: disclaimer || null,
-      commissionPercourse: commissionPercourse ? Number(commissionPercourse) : null, // ← NEW
+      commissionPercourse: commissionPercourse ? Number(commissionPercourse) : null,
+      assignedJyotishiId: assignedJyotishiId || null,
 
       features: features.filter((f) => f.trim()),
       whyLearn: whyLearn.filter((w) => w.title.trim() && w.description.trim()),
@@ -199,17 +222,6 @@ export default function AddCoursePage() {
     }
   };
 
-  // Auto-generate slug
-  useEffect(() => {
-    if (title) {
-      const generatedSlug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, "");
-      setSlug(generatedSlug);
-    }
-  }, [title]);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -257,13 +269,18 @@ export default function AddCoursePage() {
                 />
               </Field>
 
-              <Field label="Slug *">
-                <TextInput
-                  value={slug}
-                  onChange={setSlug}
-                  placeholder="kp-astrology"
-                  required
-                />
+              <Field label="Slug (Auto-generated)">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={slug}
+                    disabled
+                    className="w-full px-4 py-2.5 bg-gray-100 text-gray-500 border border-gray-300 rounded-lg cursor-not-allowed font-mono text-sm"
+                  />
+                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                    <Info className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
               </Field>
 
               <Field label="Tagline *">
@@ -279,20 +296,36 @@ export default function AddCoursePage() {
                 />
               </Field>
 
-              <Field label="Instructor">
-                <TextInput
-                  value={instructor}
-                  onChange={setInstructor}
-                  placeholder="To be announced"
+              <Field label="Instructor *">
+                <JyotishiSearch
+                  value={assignedJyotishiId}
+                  onChange={(id, name) => {
+                    setAssignedJyotishiId(id);
+                    setAssignedJyotishiName(name);
+                    // Auto-set instructor name when Jyotishi is selected
+                    setInstructor(name || "To be announced");
+                  }}
+                  selectedName={assignedJyotishiName}
                 />
+                <p className="mt-2 text-sm text-gray-500">
+                  Search and assign a Astrologer as the course instructor
+                </p>
               </Field>
 
-              <Field label="Duration">
-                <TextInput
-                  value={duration}
-                  onChange={setDuration}
-                  placeholder="25 live sessions"
-                />
+              <Field label="Duration (Minutes)">
+                <div className="space-y-2">
+                  <TextInput
+                    type="number"
+                    value={durationMinutes}
+                    onChange={setDurationMinutes}
+                    placeholder="1500"
+                  />
+                  {durationMinutes && (
+                    <div className="text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded">
+                      📅 {formatDuration()}
+                    </div>
+                  )}
+                </div>
               </Field>
 
               <Field label="Total Sessions">
@@ -315,13 +348,36 @@ export default function AddCoursePage() {
               </Field>
 
               <Field label="Price (USD) *">
-                <TextInput
-                  type="number"
-                  value={priceUSD}
-                  onChange={setPriceUSD}
-                  placeholder="250"
-                  required
-                />
+                <div className="space-y-2">
+                  <div className="relative">
+                    <TextInput
+                      type="number"
+                      value={priceUSD}
+                      onChange={(value) => {
+                        setPriceUSD(value);
+                        setIsUSDManual(true);
+                      }}
+                      placeholder="250"
+                      required
+                    />
+                    {!isUSDManual && priceUSD && (
+                      <div className="absolute inset-y-0 right-3 flex items-center">
+                        <span className="text-xs text-green-600 font-medium">
+                          Auto-calculated
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {isUSDManual && (
+                    <button
+                      type="button"
+                      onClick={() => setIsUSDManual(false)}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Reset to auto-calculate
+                    </button>
+                  )}
+                </div>
               </Field>
 
               <Field label="Commission per Course (%)">
@@ -334,13 +390,13 @@ export default function AddCoursePage() {
               </Field>
 
               <div className="md:col-span-2">
-  <ImageUpload
-    label="Thumbnail Image"
-    value={thumbnailUrl}
-    onChange={setThumbnailUrl}
-    isThumbnail={true}
-  />
-</div>
+                <ImageUpload
+                  label="Thumbnail Image"
+                  value={thumbnailUrl}
+                  onChange={setThumbnailUrl}
+                  isThumbnail={true}
+                />
+              </div>
 
               <DateInput
                 label="Start Date"

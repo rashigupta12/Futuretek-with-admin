@@ -304,7 +304,7 @@ export default function AddCouponPage() {
                 Valid From
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 name="validFrom"
                 value={formData.validFrom}
                 onChange={handleInputChange}
@@ -318,7 +318,7 @@ export default function AddCouponPage() {
                 Valid Until
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 name="validUntil"
                 value={formData.validUntil}
                 onChange={handleInputChange}
@@ -436,6 +436,9 @@ export default function AddCouponPage() {
                 <strong>Restricted to:</strong> {selectedCourses.length} course(s)
               </p>
             )}
+             <p>
+              <strong>Description:</strong> {formData.description}
+            </p>
           </div>
         </div>
       </div>

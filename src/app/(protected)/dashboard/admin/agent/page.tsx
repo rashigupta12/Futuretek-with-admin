@@ -3,12 +3,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Swal from "sweetalert2";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -22,16 +16,16 @@ import {
   Edit,
   Eye,
   Filter,
-  MoreVertical,
   Plus,
   Search,
   ToggleLeft,
   ToggleRight,
   TrendingUp,
-  Users,
+  Users
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 type Jyotishi = {
   id: string;
@@ -172,7 +166,7 @@ export default function JyotishisPage() {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header with Search and Filters */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex-1">
@@ -368,7 +362,7 @@ export default function JyotishisPage() {
                   <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Joined
                   </th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -452,77 +446,52 @@ export default function JyotishisPage() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-right">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:bg-blue-100 hover:text-blue-700 transition-colors"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          align="end"
-                          className="w-48 p-2 border border-gray-200 shadow-lg"
-                        >
-                          <div className="flex flex-col space-y-1">
-                            <Link
-                              href={`/dashboard/admin/agent/${jyotishi.id}`}
-                            >
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start gap-2 rounded-lg hover:bg-blue-50 hover:text-blue-700"
-                              >
-                                <Eye className="h-4 w-4" />
-                                View Details
-                              </Button>
-                            </Link>
-                            <Link
-                              href={`/dashboard/admin/agent/edit/${jyotishi.id}`}
-                            >
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start gap-2 rounded-lg hover:bg-amber-50 hover:text-amber-700"
-                              >
-                                <Edit className="h-4 w-4" />
-                                Edit
-                              </Button>
-                            </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={`w-full justify-start gap-2 rounded-lg ${
-                                jyotishi.isActive
-                                  ? "text-red-600 hover:bg-red-50"
-                                  : "text-green-600 hover:bg-green-50"
-                              }`}
-                              onClick={() =>
-                                handleToggleActive(
-                                  jyotishi.id,
-                                  jyotishi.isActive
-                                )
-                              }
-                            >
-                              {jyotishi.isActive ? (
-                                <>
-                                  <ToggleLeft className="h-4 w-4" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <ToggleRight className="h-4 w-4" />
-                                  Activate
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </td>
+                   <td className="px-6 py-4 text-center">
+  <div className="flex items-center justify-end ">
+    
+    {/* View */}
+    <Link href={`/dashboard/admin/agent/${jyotishi.id}`}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start gap-2 rounded-lg hover:bg-blue-50 hover:text-blue-700"
+      >
+        <Eye className="h-4 w-4" />
+      </Button>
+    </Link>
+
+    {/* Edit */}
+    <Link href={`/dashboard/admin/agent/edit/${jyotishi.id}`}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start gap-2 rounded-lg hover:bg-amber-50 hover:text-amber-700"
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+    </Link>
+
+    {/* Activate / Deactivate */}
+    <Button
+      variant="ghost"
+      size="sm"
+      className={`w-full justify-start gap-2 rounded-lg ${
+        jyotishi.isActive
+          ? "text-red-600 hover:bg-red-50"
+          : "text-green-600 hover:bg-green-50"
+      }`}
+      onClick={() => handleToggleActive(jyotishi.id, jyotishi.isActive)}
+    >
+      {jyotishi.isActive ? (
+        <ToggleLeft className="h-4 w-4" />
+      ) : (
+        <ToggleRight className="h-4 w-4" />
+      )}
+    </Button>
+
+  </div>
+</td>
+
                   </tr>
                 ))}
               </tbody>

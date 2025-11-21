@@ -1,4 +1,5 @@
 /*eslint-disable @typescript-eslint/no-unused-vars */
+/*eslint-disable @typescript-eslint/no-explicit-any */
 // app/dashboard/admin/coupons/page.tsx
 "use client";
 
@@ -15,7 +16,11 @@ import {
   Search,
   Tag,
   Trash2,
-  Users
+  Users,
+  TrendingUp,
+  DollarSign,
+  Eye,
+  Edit
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -214,20 +219,20 @@ export default function AllCouponsPage() {
     const validUntilDate = new Date(validUntil);
 
     if (!isActive) {
-      return <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">Inactive</span>;
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">Inactive</span>;
     }
 
     if (validUntilDate < now) {
-      return <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">Expired</span>;
+      return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">Expired</span>;
     }
 
-    return <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">Active</span>;
+    return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Active</span>;
   };
 
   const getScopeBadge = (scope: "GENERAL" | "PERSONAL") => {
     return scope === "GENERAL" 
-      ? <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">General</span>
-      : <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">Personal</span>;
+      ? <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">General</span>
+      : <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">Personal</span>;
   };
 
   const getDiscountDisplay = (coupon: Coupon) => {
@@ -259,175 +264,184 @@ export default function AllCouponsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-lg">FT</span>
-          </div>
-          <p className="text-gray-600">Loading coupons...</p>
-        </div>
+      <div className="p-12 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="text-gray-600 mt-4">Loading Coupons...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+      {/* Header with Search and Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex-1">
+          <h2 className="text-3xl font-bold bg-blue-700 bg-clip-text text-transparent">
+            Coupons Management
+          </h2>
+          <p className="text-gray-600 mt-2">
+            Manage and track all coupon codes and their usage.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search coupons..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">All Coupons</h1>
-            <p className="text-gray-600">Manage and track all coupon codes</p>
-          </div>
-        </div>
-        <button
-          onClick={() => router.push("/dashboard/admin/coupons/add")}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Coupon
-        </button>
-      </div>
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="expired">Expired</option>
+          </select>
 
-     <div className="flex flex-col gap-6">
-
-  {/* Row: Stats Cards + Filters */}
-  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-
-    {/* Stats Cards */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
-      <div className="bg-white rounded-lg border p-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Tag className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Total Coupons</p>
-            <p className="text-2xl font-bold">{coupons.length}</p>
-          </div>
+          {/* Add Coupon Button */}
+          <Button
+            onClick={() => router.push("/dashboard/admin/coupons/add")}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg whitespace-nowrap flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Coupon
+          </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border p-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <Users className="h-6 w-6 text-green-600" />
+      {/* Stats Overview - All cards in single row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+              <Tag className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-600">
+                Total Coupons
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {coupons.length}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-gray-600">Active Coupons</p>
-            <p className="text-2xl font-bold">
-              {coupons.filter(c => c.isActive && new Date(c.validUntil) > new Date()).length}
-            </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-600">
+                Active Coupons
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {coupons.filter(c => c.isActive && new Date(c.validUntil) > new Date()).length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-600">Total Usage</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {coupons.reduce((sum, coupon) => sum + coupon.currentUsageCount, 0)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gray-500 rounded-xl flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Fixed Amount</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {coupons.filter(ct => ct.discountType === "FIXED_AMOUNT").length}
+              </p>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Add other stat cards here (if any) */}
-    </div>
-
-    {/* Filters (Right Side) */}
-    <div className="bg-white rounded-lg border p-6 md:w-auto">
-      <div className="flex items-center gap-4">
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search coupons..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-48 md:w-64"
-          />
-        </div>
-
-        {/* Status Filter */}
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="expired">Expired</option>
-        </select>
-
-        {/* Count */}
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Filter className="h-4 w-4" />
-          <span>{filteredCoupons.length} found</span>
-        </div>
-
-      </div>
-    </div>
-
-  </div>
-</div>
 
 
       {/* Coupons Table */}
-      <div className="bg-white rounded-lg border overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         {filteredCoupons.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="p-12 text-center">
             <Tag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No coupons found</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No coupons found
+            </h3>
+            <p className="text-gray-600 mb-6">
               {coupons.length === 0 
                 ? "Get started by creating your first coupon."
                 : "No coupons match your search criteria."}
             </p>
             {coupons.length === 0 && (
-              <button
+              <Button
                 onClick={() => router.push("/dashboard/admin/coupons/add")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
               >
                 Create Your First Coupon
-              </button>
+              </Button>
             )}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-blue-500 text-white border-b border-blue-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Coupon Details
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Discount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Usage
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Validity
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-sm font-semibold uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {filteredCoupons.map((coupon) => (
-                  <tr key={coupon.id} className="hover:bg-gray-50">
+                  <tr key={coupon.id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
+                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                           <Tag className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <code className="font-mono font-bold text-gray-900 text-sm">
+                            <code className="font-mono font-bold text-gray-900 text-sm group-hover:text-blue-700 transition-colors">
                               {coupon.code}
                             </code>
                             <button
@@ -440,7 +454,7 @@ export default function AllCouponsPage() {
                           </div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm text-gray-600">{coupon.typeName}</span>
-                            {/* {getScopeBadge(coupon.couponScope)} */}
+                           
                           </div>
                           {coupon.description && (
                             <p className="text-sm text-gray-500 line-clamp-1">
@@ -457,11 +471,7 @@ export default function AllCouponsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        {coupon.discountType === "PERCENTAGE" ? (
-                          <Percent className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <IndianRupee className="h-4 w-4 text-green-600" />
-                        )}
+                       
                         <span className="font-semibold text-gray-900">
                           {getDiscountDisplay(coupon)}
                         </span>
@@ -488,47 +498,38 @@ export default function AllCouponsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="space-y-1 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-gray-400" />
-                          <span className="text-gray-600">
-                            {new Date(coupon.validFrom).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-gray-400" />
-                          <span className="text-gray-600">
-                            {new Date(coupon.validUntil).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
+                 <td className="px-6 py-4">
+  <div className="space-y-1 text-sm">
+    <div className="flex items-center gap-2">
+      {/* <Calendar className="h-4 w-4 text-gray-400" /> */}
+      <span className="text-gray-600">
+        {new Date(coupon.validFrom).toLocaleDateString("en-GB")}
+      </span>
+    </div>
+    <div className="flex items-center gap-2">
+      {/* <Calendar className="h-4 w-4 text-gray-400" /> */}
+      <span className="text-gray-600">
+        {new Date(coupon.validUntil).toLocaleDateString("en-GB")}
+      </span>
+    </div>
+  </div>
+</td>
+
                     <td className="px-6 py-4">
                       {getStatusBadge(coupon.isActive, coupon.validUntil)}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {/* <button
-                          onClick={() => router.push(`/dashboard/admin/coupons/${coupon.id}`)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button> */}
-                        {/* <button
-                          onClick={() => router.push(`/dashboard/admin/coupons/${coupon.id}/edit`)}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="Edit coupon"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button> */}
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-end gap-1">
+                  
+
+                  
+                        {/* Activate/Deactivate */}
                         <button
                           onClick={() => handleToggleStatus(coupon.id, coupon.isActive)}
                           disabled={toggleLoading === coupon.id}
                           className={`p-2 rounded-lg transition-colors ${
                             coupon.isActive
-                              ? "text-orange-600 hover:bg-orange-50"
+                              ? "text-red-600 hover:bg-red-50"
                               : "text-green-600 hover:bg-green-50"
                           } disabled:opacity-50`}
                           title={coupon.isActive ? "Deactivate" : "Activate"}
@@ -541,6 +542,8 @@ export default function AllCouponsPage() {
                             <Power className="h-4 w-4" />
                           )}
                         </button>
+
+                        {/* Delete */}
                         <button
                           onClick={() => handleDeleteCoupon(coupon.id)}
                           disabled={deleteLoading === coupon.id}
@@ -565,3 +568,24 @@ export default function AllCouponsPage() {
     </div>
   );
 }
+
+// Button component for consistency
+const Button = ({ 
+  children, 
+  className = "", 
+  onClick, 
+  ...props 
+}: { 
+  children: React.ReactNode; 
+  className?: string; 
+  onClick?: () => void;
+  [key: string]: any;
+}) => (
+  <button
+    onClick={onClick}
+    className={`px-4 py-2 rounded-lg transition-colors ${className}`}
+    {...props}
+  >
+    {children}
+  </button>
+);

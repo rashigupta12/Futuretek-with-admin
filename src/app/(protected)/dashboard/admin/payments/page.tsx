@@ -1,8 +1,7 @@
 /*eslint-disable  @typescript-eslint/no-explicit-any*/
 "use client";
 
-import { TableContainer } from "@/components/admin/TableContainer";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -11,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { CreditCard, DollarSign, Filter, Search, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -124,165 +123,255 @@ export default function PaymentsPage() {
     if (status === "PENDING") {
       return {
         displayText: "FAILED",
-        className: "bg-red-100 text-red-800"
+        variant: "destructive" as const
       };
     }
     return {
       displayText: status,
-      className: status === "COMPLETED" 
-        ? "bg-green-100 text-green-800" 
-        : "bg-red-100 text-red-800"
+      variant: status === "COMPLETED" ? "default" as const : "destructive" as const
     };
   };
 
+  // Calculate stats
+  const totalRevenue = payments
+    .filter(p => p.status === "COMPLETED")
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+  
+  const completedPayments = payments.filter(p => p.status === "COMPLETED").length;
+  const failedPayments = payments.filter(p => p.status === "PENDING" || p.status === "FAILED").length;
+
   return (
-    <div className="p-2 w-full mx-auto min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-          <div className="mb-6 lg:mb-0">
-            <h2 className="text-2xl font-bold text-gray-900">Payments</h2>
-            <p className="text-gray-600 mt-1">
-              Manage and view all payment transactions ({filtered.length} payments)
+    <div className="space-y-6">
+      {/* Header with Search and Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex-1">
+          <h2 className="text-3xl font-bold bg-blue-700 bg-clip-text text-transparent">
+            Payments Management
+          </h2>
+          <p className="text-gray-600 mt-2">
+            Manage and view all payment transactions ({filtered.length} payments)
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search payments..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-48 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-400" />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="focus:bg-blue-50">All Status</SelectItem>
+              <SelectItem value="COMPLETED" className="focus:bg-blue-50">Completed</SelectItem>
+              <SelectItem value="FAILED" className="focus:bg-blue-50">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Stats Overview - All cards in single row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-600">
+                Total Payments
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                {payments.length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-600">
+                Total Revenue
+              </p>
+              <p className="text-2xl font-bold text-gray-900">
+                ₹{totalRevenue.toLocaleString("en-IN")}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+              <CreditCard className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-600">Completed</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {completedPayments}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gray-500 rounded-xl flex items-center justify-center">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Failed</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {failedPayments}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-4">Loading Payments...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center">
+            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No payments found
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {searchTerm || statusFilter !== "all"
+                ? "Try adjusting your search or filter criteria"
+                : "No payment transactions found"}
             </p>
+            {searchTerm || statusFilter !== "all" ? (
+              <Button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("all");
+                }}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+              >
+                Clear Filters
+              </Button>
+            ) : null}
           </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-blue-500 text-white border-b border-blue-600">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Invoice Details
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Method
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">
+                    Date
+                  </th>
+         
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((p) => {
+                  const statusInfo = getDisplayStatus(p.status);
+                  return (
+                    <tr key={p.id} className="hover:bg-blue-50/30 transition-colors group">
+                      {/* Invoice */}
+                      <td className="px-6 py-4">
+                        <div className="font-mono text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                          {p.invoiceNumber}
+                        </div>
+                      </td>
 
-          {/* Search and Filter Section */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search Bar */}
-            <div className="bg-white rounded-lg border border-gray-300 shadow-sm">
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search payments..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-0 focus-visible:ring-0"
-                />
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <div className="bg-white rounded-lg border border-gray-300 shadow-sm">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40 border-0 focus:ring-0">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
-                  <SelectItem value="FAILED">Failed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* Table Section */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <TableContainer>
-            {loading ? (
-              <div className="p-8 text-center text-gray-500">
-                Loading payments...
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                No payments found matching your criteria.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-blue-700 border-b border-gray-200 text-white">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Invoice
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Method
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Date
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filtered.map((p) => {
-                      const statusInfo = getDisplayStatus(p.status);
-                      return (
-                        <tr 
-                          key={p.id} 
-                          className="hover:bg-gray-50 transition-colors"
+                      {/* Customer */}
+                      <td className="px-6 py-4">
+                        <Link
+                          href={`/dashboard/admin/users/${p.userId}`}
+                          className="block hover:underline"
                         >
-                          {/* Invoice */}
-                          <td className="px-6 py-4">
-                            <span className="font-mono text-sm text-gray-900 font-medium">
-                              {p.invoiceNumber}
-                            </span>
-                          </td>
+                          <div className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                            {p.user.name}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {p.user.email}
+                          </div>
+                        </Link>
+                      </td>
 
-                          {/* User */}
-                          <td className="px-6 py-4">
-                            <Link
-                              href={`/dashboard/admin/users/${p.userId}`}
-                              className="block hover:underline"
-                            >
-                              <div className="text-sm font-medium text-gray-900">
-                                {p.user.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {p.user.email}
-                              </div>
-                            </Link>
-                          </td>
-
-                          {/* Amount */}
-                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                      {/* Amount */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                       
+                          <span className="text-sm font-semibold text-gray-900">
                             ₹{Number(p.amount).toLocaleString("en-IN")}
-                          </td>
+                          </span>
+                        </div>
+                      </td>
 
-                          {/* Method */}
-                          <td className="px-6 py-4 text-sm text-gray-600">
-                            {p.paymentMethod || "Online"}
-                          </td>
+                      {/* Payment Method */}
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-600">
+                          {p.paymentMethod || "Online"}
+                        </span>
+                      </td>
 
-                          {/* Status */}
-                          <td className="px-6 py-4">
-                            <Badge className={`${statusInfo.className} font-medium`}>
-                              {statusInfo.displayText}
-                            </Badge>
-                          </td>
+                      {/* Status */}
+                      <td className="px-6 py-4 text-left">
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
+                            statusInfo.displayText === "COMPLETED"
+                              ? "bg-green-100 text-green-800 border-green-200"
+                              : "bg-red-100 text-red-800 border-red-200"
+                          }`}
+                        >
+                          {statusInfo.displayText}
+                        </span>
+                      </td>
 
-                          {/* Date */}
-                          <td className="px-6 py-4 text-sm text-gray-500">
-                            {new Date(p.createdAt).toLocaleDateString("en-IN", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </TableContainer>
-        </div>
+                      {/* Date */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          {/* <Calendar className="h-4 w-4 text-gray-400" /> */}
+                          {new Date(p.createdAt).toLocaleDateString("en-GB")}
+                        </div>
+                      </td>
 
-        {/* Summary Footer */}
-        {filtered.length > 0 && (
-          <div className="mt-4 text-sm text-gray-500">
-            Showing {filtered.length} of {payments.length} payments
+      
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
