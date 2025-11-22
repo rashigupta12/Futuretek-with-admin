@@ -170,7 +170,7 @@ export function JyotishiSearch({ value, onChange, selectedName }: JyotishiSearch
       {/* No Results Message */}
       {isOpen && searchTerm.length >= 2 && results.length === 0 && !loading && (
         <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-gray-500">
-          No Jyotishis found matching &quot;{searchTerm}&quot;
+          No instructor found matching &quot;{searchTerm}&quot;
         </div>
       )}
     </div>

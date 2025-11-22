@@ -240,7 +240,7 @@ export default function ViewJyotishiPage() {
         Swal.fire({
           icon: 'success',
           title: 'Updated!',
-          text: 'Jyotishi details updated successfully',
+          text: 'Astrologer details updated successfully',
           timer: 2000,
           showConfirmButton: false
         });

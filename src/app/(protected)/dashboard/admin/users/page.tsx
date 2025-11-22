@@ -139,15 +139,7 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Filter className="h-4 w-4" />
-            <span>{filtered.length} users found</span>
-          </div>
-        </div>
-      </div>
+     
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">

@@ -4,7 +4,7 @@ import { DynamicWhyLearn } from "@/components/courses/course-form";
 import { EnhancedDynamicList } from "@/components/courses/EnhancedDynamicList";
 import { CourseFormFields } from "@/components/courses/CourseFormFields";
 import RichTextEditor from "@/components/courses/RichTextEditor";
-import SessionManager, { Session } from "@/components/SessionManager";
+import { Session } from "@/components/SessionManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Save } from "lucide-react";
@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState, useCallback } from "react";
 import Swal from 'sweetalert2';
+import SessionManager from "@/components/SessionManager";
 
 export default function AddCoursePage() {
   const router = useRouter();

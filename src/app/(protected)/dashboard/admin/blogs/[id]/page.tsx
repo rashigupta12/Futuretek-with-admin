@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import Swal from "sweetalert2";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/ImageUpload";
+import RichTextEditor from "@/components/courses/RichTextEditor";
 import Image from "next/image";
 import {
   ArrowLeft,
@@ -21,7 +22,7 @@ import {
   Save,
   Trash2,
   User,
-  X
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -79,7 +80,7 @@ export default function BlogDetailPage() {
       };
 
       setBlog(blogData);
-      
+
       // Initialize form data
       setFormData({
         title: blogData.title,
@@ -93,9 +94,9 @@ export default function BlogDetailPage() {
     } catch (err) {
       console.error(err);
       Swal.fire({
-        icon: 'error',
-        title: 'Blog Not Found',
-        text: 'The requested blog post could not be found.',
+        icon: "error",
+        title: "Blog Not Found",
+        text: "The requested blog post could not be found.",
       });
     } finally {
       setLoading(false);
@@ -105,7 +106,7 @@ export default function BlogDetailPage() {
   const handleEditToggle = () => {
     if (isEditing) {
       // Check if there are unsaved changes
-      const hasChanges = 
+      const hasChanges =
         formData.title !== blog?.title ||
         formData.slug !== blog?.slug ||
         formData.excerpt !== (blog?.excerpt || "") ||
@@ -116,13 +117,13 @@ export default function BlogDetailPage() {
 
       if (hasChanges) {
         Swal.fire({
-          title: 'Discard Changes?',
-          text: 'You have unsaved changes. Are you sure you want to cancel?',
-          icon: 'warning',
+          title: "Discard Changes?",
+          text: "You have unsaved changes. Are you sure you want to cancel?",
+          icon: "warning",
           showCancelButton: true,
-          confirmButtonText: 'Yes, discard changes',
-          cancelButtonText: 'Continue editing',
-          reverseButtons: true
+          confirmButtonText: "Yes, discard changes",
+          cancelButtonText: "Continue editing",
+          reverseButtons: true,
         }).then((result) => {
           if (result.isConfirmed) {
             // Reset form data when canceling edit
@@ -152,27 +153,27 @@ export default function BlogDetailPage() {
     // Validation
     if (!formData.title.trim()) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Missing Title',
-        text: 'Please enter a blog title',
+        icon: "warning",
+        title: "Missing Title",
+        text: "Please enter a blog title",
       });
       return;
     }
 
     if (!formData.slug.trim()) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Missing Slug',
-        text: 'Please enter a blog slug',
+        icon: "warning",
+        title: "Missing Slug",
+        text: "Please enter a blog slug",
       });
       return;
     }
 
     if (!formData.content.trim()) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Missing Content',
-        text: 'Please enter blog content',
+        icon: "warning",
+        title: "Missing Content",
+        text: "Please enter blog content",
       });
       return;
     }
@@ -181,7 +182,7 @@ export default function BlogDetailPage() {
     try {
       const payload = {
         ...formData,
-        tags: formData.tags.filter(tag => tag.trim() !== ""),
+        tags: formData.tags.filter((tag) => tag.trim() !== ""),
       };
 
       const res = await fetch(`/api/admin/blogs/${blog.id}`, {
@@ -195,26 +196,26 @@ export default function BlogDetailPage() {
         setBlog(updatedBlog.blog);
         setIsEditing(false);
         await Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: 'Blog updated successfully!',
+          icon: "success",
+          title: "Success!",
+          text: "Blog updated successfully!",
           timer: 2000,
-          showConfirmButton: false
+          showConfirmButton: false,
         });
       } else {
         const err = await res.json();
         Swal.fire({
-          icon: 'error',
-          title: 'Update Failed',
-          text: err.error || 'Failed to update blog',
+          icon: "error",
+          title: "Update Failed",
+          text: err.error || "Failed to update blog",
         });
       }
     } catch (err) {
       console.error(err);
       Swal.fire({
-        icon: 'error',
-        title: 'Unexpected Error',
-        text: 'An unexpected error occurred',
+        icon: "error",
+        title: "Unexpected Error",
+        text: "An unexpected error occurred",
       });
     } finally {
       setSaving(false);
@@ -223,89 +224,95 @@ export default function BlogDetailPage() {
 
   const handleDelete = async () => {
     const result = await Swal.fire({
-      title: 'Are you sure?',
+      title: "Are you sure?",
       html: `You are about to delete <strong>"${blog?.title}"</strong>.<br>This action cannot be undone.`,
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!',
-      cancelButtonText: 'Cancel',
-      reverseButtons: true
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
     });
 
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`/api/admin/blogs/${blog?.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/blogs/${blog?.id}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         await Swal.fire({
-          icon: 'success',
-          title: 'Deleted!',
-          text: 'Blog deleted successfully',
+          icon: "success",
+          title: "Deleted!",
+          text: "Blog deleted successfully",
           timer: 2000,
-          showConfirmButton: false
+          showConfirmButton: false,
         });
         router.push("/dashboard/admin/blogs");
       } else {
         Swal.fire({
-          icon: 'error',
-          title: 'Delete Failed',
-          text: 'Failed to delete blog',
+          icon: "error",
+          title: "Delete Failed",
+          text: "Failed to delete blog",
         });
       }
     } catch {
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Error deleting blog',
+        icon: "error",
+        title: "Error",
+        text: "Error deleting blog",
       });
     }
   };
 
   const handleAddTag = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      tags: [...prev.tags, ""]
+      tags: [...prev.tags, ""],
     }));
   };
 
   const handleRemoveTag = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter((_, i) => i !== index)
+      tags: prev.tags.filter((_, i) => i !== index),
     }));
   };
 
   const handleTagChange = (index: number, value: string) => {
     const newTags = [...formData.tags];
     newTags[index] = value;
-    setFormData(prev => ({ ...prev, tags: newTags }));
+    setFormData((prev) => ({ ...prev, tags: newTags }));
   };
 
-  const formatDate = (d: string | null | undefined) => 
-    d ? new Date(d).toLocaleDateString("en-IN", { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    }) : "Not set";
+  const formatDate = (d: string | null | undefined) =>
+    d
+      ? new Date(d).toLocaleDateString("en-IN", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : "Not set";
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    );
 
-  if (!blog) return (
-    <div className="container mx-auto p-8 text-center">
-      <h2 className="text-2xl font-bold text-red-600 mb-4">Blog Not Found</h2>
-      <Button asChild className="bg-blue-600 hover:bg-blue-700">
-        <Link href="/dashboard/admin/blogs">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Blogs
-        </Link>
-      </Button>
-    </div>
-  );
+  if (!blog)
+    return (
+      <div className="container mx-auto p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Blog Not Found</h2>
+        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <Link href="/dashboard/admin/blogs">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Blogs
+          </Link>
+        </Button>
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -332,13 +339,20 @@ export default function BlogDetailPage() {
               <div className="space-y-4">
                 <Input
                   value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, title: e.target.value }))
+                  }
                   placeholder="Blog Title"
                   className="text-3xl font-bold border-blue-300 focus:border-blue-500 h-16 "
                 />
                 <Textarea
                   value={formData.excerpt}
-                  onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      excerpt: e.target.value,
+                    }))
+                  }
                   placeholder="Brief excerpt for the blog..."
                   rows={2}
                   className="text-lg border-blue-300 focus:border-blue-500"
@@ -364,7 +378,9 @@ export default function BlogDetailPage() {
                       <div key={index} className="flex gap-2">
                         <Input
                           value={tag}
-                          onChange={(e) => handleTagChange(index, e.target.value)}
+                          onChange={(e) =>
+                            handleTagChange(index, e.target.value)
+                          }
                           placeholder="astrology"
                           className="flex-1"
                         />
@@ -420,12 +436,17 @@ export default function BlogDetailPage() {
                   <ImageUpload
                     label="Blog Thumbnail"
                     value={formData.thumbnailUrl}
-                    onChange={(url) => setFormData(prev => ({ ...prev, thumbnailUrl: url }))}
+                    onChange={(url) =>
+                      setFormData((prev) => ({ ...prev, thumbnailUrl: url }))
+                    }
                     isThumbnail={true}
                   />
                 ) : blog.thumbnailUrl ? (
                   <div className="relative w-full rounded-lg overflow-hidden border border-gray-200">
-                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                    <div
+                      className="relative w-full"
+                      style={{ paddingBottom: "56.25%" }}
+                    >
                       <Image
                         src={blog.thumbnailUrl}
                         alt={blog.title}
@@ -444,6 +465,7 @@ export default function BlogDetailPage() {
             </Card>
 
             {/* Blog Content */}
+
             <Card className="border border-gray-200 hover:shadow-md transition-shadow">
               <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50">
                 <CardTitle>Content</CardTitle>
@@ -452,17 +474,17 @@ export default function BlogDetailPage() {
                 {isEditing ? (
                   <div className="space-y-2">
                     <Label htmlFor="content">Blog Content</Label>
-                    <Textarea
-                      id="content"
-                      rows={15}
+                    <RichTextEditor
                       value={formData.content}
-                      onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                      onChange={(content) =>
+                        setFormData((prev) => ({ ...prev, content }))
+                      }
                       placeholder="Write your blog content here..."
-                      className="font-mono text-sm"
+                      minHeight="400px"
                     />
                   </div>
                 ) : (
-                  <div 
+                  <div
                     className="prose prose-lg max-w-none"
                     dangerouslySetInnerHTML={{ __html: blog.content }}
                   />
@@ -487,14 +509,20 @@ export default function BlogDetailPage() {
                         <Switch
                           id="isPublished"
                           checked={formData.isPublished}
-                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPublished: checked }))}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              isPublished: checked,
+                            }))
+                          }
                         />
                       </div>
                     ) : (
                       <Badge
-                        className={blog.isPublished ? 
-                          "bg-green-100 text-green-800 border-green-200" : 
-                          "bg-amber-100 text-amber-800 border-amber-200"
+                        className={
+                          blog.isPublished
+                            ? "bg-green-100 text-green-800 border-green-200"
+                            : "bg-amber-100 text-amber-800 border-amber-200"
                         }
                       >
                         {blog.isPublished ? "Published" : "Draft"}
@@ -509,21 +537,27 @@ export default function BlogDetailPage() {
                       <Calendar className="h-4 w-4 text-gray-500" />
                       <div className="flex-1">
                         <div className="text-gray-600">Published</div>
-                        <div className="font-medium text-gray-900">{formatDate(blog.publishedAt)}</div>
+                        <div className="font-medium text-gray-900">
+                          {formatDate(blog.publishedAt)}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-500" />
                       <div className="flex-1">
                         <div className="text-gray-600">Created</div>
-                        <div className="font-medium text-gray-900">{formatDate(blog.createdAt)}</div>
+                        <div className="font-medium text-gray-900">
+                          {formatDate(blog.createdAt)}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-500" />
                       <div className="flex-1">
                         <div className="text-gray-600">Updated</div>
-                        <div className="font-medium text-gray-900">{formatDate(blog.updatedAt)}</div>
+                        <div className="font-medium text-gray-900">
+                          {formatDate(blog.updatedAt)}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -536,7 +570,9 @@ export default function BlogDetailPage() {
                       <Eye className="h-4 w-4 text-blue-500" />
                       <div className="flex-1">
                         <div className="text-gray-600">Views</div>
-                        <div className="font-medium text-gray-900">{blog.viewCount.toLocaleString()}</div>
+                        <div className="font-medium text-gray-900">
+                          {blog.viewCount.toLocaleString()}
+                        </div>
                       </div>
                     </div>
                     {blog.authorName && (
@@ -544,7 +580,9 @@ export default function BlogDetailPage() {
                         <User className="h-4 w-4 text-blue-500" />
                         <div className="flex-1">
                           <div className="text-gray-600">Author</div>
-                          <div className="font-medium text-gray-900">{blog.authorName}</div>
+                          <div className="font-medium text-gray-900">
+                            {blog.authorName}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -575,8 +613,11 @@ export default function BlogDetailPage() {
                       </>
                     ) : (
                       <>
-                        <Button asChild variant="outline"
-                        className="w-full justify-start">
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="w-full justify-start"
+                        >
                           <Link href={`/blogs/${blog.slug}`} target="_blank">
                             <Eye className="h-4 w-4 mr-2" />
                             View Live
@@ -613,7 +654,9 @@ export default function BlogDetailPage() {
               <CardContent className="p-6 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Slug</span>
-                  <code className="bg-gray-100 px-2 py-1 rounded text-xs">{blog.slug}</code>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-xs">
+                    {blog.slug}
+                  </code>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">ID</span>

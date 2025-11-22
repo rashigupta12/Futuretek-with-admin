@@ -308,31 +308,6 @@ export default function EditCoursePage() {
     }
   };
 
-  // Sticky save button
-  const StickySaveButton = () => (
-    <div className="sticky bottom-6 z-10 flex justify-end">
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
-        <div className="flex gap-3">
-          <Button
-            type="submit"
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {saving ? "Saving…" : "Save Changes"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            asChild
-            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
-            <Link href="/dashboard/admin/courses">Cancel</Link>
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -347,7 +322,7 @@ export default function EditCoursePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto ">
         {/* Header */}
         <div className="mb-8">
           <Link
@@ -514,7 +489,27 @@ export default function EditCoursePage() {
           />
 
           {/* Sticky Save Button */}
-          <StickySaveButton />
+    
+          
+        <div className="flex justify-end gap-3 ">
+          <Button
+            type="submit"
+            disabled={saving}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Saving…" : "Save Changes"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            asChild
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            <Link href="/dashboard/admin/courses">Cancel</Link>
+          </Button>
+        
+      </div>
         </form>
       </div>
     </div>

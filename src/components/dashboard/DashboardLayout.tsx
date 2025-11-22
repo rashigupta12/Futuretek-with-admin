@@ -63,11 +63,11 @@ const navConfigs = {
       ],
     },
     {
-      title: "Agent Management",
+      title: "Astrologer ",
       icon: Users,
       children: [
-        { title: "All Agents", href: "/dashboard/admin/agent", icon: List },
-        { title: "Add Agent", href: "/dashboard/admin/agent/add", icon: Plus },
+        { title: "All Astrologer", href: "/dashboard/admin/agent", icon: List },
+        { title: "Add Astrologer", href: "/dashboard/admin/agent/add", icon: Plus },
       ],
     },
     {
@@ -81,7 +81,7 @@ const navConfigs = {
       ],
     },
     {
-      title: "Users & Finance",
+      title: "Users",
       icon: Users,
       children: [
         { title: "All Users", href: "/dashboard/admin/users", icon: List },

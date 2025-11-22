@@ -92,7 +92,7 @@ export async function GET(
   } catch (error) {
     console.error("Error fetching jyotishi:", error);
     return NextResponse.json(
-      { error: "Failed to fetch jyotishi details" },
+      { error: "Failed to fetch Astrologer details" },
       { status: 500 }
     );
   }
@@ -210,7 +210,7 @@ export async function DELETE(
     }
 
     return NextResponse.json(
-      { message: "Jyotishi deactivated successfully" },
+      { message: "Astrologer deactivated successfully" },
       { status: 200 }
     );
   } catch (error) {
