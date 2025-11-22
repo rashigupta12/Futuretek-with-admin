@@ -387,8 +387,8 @@ export function CoursesCatalog() {
   if (totalCourses === 0) {
     return (
       <section className="py-16 bg-gradient-to-br from-slate-50 via-blue-50/30 to-amber-50/30">
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center bg-white rounded-2xl border border-blue-100 p-8 shadow-lg max-w-2xl mx-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center bg-white rounded-2xl border border-blue-100 p-8 shadow-lg">
             <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-md">
               <BookOpen className="h-8 w-8 text-white" />
             </div>
@@ -428,7 +428,7 @@ export function CoursesCatalog() {
         </div>
       )}
 
-      <div className="w-full   relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-amber-700 bg-clip-text text-transparent mb-4">
@@ -503,7 +503,7 @@ export function CoursesCatalog() {
         {/* Courses Display */}
         {activeCategory === "ALL" ? (
           // Show all courses organized by category
-          <div className="space-y-12 mx-auto max-w-7xl">
+          <div className="space-y-12">
             {courseCategories.map((category) => {
               if (category.courses.length === 0) return null;
 
@@ -535,7 +535,7 @@ export function CoursesCatalog() {
             })}
           </div>
         ) : (
-          // Show filtered courses for specific category
+          // Show filtered courses for specific category - NOW WITH CONSISTENT STYLING
           <div className="space-y-6">
             {/* Category Header */}
             <div className="flex items-center gap-3">
@@ -556,7 +556,7 @@ export function CoursesCatalog() {
               </div>
             </div>
 
-            {/* Courses Grid */}
+            {/* Courses Grid - NOW WITH CONSISTENT PADDING AND LAYOUT */}
             {activeCourses.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {activeCourses.map((course) => renderCourseCard(course))}

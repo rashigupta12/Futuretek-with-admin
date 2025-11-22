@@ -12,14 +12,13 @@ import {
 import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-
 interface Activity {
   id: string;
   action: string;
   time: string;
   type: "enrollment" | "certificate" | "blog" | "payment";
   color: "blue" | "amber" | "indigo" | "emerald";
-  createdAt: Date; // Add actual timestamp for sorting
+  createdAt: Date;
   metadata?: {
     userName?: string;
     courseName?: string;
@@ -39,11 +38,15 @@ export async function GET() {
       );
     }
 
-    const activities: Activity[] = [];
-
-    // Fetch recent enrollments (last 5)
-    const recentEnrollments = await db
-      .select({
+    // Fetch all activity types in parallel with smaller limits
+    const [
+      recentEnrollments,
+      recentCertRequests,
+      recentBlogs,
+      recentPayments
+    ] = await Promise.all([
+      // Recent enrollments (limit 3)
+      db.select({
         id: EnrollmentsTable.id,
         enrolledAt: EnrollmentsTable.enrolledAt,
         courseName: CoursesTable.title,
@@ -53,8 +56,52 @@ export async function GET() {
       .innerJoin(CoursesTable, eq(EnrollmentsTable.courseId, CoursesTable.id))
       .innerJoin(UsersTable, eq(EnrollmentsTable.userId, UsersTable.id))
       .orderBy(desc(EnrollmentsTable.enrolledAt))
-      .limit(5);
+      .limit(3),
 
+      // Recent certificate requests (limit 2)
+      db.select({
+        id: CertificateRequestsTable.id,
+        requestedAt: CertificateRequestsTable.requestedAt,
+        userName: UsersTable.name,
+        status: CertificateRequestsTable.status,
+      })
+      .from(CertificateRequestsTable)
+      .innerJoin(UsersTable, eq(CertificateRequestsTable.userId, UsersTable.id))
+      .where(eq(CertificateRequestsTable.status, "PENDING"))
+      .orderBy(desc(CertificateRequestsTable.requestedAt))
+      .limit(2),
+
+      // Recent blogs (limit 2)
+      db.select({
+        id: BlogsTable.id,
+        publishedAt: BlogsTable.publishedAt,
+        title: BlogsTable.title,
+        authorName: UsersTable.name,
+      })
+      .from(BlogsTable)
+      .innerJoin(UsersTable, eq(BlogsTable.authorId, UsersTable.id))
+      .where(eq(BlogsTable.isPublished, true))
+      .orderBy(desc(BlogsTable.publishedAt))
+      .limit(2),
+
+      // Recent payments (limit 3)
+      db.select({
+        id: PaymentsTable.id,
+        createdAt: PaymentsTable.createdAt,
+        finalAmount: PaymentsTable.finalAmount,
+        currency: PaymentsTable.currency,
+        userName: UsersTable.name,
+      })
+      .from(PaymentsTable)
+      .innerJoin(UsersTable, eq(PaymentsTable.userId, UsersTable.id))
+      .where(eq(PaymentsTable.status, "COMPLETED"))
+      .orderBy(desc(PaymentsTable.createdAt))
+      .limit(3)
+    ]);
+
+    const activities: Activity[] = [];
+
+    // Process enrollments
     recentEnrollments.forEach(enrollment => {
       activities.push({
         id: enrollment.id,
@@ -70,20 +117,7 @@ export async function GET() {
       });
     });
 
-    // Fetch recent certificate requests (last 3)
-    const recentCertRequests = await db
-      .select({
-        id: CertificateRequestsTable.id,
-        requestedAt: CertificateRequestsTable.requestedAt,
-        userName: UsersTable.name,
-        status: CertificateRequestsTable.status,
-      })
-      .from(CertificateRequestsTable)
-      .innerJoin(UsersTable, eq(CertificateRequestsTable.userId, UsersTable.id))
-      .where(eq(CertificateRequestsTable.status, "PENDING"))
-      .orderBy(desc(CertificateRequestsTable.requestedAt))
-      .limit(3);
-
+    // Process certificate requests
     recentCertRequests.forEach(request => {
       activities.push({
         id: request.id,
@@ -98,20 +132,7 @@ export async function GET() {
       });
     });
 
-    // Fetch recent blog posts (last 3)
-    const recentBlogs = await db
-      .select({
-        id: BlogsTable.id,
-        publishedAt: BlogsTable.publishedAt,
-        title: BlogsTable.title,
-        authorName: UsersTable.name,
-      })
-      .from(BlogsTable)
-      .innerJoin(UsersTable, eq(BlogsTable.authorId, UsersTable.id))
-      .where(eq(BlogsTable.isPublished, true))
-      .orderBy(desc(BlogsTable.publishedAt))
-      .limit(3);
-
+    // Process blogs
     recentBlogs.forEach(blog => {
       if (blog.publishedAt) {
         activities.push({
@@ -128,21 +149,7 @@ export async function GET() {
       }
     });
 
-    // Fetch recent payments (last 5)
-    const recentPayments = await db
-      .select({
-        id: PaymentsTable.id,
-        createdAt: PaymentsTable.createdAt,
-        finalAmount: PaymentsTable.finalAmount,
-        currency: PaymentsTable.currency,
-        userName: UsersTable.name,
-      })
-      .from(PaymentsTable)
-      .innerJoin(UsersTable, eq(PaymentsTable.userId, UsersTable.id))
-      .where(eq(PaymentsTable.status, "COMPLETED"))
-      .orderBy(desc(PaymentsTable.createdAt))
-      .limit(5);
-
+    // Process payments
     recentPayments.forEach(payment => {
       const amount = parseFloat(payment.finalAmount);
       const formattedAmount = payment.currency === "INR" 
@@ -163,10 +170,10 @@ export async function GET() {
       });
     });
 
-    // Sort all activities by timestamp (most recent first)
+    // Sort and limit to 8 most recent activities (reduced from 10)
     const sortedActivities = activities
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, 10); // Return only top 10 most recent
+      .slice(0, 8);
 
     return NextResponse.json(sortedActivities);
   } catch (error) {
@@ -178,7 +185,7 @@ export async function GET() {
   }
 }
 
-// Helper function to get relative time
+// Optimized relative time function
 function getRelativeTime(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -187,8 +194,8 @@ function getRelativeTime(date: Date): string {
   const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString();
 }

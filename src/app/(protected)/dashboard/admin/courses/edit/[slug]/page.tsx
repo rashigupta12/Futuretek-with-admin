@@ -1,26 +1,19 @@
-// src/app/(protected)/dashboard/admin/courses/edit/[slug]/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import {
-  DateInput,
-  DynamicStringList,
-  DynamicWhyLearn,
-  Field,
-  StatusSelect,
-  TextInput,
-} from "@/components/courses/course-form";
+import { DynamicWhyLearn } from "@/components/courses/course-form";
+import { EnhancedDynamicList } from "@/components/courses/EnhancedDynamicList";
+import { CourseFormFields } from "@/components/courses/CourseFormFields";
 import RichTextEditor from "@/components/courses/RichTextEditor";
-import { JyotishiSearch } from "@/components/JyotishiSearch";
-import { ImageUpload } from "@/components/ImageUpload";
+import SessionManager, { Session } from "@/components/SessionManager";
 
-const USD_TO_INR_RATE = 83.5; // Default conversion rate
+// const USD_TO_INR_RATE = 83.5;
 
 type Course = {
   id: string;
@@ -46,10 +39,12 @@ type Course = {
   currentEnrollments: number;
   commissionPercourse: number | null;
   assignedJyotishiId: string | null;
+  assignedJyotishiName: string | null;
   features: string[];
   whyLearn: { title: string; description: string }[];
   courseContent: string[];
   topics: string[];
+  sessions: Session[];
 };
 
 export default function EditCoursePage() {
@@ -59,42 +54,41 @@ export default function EditCoursePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  // ── Core fields ─────────────────────────────────────────────────────
-  const [courseId, setCourseId] = useState("");
-  const [courseSlug, setCourseSlug] = useState("");
-  const [title, setTitle] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [description, setDescription] = useState("");
-  const [instructor, setInstructor] = useState("To be announced");
-  const [durationMinutes, setDurationMinutes] = useState("");
-  const [totalSessions, setTotalSessions] = useState("");
-  const [priceINR, setPriceINR] = useState("");
-  const [priceUSD, setPriceUSD] = useState("");
   const [isUSDManual, setIsUSDManual] = useState(false);
-  const [status, setStatus] = useState("DRAFT");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [registrationDeadline, setRegistrationDeadline] = useState("");
-  const [whyLearnIntro, setWhyLearnIntro] = useState("");
-  const [whatYouLearn, setWhatYouLearn] = useState("");
-  const [disclaimer, setDisclaimer] = useState("");
-  const [maxStudents, setMaxStudents] = useState("");
-  const [currentEnrollments, setCurrentEnrollments] = useState("0");
-  const [commissionPercourse, setCommissionPercourse] = useState("");
-  
-  // Jyotishi assignment
-  const [assignedJyotishiId, setAssignedJyotishiId] = useState<string | null>(null);
-  const [assignedJyotishiName, setAssignedJyotishiName] = useState<string | null>(null);
 
-  // ── Arrays ───────────────────────────────────────────────────────
-  const [features, setFeatures] = useState<string[]>([""]);
-  const [whyLearn, setWhyLearn] = useState<
-    { title: string; description: string }[]
-  >([{ title: "", description: "" }]);
-  const [courseContent, setCourseContent] = useState<string[]>([""]);
-  const [relatedTopics, setRelatedTopics] = useState<string[]>([""]);
+  // Form state
+  const [formData, setFormData] = useState({
+    id: "",
+    slug: "",
+    title: "",
+    tagline: "",
+    description: "",
+    instructor: "To be announced",
+    durationMinutes: "",
+    totalSessions: "",
+    priceINR: "",
+    priceUSD: "",
+    status: "DRAFT",
+    thumbnailUrl: "",
+    startDate: "",
+    endDate: "",
+    registrationDeadline: "",
+    whyLearnIntro: "",
+    whatYouLearn: "",
+    disclaimer: "",
+    maxStudents: "",
+    currentEnrollments: "0",
+    commissionPercourse: "",
+    assignedJyotishiId: null as string | null,
+    assignedJyotishiName: null as string | null,
+  });
+
+  // Arrays
+  const [features, setFeatures] = useState<string[]>([]);
+  const [whyLearn, setWhyLearn] = useState<{ title: string; description: string }[]>([]);
+  const [courseContent, setCourseContent] = useState<string[]>([]);
+  const [relatedTopics, setRelatedTopics] = useState<string[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   const [dateErrors, setDateErrors] = useState({
     registrationDeadline: "",
@@ -102,65 +96,52 @@ export default function EditCoursePage() {
     endDate: "",
   });
 
-  useEffect(() => {
-    if (slug) {
-      fetchCourse();
-    }
-  }, [slug]);
+  // Field change handler
+  const handleFieldChange = useCallback((field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
-  const validateDates = () => {
+  // Jyotishi change handler
+  const handleJyotishiChange = useCallback((id: string | null, name: string | null) => {
+    setFormData(prev => ({
+      ...prev,
+      assignedJyotishiId: id,
+      assignedJyotishiName: name,
+      instructor: name || "To be announced"
+    }));
+  }, []);
+
+  // Date validation
+  const validateDates = useCallback(() => {
     const errors = {
       registrationDeadline: "",
       startDate: "",
       endDate: "",
     };
 
-    if (registrationDeadline && startDate) {
-      if (new Date(registrationDeadline) >= new Date(startDate)) {
-        errors.registrationDeadline =
-          "Registration deadline must be before start date";
+    if (formData.registrationDeadline && formData.startDate) {
+      if (new Date(formData.registrationDeadline) >= new Date(formData.startDate)) {
+        errors.registrationDeadline = "Registration deadline must be before start date";
       }
     }
 
-    if (startDate && endDate) {
-      if (new Date(startDate) >= new Date(endDate)) {
+    if (formData.startDate && formData.endDate) {
+      if (new Date(formData.startDate) >= new Date(formData.endDate)) {
         errors.startDate = "Start date must be before end date";
       }
     }
 
     setDateErrors(errors);
     return Object.values(errors).every((error) => !error);
-  };
+  }, [formData.registrationDeadline, formData.startDate, formData.endDate]);
 
   useEffect(() => {
     validateDates();
-  }, [registrationDeadline, startDate, endDate]);
+  }, [validateDates]);
 
-  // Auto-generate slug when title changes
-  useEffect(() => {
-    if (title && !courseId) { // Only auto-generate for new courses
-      const generatedSlug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, "");
-      setCourseSlug(generatedSlug);
-    }
-  }, [title, courseId]);
-
-  // Auto-calculate USD from INR
-  useEffect(() => {
-    if (!isUSDManual && priceINR) {
-      const inrValue = parseFloat(priceINR);
-      if (!isNaN(inrValue)) {
-        const calculatedUSD = (inrValue / USD_TO_INR_RATE).toFixed(2);
-        setPriceUSD(calculatedUSD);
-      }
-    }
-  }, [priceINR, isUSDManual]);
-
-  // Format duration display
-  const formatDuration = () => {
-    const minutes = parseInt(durationMinutes);
+  // Format duration
+  const formatDuration = useCallback(() => {
+    const minutes = parseInt(formData.durationMinutes);
     if (isNaN(minutes)) return "";
     
     const hours = Math.floor(minutes / 60);
@@ -169,12 +150,16 @@ export default function EditCoursePage() {
     if (hours === 0) return `${mins} minutes`;
     if (mins === 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
     return `${hours} hour${hours > 1 ? 's' : ''} ${mins} minutes`;
-  };
+  }, [formData.durationMinutes]);
 
   const fetchCourse = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/courses/${slug}`);
+      const res = await fetch(`/api/admin/courses/${slug}`, {
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
 
       if (!res.ok) {
         throw new Error("Course not found");
@@ -182,53 +167,40 @@ export default function EditCoursePage() {
 
       const data: Course = await res.json();
 
-      // Populate all fields
-      setCourseId(data.id);
-      setCourseSlug(data.slug);
-      setTitle(data.title);
-      setTagline(data.tagline || "");
-      setDescription(data.description);
-      setInstructor(data.instructor || "To be announced");
-      setDurationMinutes(data.durationMinutes ? String(data.durationMinutes) : "");
-      setTotalSessions(data.totalSessions ? String(data.totalSessions) : "");
-      setPriceINR(String(data.priceINR));
-      setPriceUSD(String(data.priceUSD));
-      setStatus(data.status);
-      setThumbnailUrl(data.thumbnailUrl || "");
+      // Populate form data
+      setFormData({
+        id: data.id,
+        slug: data.slug,
+        title: data.title,
+        tagline: data.tagline || "",
+        description: data.description,
+        instructor: data.instructor || "To be announced",
+        durationMinutes: data.durationMinutes ? String(data.durationMinutes) : "",
+        totalSessions: data.totalSessions ? String(data.totalSessions) : "",
+        priceINR: String(data.priceINR),
+        priceUSD: String(data.priceUSD),
+        status: data.status,
+        thumbnailUrl: data.thumbnailUrl || "",
+        startDate: data.startDate ? data.startDate.split("T")[0] : "",
+        endDate: data.endDate ? data.endDate.split("T")[0] : "",
+        registrationDeadline: data.registrationDeadline ? data.registrationDeadline.split("T")[0] : "",
+        whyLearnIntro: data.whyLearnIntro || "",
+        whatYouLearn: data.whatYouLearn || "",
+        disclaimer: data.disclaimer || "",
+        maxStudents: data.maxStudents ? String(data.maxStudents) : "",
+        currentEnrollments: String(data.currentEnrollments),
+        commissionPercourse: data.commissionPercourse !== null ? String(data.commissionPercourse) : "",
+        assignedJyotishiId: data.assignedJyotishiId,
+        assignedJyotishiName: data.assignedJyotishiName || null,
+      });
 
-      // Format dates to YYYY-MM-DD
-      setStartDate(data.startDate ? data.startDate.split("T")[0] : "");
-      setEndDate(data.endDate ? data.endDate.split("T")[0] : "");
-      setRegistrationDeadline(
-        data.registrationDeadline ? data.registrationDeadline.split("T")[0] : ""
-      );
+      // Set arrays
+      setFeatures(data.features || []);
+      setWhyLearn(data.whyLearn || []);
+      setCourseContent(data.courseContent || []);
+      setRelatedTopics(data.topics || []);
+      setSessions(data.sessions || []);
 
-      setWhyLearnIntro(data.whyLearnIntro || "");
-      setWhatYouLearn(data.whatYouLearn || "");
-      setDisclaimer(data.disclaimer || "");
-      setMaxStudents(data.maxStudents ? String(data.maxStudents) : "");
-      setCurrentEnrollments(String(data.currentEnrollments));
-      setCommissionPercourse(
-        data.commissionPercourse !== null ? String(data.commissionPercourse) : ""
-      );
-
-      // Set Jyotishi info
-      if (data.assignedJyotishiId) {
-        setAssignedJyotishiId(data.assignedJyotishiId);
-        setAssignedJyotishiName(data.instructor || null);
-      }
-
-      // Arrays
-      setFeatures(data.features?.length > 0 ? data.features : [""]);
-      setWhyLearn(
-        data.whyLearn?.length > 0
-          ? data.whyLearn
-          : [{ title: "", description: "" }]
-      );
-      setCourseContent(
-        data.courseContent?.length > 0 ? data.courseContent : [""]
-      );
-      setRelatedTopics(data.topics?.length > 0 ? data.topics : [""]);
     } catch (error) {
       console.error("Failed to fetch course:", error);
       Swal.fire({
@@ -241,6 +213,12 @@ export default function EditCoursePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (slug) {
+      fetchCourse();
+    }
+  }, [slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,40 +235,44 @@ export default function EditCoursePage() {
     setSaving(true);
 
     // Calculate total duration string
-    const durationString = formatDuration() || `${totalSessions} live sessions`;
+    const durationString = formatDuration() || `${formData.totalSessions} live sessions`;
 
     const payload = {
-      slug: courseSlug,
-      title,
-      tagline: tagline || null,
-      description,
-      instructor: instructor || null,
+      slug: formData.slug,
+      title: formData.title,
+      tagline: formData.tagline || null,
+      description: formData.description,
+      instructor: formData.instructor || null,
       duration: durationString,
-      durationMinutes: durationMinutes ? Number(durationMinutes) : null,
-      totalSessions: totalSessions ? Number(totalSessions) : null,
-      priceINR: priceINR ? Number(priceINR) : null,
-      priceUSD: priceUSD ? Number(priceUSD) : null,
-      status,
-      thumbnailUrl: thumbnailUrl || null,
-      startDate: startDate || null,
-      endDate: endDate || null,
-      registrationDeadline: registrationDeadline || null,
-      whyLearnIntro: whyLearnIntro || null,
-      whatYouLearn: whatYouLearn || null,
-      disclaimer: disclaimer || null,
-      maxStudents: maxStudents ? Number(maxStudents) : null,
-      currentEnrollments: Number(currentEnrollments),
-      commissionPercourse: commissionPercourse ? Number(commissionPercourse) : null,
-      assignedJyotishiId: assignedJyotishiId || null,
+      durationMinutes: formData.durationMinutes ? Number(formData.durationMinutes) : null,
+      totalSessions: formData.totalSessions ? Number(formData.totalSessions) : null,
+      priceINR: formData.priceINR ? Number(formData.priceINR) : null,
+      priceUSD: formData.priceUSD ? Number(formData.priceUSD) : null,
+      status: formData.status,
+      thumbnailUrl: formData.thumbnailUrl || null,
+      startDate: formData.startDate || null,
+      endDate: formData.endDate || null,
+      registrationDeadline: formData.registrationDeadline || null,
+      whyLearnIntro: formData.whyLearnIntro || null,
+      whatYouLearn: formData.whatYouLearn || null,
+      disclaimer: formData.disclaimer || null,
+      maxStudents: formData.maxStudents ? Number(formData.maxStudents) : null,
+      currentEnrollments: Number(formData.currentEnrollments),
+      commissionPercourse: formData.commissionPercourse ? Number(formData.commissionPercourse) : null,
+      assignedJyotishiId: formData.assignedJyotishiId,
 
       features: features.filter((f) => f.trim()),
       whyLearn: whyLearn.filter((w) => w.title.trim() && w.description.trim()),
       content: courseContent.filter((c) => c.trim()),
       topics: relatedTopics.filter((t) => t.trim()),
+      sessions: sessions.map(session => ({
+        ...session,
+        duration: Number(session.duration),
+      })),
     };
 
     try {
-      const res = await fetch(`/api/admin/courses/${courseId}`, {
+      const res = await fetch(`/api/admin/courses/${formData.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -305,6 +287,7 @@ export default function EditCoursePage() {
           showConfirmButton: false,
         });
         router.push("/dashboard/admin/courses");
+        router.refresh();
       } else {
         const err = await res.json();
         Swal.fire({
@@ -325,206 +308,93 @@ export default function EditCoursePage() {
     }
   };
 
+  // Sticky save button
+  const StickySaveButton = () => (
+    <div className="sticky bottom-6 z-10 flex justify-end">
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+        <div className="flex gap-3">
+          <Button
+            type="submit"
+            disabled={saving}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {saving ? "Saving…" : "Save Changes"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            asChild
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            <Link href="/dashboard/admin/courses">Cancel</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="p-6 flex justify-center items-center min-h-64">
-        <div className="text-muted-foreground">Loading course...</div>
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading course...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
-      <div className="max-w-7xl mx-auto">
-        <Link
-          href="/dashboard/admin/courses"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Courses
-        </Link>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <Link
+            href="/dashboard/admin/courses"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Courses
+          </Link>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Course</h1>
-            <p className="text-gray-600">Update course details and content.</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Course</h1>
+              <p className="text-gray-600">Update course details and content.</p>
+            </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* ── Basic Info ── */}
+        <form onSubmit={handleSubmit} className="space-y-8 pb-20">
+          {/* Basic Information */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
               <CardTitle className="text-xl text-gray-900">
                 Basic Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Title *">
-                <TextInput
-                  value={title}
-                  onChange={(value) => {
-                    const capitalized =
-                      value.charAt(0).toUpperCase() + value.slice(1);
-                    setTitle(capitalized);
-                  }}
-                  placeholder="KP Astrology"
-                  required
-                />
-              </Field>
-
-              <Field label="Slug (Auto-generated)">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={courseSlug}
-                    disabled
-                    className="w-full px-4 py-2.5 bg-gray-100 text-gray-500 border border-gray-300 rounded-lg cursor-not-allowed font-mono text-sm"
-                  />
-                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                    <Info className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-              </Field>
-
-              <Field label="Tagline">
-                <TextInput
-                  value={tagline}
-                  onChange={(value) => {
-                    const capitalized =
-                      value.charAt(0).toUpperCase() + value.slice(1);
-                    setTagline(capitalized);
-                  }}
-                  placeholder="Learn KP in its original form..."
-                />
-              </Field>
-
-              <Field label="Instructor / Jyotishi *">
-                <JyotishiSearch
-                  value={assignedJyotishiId}
-                  onChange={(id, name) => {
-                    setAssignedJyotishiId(id);
-                    setAssignedJyotishiName(name);
-                    setInstructor(name || "To be announced");
-                  }}
-                  selectedName={assignedJyotishiName}
-                />
-                <p className="mt-2 text-sm text-gray-500">
-                  Search and assign a Jyotishi as the course instructor
-                </p>
-              </Field>
-
-              <Field label="Duration (Minutes)">
-                <div className="space-y-2">
-                  <TextInput
-                    type="number"
-                    value={durationMinutes}
-                    onChange={setDurationMinutes}
-                    placeholder="1500"
-                  />
-                  {durationMinutes && (
-                    <div className="text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded">
-                      📅 {formatDuration()}
-                    </div>
-                  )}
-                </div>
-              </Field>
-
-              <Field label="Total Sessions">
-                <TextInput
-                  type="number"
-                  value={totalSessions}
-                  onChange={setTotalSessions}
-                  placeholder="25"
-                />
-              </Field>
-
-              <Field label="Price (INR) *">
-                <TextInput
-                  type="number"
-                  value={priceINR}
-                  onChange={setPriceINR}
-                  placeholder="20000"
-                  required
-                />
-              </Field>
-
-              <Field label="Price (USD) *">
-                <div className="space-y-2">
-                  <div className="relative">
-                    <TextInput
-                      type="number"
-                      value={priceUSD}
-                      onChange={(value) => {
-                        setPriceUSD(value);
-                        setIsUSDManual(true);
-                      }}
-                      placeholder="250"
-                      required
-                    />
-                    {!isUSDManual && priceUSD && (
-                      <div className="absolute inset-y-0 right-3 flex items-center">
-                        <span className="text-xs text-green-600 font-medium">
-                          Auto-calculated
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  {isUSDManual && (
-                    <button
-                      type="button"
-                      onClick={() => setIsUSDManual(false)}
-                      className="text-xs text-blue-600 hover:text-blue-800 underline"
-                    >
-                      Reset to auto-calculate
-                    </button>
-                  )}
-                </div>
-              </Field>
-
-              <Field label="Commission per Course (%)">
-                <TextInput
-                  type="number"
-                  value={commissionPercourse}
-                  onChange={setCommissionPercourse}
-                  placeholder="15.5"
-                />
-              </Field>
-
-              <div className="md:col-span-2">
-                <ImageUpload
-                  label="Thumbnail Image"
-                  value={thumbnailUrl}
-                  onChange={setThumbnailUrl}
-                  isThumbnail={true}
-                />
-              </div>
-
-              <DateInput
-                label="Start Date"
-                value={startDate}
-                onChange={setStartDate}
-                error={dateErrors.startDate}
+            <CardContent className="p-6">
+              <CourseFormFields
+                formData={formData}
+                onFieldChange={handleFieldChange}
+                onJyotishiChange={handleJyotishiChange}
+                dateErrors={dateErrors}
+                isUSDManual={isUSDManual}
+                onUSDManualToggle={() => setIsUSDManual(false)}
+                formatDuration={formatDuration}
               />
-              <DateInput
-                label="End Date"
-                value={endDate}
-                onChange={setEndDate}
-              />
-              <DateInput
-                label="Registration Deadline"
-                value={registrationDeadline}
-                onChange={setRegistrationDeadline}
-                error={dateErrors.registrationDeadline}
-              />
-
-              <div className="md:col-span-2">
-                <StatusSelect value={status} onChange={setStatus} />
-              </div>
             </CardContent>
           </Card>
 
-          {/* ── Long Texts ── */}
+          {/* Sessions Management */}
+          <SessionManager
+            sessions={sessions}
+            setSessions={setSessions}
+            totalSessions={parseInt(formData.totalSessions) || 0}
+          />
+
+          {/* Content & SEO */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
               <CardTitle className="text-xl text-gray-900">
@@ -532,112 +402,119 @@ export default function EditCoursePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              <Field label="Description *">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description *
+                </label>
                 <RichTextEditor
-                  value={description}
-                  onChange={setDescription}
+                  value={formData.description}
+                  onChange={(value) => handleFieldChange("description", value)}
                   placeholder="Enter course description..."
                   minHeight="300px"
                 />
-              </Field>
+              </div>
 
-              <Field label="Why Learn Intro">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Why Learn Intro
+                </label>
                 <RichTextEditor
-                  value={whyLearnIntro}
-                  onChange={setWhyLearnIntro}
+                  value={formData.whyLearnIntro}
+                  onChange={(value) => handleFieldChange("whyLearnIntro", value)}
                   placeholder="Enter why learn introduction..."
                   minHeight="200px"
                 />
-              </Field>
+              </div>
 
-              <Field label="What You Learn">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  What You Learn
+                </label>
                 <RichTextEditor
-                  value={whatYouLearn}
-                  onChange={setWhatYouLearn}
+                  value={formData.whatYouLearn}
+                  onChange={(value) => handleFieldChange("whatYouLearn", value)}
                   placeholder="Enter what students will learn..."
                   minHeight="300px"
                 />
-              </Field>
+              </div>
 
-              <Field label="Disclaimer">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Disclaimer
+                </label>
                 <RichTextEditor
-                  value={disclaimer}
-                  onChange={setDisclaimer}
+                  value={formData.disclaimer}
+                  onChange={(value) => handleFieldChange("disclaimer", value)}
                   placeholder="Enter disclaimer..."
                   minHeight="200px"
                 />
-              </Field>
+              </div>
             </CardContent>
           </Card>
 
-          {/* ── Capacity ── */}
+          {/* Capacity */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
               <CardTitle className="text-xl text-gray-900">Capacity</CardTitle>
             </CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Field label="Max Students">
-                <TextInput
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Students
+                </label>
+                <input
                   type="number"
-                  value={maxStudents}
-                  onChange={setMaxStudents}
+                  value={formData.maxStudents}
+                  onChange={(e) => handleFieldChange("maxStudents", e.target.value)}
                   placeholder="50"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
-              </Field>
+              </div>
 
-              <Field label="Current Enrollments">
-                <TextInput
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Enrollments
+                </label>
+                <input
                   type="number"
-                  value={currentEnrollments}
-                  onChange={setCurrentEnrollments}
+                  value={formData.currentEnrollments}
+                  onChange={(e) => handleFieldChange("currentEnrollments", e.target.value)}
                   placeholder="0"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 />
-              </Field>
+              </div>
             </CardContent>
           </Card>
 
-          {/* ── Dynamic Lists ── */}
-          <DynamicStringList
+          {/* Dynamic Lists */}
+          <EnhancedDynamicList
             title="Features"
             items={features}
             setItems={setFeatures}
             placeholder="25 live sessions on Zoom"
+            type="feature"
           />
 
           <DynamicWhyLearn items={whyLearn} setItems={setWhyLearn} />
 
-          <DynamicStringList
+          <EnhancedDynamicList
             title="Course Content"
             items={courseContent}
             setItems={setCourseContent}
             placeholder="The Zodiac and Its Divisions"
+            type="content"
           />
 
-          <DynamicStringList
+          <EnhancedDynamicList
             title="Related Topics"
             items={relatedTopics}
             setItems={setRelatedTopics}
             placeholder="Astrology"
+            type="topic"
           />
 
-          {/* ── Submit ── */}
-          <div className="flex gap-3 pt-6">
-            <Button
-              type="submit"
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8"
-            >
-              {saving ? "Saving…" : "Save Changes"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              asChild
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              <Link href="/dashboard/admin/courses">Cancel</Link>
-            </Button>
-          </div>
+          {/* Sticky Save Button */}
+          <StickySaveButton />
         </form>
       </div>
     </div>

@@ -22,120 +22,115 @@ export async function GET() {
       );
     }
 
-    // Calculate date ranges
+    // Calculate date ranges once
     const now = new Date();
     const firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    // const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    // 1. Total Users (with month-over-month growth)
-    const [totalUsers] = await db
-      .select({ count: count() })
-      .from(UsersTable);
-
-    const [lastMonthUsers] = await db
-      .select({ count: count() })
-      .from(UsersTable)
-      .where(
-        and(
+    // Run ALL database queries in parallel
+    const [
+      // User counts
+      totalUsersResult,
+      lastMonthUsersResult,
+      thisMonthUsersResult,
+      
+      // Course counts
+      activeCoursesResult,
+      totalCoursesResult,
+      newCoursesThisMonthResult,
+      
+      // Revenue data
+      totalRevenueResult,
+      lastMonthRevenueResult,
+      thisMonthRevenueResult,
+      
+      // Certificates & Enrollments
+      pendingCertificatesResult,
+      totalEnrollmentsResult,
+      activeEnrollmentsResult
+    ] = await Promise.all([
+      // 1. User counts (parallel)
+      db.select({ count: count() }).from(UsersTable),
+      db.select({ count: count() })
+        .from(UsersTable)
+        .where(and(
           gte(UsersTable.createdAt, firstDayLastMonth),
           sql`${UsersTable.createdAt} < ${firstDayThisMonth}`
-        )
-      );
+        )),
+      db.select({ count: count() })
+        .from(UsersTable)
+        .where(gte(UsersTable.createdAt, firstDayThisMonth)),
 
-    const [thisMonthUsers] = await db
-      .select({ count: count() })
-      .from(UsersTable)
-      .where(gte(UsersTable.createdAt, firstDayThisMonth));
+      // 2. Course counts (parallel)
+      db.select({ count: count() })
+        .from(CoursesTable)
+        .where(sql`${CoursesTable.status} IN ('REGISTRATION_OPEN', 'ONGOING')`),
+      db.select({ count: count() }).from(CoursesTable),
+      db.select({ count: count() })
+        .from(CoursesTable)
+        .where(gte(CoursesTable.createdAt, firstDayThisMonth)),
 
-    const userGrowth = lastMonthUsers.count > 0 
-      ? ((thisMonthUsers.count - lastMonthUsers.count) / lastMonthUsers.count) * 100 
-      : thisMonthUsers.count > 0 ? 100 : 0;
-
-    // 2. Active Courses (REGISTRATION_OPEN, ONGOING)
-    const [activeCourses] = await db
-      .select({ count: count() })
-      .from(CoursesTable)
-      .where(
-        sql`${CoursesTable.status} IN ('REGISTRATION_OPEN', 'ONGOING')`
-      );
-
-    const [totalCourses] = await db
-      .select({ count: count() })
-      .from(CoursesTable);
-
-    const [newCoursesThisMonth] = await db
-      .select({ count: count() })
-      .from(CoursesTable)
-      .where(gte(CoursesTable.createdAt, firstDayThisMonth));
-
-    // 3. Total Revenue (with month-over-month comparison)
-    const [totalRevenueResult] = await db
-      .select({ 
-        total: sum(PaymentsTable.finalAmount) 
-      })
-      .from(PaymentsTable)
-      .where(eq(PaymentsTable.status, "COMPLETED"));
-
-    const [lastMonthRevenue] = await db
-      .select({ 
-        total: sum(PaymentsTable.finalAmount) 
-      })
-      .from(PaymentsTable)
-      .where(
-        and(
+      // 3. Revenue data (parallel)
+      db.select({ total: sum(PaymentsTable.finalAmount) })
+        .from(PaymentsTable)
+        .where(eq(PaymentsTable.status, "COMPLETED")),
+      db.select({ total: sum(PaymentsTable.finalAmount) })
+        .from(PaymentsTable)
+        .where(and(
           eq(PaymentsTable.status, "COMPLETED"),
           gte(PaymentsTable.createdAt, firstDayLastMonth),
           sql`${PaymentsTable.createdAt} < ${firstDayThisMonth}`
-        )
-      );
-
-    const [thisMonthRevenue] = await db
-      .select({ 
-        total: sum(PaymentsTable.finalAmount) 
-      })
-      .from(PaymentsTable)
-      .where(
-        and(
+        )),
+      db.select({ total: sum(PaymentsTable.finalAmount) })
+        .from(PaymentsTable)
+        .where(and(
           eq(PaymentsTable.status, "COMPLETED"),
           gte(PaymentsTable.createdAt, firstDayThisMonth)
-        )
-      );
+        )),
 
-    const totalRevenue = parseFloat(totalRevenueResult?.total || "0");
-    const lastMonthRev = parseFloat(lastMonthRevenue?.total || "0");
-    const thisMonthRev = parseFloat(thisMonthRevenue?.total || "0");
-    
-    const revenueGrowth = lastMonthRev > 0 
-      ? ((thisMonthRev - lastMonthRev) / lastMonthRev) * 100 
+      // 4. Certificates & Enrollments (parallel)
+      db.select({ count: count() })
+        .from(CertificateRequestsTable)
+        .where(eq(CertificateRequestsTable.status, "PENDING")),
+      db.select({ count: count() }).from(EnrollmentsTable),
+      db.select({ count: count() })
+        .from(EnrollmentsTable)
+        .where(eq(EnrollmentsTable.status, "ACTIVE"))
+    ]);
+
+    // Extract results
+    const totalUsers = totalUsersResult[0]?.count || 0;
+    const lastMonthUsers = lastMonthUsersResult[0]?.count || 0;
+    const thisMonthUsers = thisMonthUsersResult[0]?.count || 0;
+    const activeCourses = activeCoursesResult[0]?.count || 0;
+    const totalCourses = totalCoursesResult[0]?.count || 0;
+    const newCoursesThisMonth = newCoursesThisMonthResult[0]?.count || 0;
+    const totalRevenue = parseFloat(totalRevenueResult[0]?.total || "0");
+    const lastMonthRev = parseFloat(lastMonthRevenueResult[0]?.total || "0");
+    const thisMonthRev = parseFloat(thisMonthRevenueResult[0]?.total || "0");
+    const pendingCertificates = pendingCertificatesResult[0]?.count || 0;
+    const totalEnrollments = totalEnrollmentsResult[0]?.count || 0;
+    const activeEnrollments = activeEnrollmentsResult[0]?.count || 0;
+
+    // Calculate growth percentages
+    const userGrowth = lastMonthUsers > 0 
+      ? ((thisMonthUsers - lastMonthUsers) / lastMonthUsers) * 100 
+      : thisMonthUsers > 0 ? 100 : 0;
+
+    const revenueGrowth = lastMonthRev > 0
+      ? ((thisMonthRev - lastMonthRev) / lastMonthRev) * 100
       : thisMonthRev > 0 ? 100 : 0;
-
-    // 4. Pending Certificate Requests
-    const [pendingCertificates] = await db
-      .select({ count: count() })
-      .from(CertificateRequestsTable)
-      .where(eq(CertificateRequestsTable.status, "PENDING"));
-
-    // 5. Additional Stats
-    const [totalEnrollments] = await db
-      .select({ count: count() })
-      .from(EnrollmentsTable);
-
-    const [activeEnrollments] = await db
-      .select({ count: count() })
-      .from(EnrollmentsTable)
-      .where(eq(EnrollmentsTable.status, "ACTIVE"));
 
     return NextResponse.json({
       totalUsers: {
-        count: totalUsers.count || 0,
-        growth: Math.round(userGrowth * 10) / 10, // Round to 1 decimal
-        newThisMonth: thisMonthUsers.count || 0
+        count: totalUsers,
+        growth: Math.round(userGrowth * 10) / 10,
+        newThisMonth: thisMonthUsers
       },
       activeCourses: {
-        count: activeCourses.count || 0,
-        total: totalCourses.count || 0,
-        newThisMonth: newCoursesThisMonth.count || 0
+        count: activeCourses,
+        total: totalCourses,
+        newThisMonth: newCoursesThisMonth
       },
       revenue: {
         total: totalRevenue,
@@ -143,11 +138,11 @@ export async function GET() {
         thisMonth: thisMonthRev
       },
       pendingCertificates: {
-        count: pendingCertificates.count || 0
+        count: pendingCertificates
       },
       enrollments: {
-        total: totalEnrollments.count || 0,
-        active: activeEnrollments.count || 0
+        total: totalEnrollments,
+        active: activeEnrollments
       }
     });
   } catch (error) {

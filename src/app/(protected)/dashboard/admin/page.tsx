@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 interface DashboardStats {
   totalUsers: {
@@ -49,48 +49,48 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchDashboardData() {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/admin/dashboard-stats");
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data);
-        } else {
-          console.error("Failed to fetch dashboard stats");
-        }
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setActivitiesLoading(true);
 
- async function fetchRecentActivity() {
-      try {
-        setActivitiesLoading(true);
-        const response = await fetch("/api/admin/recent-activity");
-        if (response.ok) {
-          const data = await response.json();
-          // Sort activities by timestamp in descending order (latest first)
-          const sortedData = data.sort((a: Activity, b: Activity) => {
-            return new Date(b.time).getTime() - new Date(a.time).getTime();
-          });
-          setActivities(sortedData);
-        } else {
-          console.error("Failed to fetch recent activity");
-        }
-      } catch (error) {
-        console.error("Failed to fetch recent activity:", error);
-      } finally {
-        setActivitiesLoading(false);
-      }
-    }
+      // Use Promise.all to fetch both endpoints in parallel
+      const [statsResponse, activitiesResponse] = await Promise.all([
+        fetch("/api/admin/dashboard-stats"),
+        fetch("/api/admin/recent-activity")
+      ]);
 
-    fetchDashboardData();
-    fetchRecentActivity();
+      // Process stats response immediately
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats(statsData);
+      } else {
+        console.error("Failed to fetch dashboard stats");
+      }
+
+      // Process activities response
+      if (activitiesResponse.ok) {
+        const activitiesData = await activitiesResponse.json();
+        // Sort activities by timestamp in descending order (latest first)
+        const sortedData = activitiesData.sort((a: Activity, b: Activity) => {
+          return new Date(b.time).getTime() - new Date(a.time).getTime();
+        });
+        setActivities(sortedData);
+      } else {
+        console.error("Failed to fetch recent activity");
+      }
+
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+    } finally {
+      setLoading(false);
+      setActivitiesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const formatCurrency = (amount: number) => {
     return `₹${amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
@@ -106,6 +106,9 @@ export default function AdminDashboard() {
     }
   };
 
+  // Show stats immediately when available, don't wait for activities
+  const statsLoaded = !loading && stats !== null;
+
   return (
     <>
       {/* Dashboard Overview */}
@@ -120,128 +123,127 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Total Users */}
         <Link href="/dashboard/admin/users">
-        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-2xl shadow-sm">
-              👥
-            </div>
-          </div>
-          <h3 className="text-sm font-medium text-gray-600 mb-1">Total Users</h3>
-          {loading ? (
-            <div className="space-y-2">
-              <div className="h-9 w-24 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-gray-900 mb-2">
-                {stats?.totalUsers.count.toLocaleString()}
-              </p>
-              <div className="flex items-center">
-                <span className={`text-sm font-medium ${
-                  stats && stats.totalUsers.growth >= 0 ? "text-emerald-600" : "text-rose-600"
-                }`}>
-                  {stats && stats.totalUsers.growth >= 0 ? "+" : ""}
-                  {stats?.totalUsers.growth.toFixed(1)}%
-                </span>
-                <span className="text-sm text-gray-500 ml-1">from last month</span>
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-2xl shadow-sm">
+                👥
               </div>
-            </>
-          )}
-          
-        </div>
+            </div>
+            <h3 className="text-sm font-medium text-gray-600 mb-1">Total Users</h3>
+            {!statsLoaded ? (
+              <div className="space-y-2">
+                <div className="h-9 w-24 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-900 mb-2">
+                  {stats?.totalUsers.count.toLocaleString()}
+                </p>
+                <div className="flex items-center">
+                  <span className={`text-sm font-medium ${
+                    stats && stats.totalUsers.growth >= 0 ? "text-emerald-600" : "text-rose-600"
+                  }`}>
+                    {stats && stats.totalUsers.growth >= 0 ? "+" : ""}
+                    {stats?.totalUsers.growth.toFixed(1)}%
+                  </span>
+                  <span className="text-sm text-gray-500 ml-1">from last month</span>
+                </div>
+              </>
+            )}
+          </div>
         </Link>
 
         {/* Active Courses */}
         <Link href="/dashboard/admin/courses">
-        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl shadow-sm">
-              📚
-            </div>
-          </div>
-          <h3 className="text-sm font-medium text-gray-600 mb-1">Active Courses</h3>
-          {loading ? (
-            <div className="space-y-2">
-              <div className="h-9 w-20 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-5 w-24 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-gray-900 mb-2">
-                {stats?.activeCourses.count}
-              </p>
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-emerald-600">
-                  +{stats?.activeCourses.newThisMonth}
-                </span>
-                <span className="text-sm text-gray-500 ml-1">new this month</span>
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-2xl shadow-sm">
+                📚
               </div>
-            </>
-          )}
-        </div>
+            </div>
+            <h3 className="text-sm font-medium text-gray-600 mb-1">Active Courses</h3>
+            {!statsLoaded ? (
+              <div className="space-y-2">
+                <div className="h-9 w-20 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-5 w-24 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-900 mb-2">
+                  {stats?.activeCourses.count}
+                </p>
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-emerald-600">
+                    +{stats?.activeCourses.newThisMonth}
+                  </span>
+                  <span className="text-sm text-gray-500 ml-1">new this month</span>
+                </div>
+              </>
+            )}
+          </div>
         </Link>
 
         {/* Total Revenue */}
         <Link href="/dashboard/admin/payments">
-        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-2xl shadow-sm">
-              💰
-            </div>
-          </div>
-          <h3 className="text-sm font-medium text-gray-600 mb-1">Total Revenue</h3>
-          {loading ? (
-            <div className="space-y-2">
-              <div className="h-9 w-32 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-5 w-36 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-gray-900 mb-2">
-                {formatCurrency(stats?.revenue.total || 0)}
-              </p>
-              <div className="flex items-center">
-                <span className={`text-sm font-medium ${
-                  stats && stats.revenue.growth >= 0 ? "text-emerald-600" : "text-rose-600"
-                }`}>
-                  {stats && stats.revenue.growth >= 0 ? "+" : ""}
-                  {stats?.revenue.growth.toFixed(1)}%
-                </span>
-                <span className="text-sm text-gray-500 ml-1">from last month</span>
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-2xl shadow-sm">
+                💰
               </div>
-            </>
-          )}
-        </div>
-</Link>
-        {/* Pending Certificates */}
+            </div>
+            <h3 className="text-sm font-medium text-gray-600 mb-1">Total Revenue</h3>
+            {!statsLoaded ? (
+              <div className="space-y-2">
+                <div className="h-9 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-5 w-36 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-900 mb-2">
+                  {formatCurrency(stats?.revenue.total || 0)}
+                </p>
+                <div className="flex items-center">
+                  <span className={`text-sm font-medium ${
+                    stats && stats.revenue.growth >= 0 ? "text-emerald-600" : "text-rose-600"
+                  }`}>
+                    {stats && stats.revenue.growth >= 0 ? "+" : ""}
+                    {stats?.revenue.growth.toFixed(1)}%
+                  </span>
+                  <span className="text-sm text-gray-500 ml-1">from last month</span>
+                </div>
+              </>
+            )}
+          </div>
+        </Link>
 
+        {/* Pending Certificates */}
         <Link href="/dashboard/admin/certificates/requests">
-        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center text-2xl shadow-sm">
-              🏆
-            </div>
-          </div>
-          <h3 className="text-sm font-medium text-gray-600 mb-1">Pending Certificates</h3>
-          {loading ? (
-            <div className="space-y-2">
-              <div className="h-9 w-16 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-5 w-28 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-gray-900 mb-2">
-                {stats?.pendingCertificates.count}
-              </p>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-500">
-                  Awaiting approval
-                </span>
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center text-2xl shadow-sm">
+                🏆
               </div>
-            </>
-          )}
-        </div>
+            </div>
+            <h3 className="text-sm font-medium text-gray-600 mb-1">Pending Certificates</h3>
+            {!statsLoaded ? (
+              <div className="space-y-2">
+                <div className="h-9 w-16 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-5 w-28 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-gray-900 mb-2">
+                  {stats?.pendingCertificates.count}
+                </p>
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500">
+                    Awaiting approval
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
         </Link>
       </div>
 
