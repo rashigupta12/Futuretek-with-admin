@@ -13,8 +13,6 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState, useCallback } from "react";
 import Swal from 'sweetalert2';
 
-// const USD_TO_INR_RATE = 83.5;
-
 export default function AddCoursePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -171,7 +169,6 @@ export default function AddCoursePage() {
       });
 
       if (res.ok) {
-        // const data = await res.json();
         Swal.fire({
           icon: 'success',
           title: 'Course Created!',
@@ -202,35 +199,9 @@ export default function AddCoursePage() {
     }
   };
 
-  // Sticky save button
-  const StickySaveButton = () => (
-    <div className="sticky bottom-6 z-10 flex justify-end">
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
-        <div className="flex gap-3">
-          <Button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {loading ? "Creating…" : "Create Course"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            asChild
-            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-          >
-            <Link href="/dashboard/admin/courses">Cancel</Link>
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-7xl mx-auto ">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <Link
@@ -253,7 +224,7 @@ export default function AddCoursePage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8 pb-20">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50 border-b">
@@ -366,8 +337,25 @@ export default function AddCoursePage() {
             type="topic"
           />
 
-          {/* Sticky Save Button */}
-          <StickySaveButton />
+          {/* Action Buttons - Bottom Right */}
+          <div className="flex justify-end gap-3 pt-6 pb-8">
+            <Button
+              type="button"
+              variant="outline"
+              asChild
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              <Link href="/dashboard/admin/courses">Cancel</Link>
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {loading ? "Creating…" : "Create Course"}
+            </Button>
+          </div>
         </form>
       </div>
     </div>
