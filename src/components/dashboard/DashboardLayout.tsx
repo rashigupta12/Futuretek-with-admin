@@ -219,7 +219,7 @@ export default function DashboardLayout({ children, role }: Props) {
 
       {/* Main Content */}
       <main className="flex-1 ml-64 min-h-screen">
-        <div className="p-8">{children}</div>
+        <div className="p-6">{children}</div>
       </main>
     </div>
   );

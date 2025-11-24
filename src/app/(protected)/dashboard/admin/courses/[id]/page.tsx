@@ -1,5 +1,5 @@
-//src/app/(protected)/dashboard/admin/courses/[id]/page.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars*/
 "use client";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -54,7 +54,7 @@ type Course = {
   disclaimer?: string | null;
   maxStudents?: number | null;
   currentEnrollments: number;
-  commissionPercourse?: number | null; // ← NEW: Decimal commission
+  commissionPercourse?: number | null;
   createdAt: string;
   updatedAt: string;
   features?: { feature: string }[] | string[];
@@ -115,7 +115,7 @@ export default function ViewCoursePage() {
         status: safeStatus,
         priceINR: data.priceINR ?? 0,
         priceUSD: data.priceUSD ?? 0,
-        commissionPercourse: data.commissionPercourse ?? null, // ← NEW
+        commissionPercourse: data.commissionPercourse ?? null,
         features: normalizedFeatures,
         whyLearn: Array.isArray(data.whyLearn) ? data.whyLearn : [],
         content: Array.isArray(data.content) ? data.content : [],
@@ -175,7 +175,7 @@ export default function ViewCoursePage() {
         disclaimer: editData.disclaimer || null,
         maxStudents: editData.maxStudents ? Number(editData.maxStudents) : null,
         currentEnrollments: Number(editData.currentEnrollments),
-        commissionPercourse: editData.commissionPercourse ? Number(editData.commissionPercourse) : null, // ← NEW
+        commissionPercourse: editData.commissionPercourse ? Number(editData.commissionPercourse) : null,
         features: (editData.features || [])
           .map((f) => (typeof f === "string" ? f : f.feature))
           .filter((f) => f.trim()),
@@ -266,61 +266,100 @@ export default function ViewCoursePage() {
   };
 
   // Session Management Functions
-  const addSession = async () => {
-    if (!course) return;
+const addSession = async () => {
+  if (!course) return;
 
-    const newSessionNumber =
-      course.sessions && course.sessions.length > 0
-        ? Math.max(...course.sessions.map((s) => s.sessionNumber)) + 1
-        : 1;
+  // Always calculate based on current sessions to avoid conflicts
+  const newSessionNumber = course.sessions && course.sessions.length > 0
+    ? Math.max(...course.sessions.map((s) => s.sessionNumber)) + 1
+    : 1;
 
-    const newSession: Partial<Session> = {
-      sessionNumber: newSessionNumber,
-      title: `Session ${newSessionNumber}`,
-      description: "",
-      sessionDate: "",
-      sessionTime: "",
-      duration: 60,
-      meetingLink: "",
-      meetingPasscode: "",
-      recordingUrl: "",
-      isCompleted: false,
-    };
-
-    try {
-      const res = await fetch(`/api/admin/courses/${course.id}/sessions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSession),
-      });
-
-      if (res.ok) {
-        Swal.fire("Success", "Session added successfully!", "success");
-        fetchCourse();
-      } else {
-        const err = await res.json();
-        Swal.fire("Error", err.error || "Failed to add session", "error");
-      }
-    } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Error adding session", "error");
-    }
+  // Create a temporary session with empty fields that opens in edit mode
+  const tempSession: Session = {
+    id: `temp-${Date.now()}`,
+    sessionNumber: newSessionNumber,
+    title: "",
+    description: "",
+    sessionDate: "",
+    sessionTime: "",
+    duration: 60,
+    meetingLink: "",
+    meetingPasscode: "",
+    recordingUrl: "",
+    isCompleted: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
+
+  // Add to local state immediately to show the form
+  const updatedSessions = [...(course.sessions || []), tempSession];
+  setCourse({ ...course, sessions: updatedSessions });
+  if (editData) {
+    setEditData({ ...editData, sessions: updatedSessions });
+  }
+  
+  // Open the new session in edit mode
+  setEditingSession(tempSession.id);
+  setEditSessionData(tempSession);
+};
 
   const startEditingSession = (session: Session) => {
     setEditingSession(session.id);
     setEditSessionData({ ...session });
   };
 
-  const cancelEditingSession = () => {
-    setEditingSession(null);
-    setEditSessionData(null);
-  };
+const cancelEditingSession = () => {
+  if (editingSession?.startsWith('temp-') && course) {
+    // Remove the temporary session from local state
+    const updatedSessions = course.sessions?.filter(s => s.id !== editingSession) || [];
+    setCourse({ ...course, sessions: updatedSessions });
+    if (editData) {
+      setEditData({ ...editData, sessions: updatedSessions });
+    }
+  }
+  
+  setEditingSession(null);
+  setEditSessionData(null);
+};
 
-  const saveSession = async () => {
-    if (!editSessionData || !course) return;
+const saveSession = async () => {
+  if (!editSessionData || !course) return;
 
-    try {
+  // Validate required fields
+  if (!editSessionData.title || !editSessionData.sessionDate || !editSessionData.sessionTime) {
+    Swal.fire({
+      icon: "error",
+      title: "Missing Required Fields",
+      text: "Session title, date, and time are required.",
+      confirmButtonColor: "#16a34a",
+    });
+    return;
+  }
+
+  try {
+    const isNewSession = editSessionData.id.startsWith('temp-');
+    
+    if (isNewSession) {
+      // Create new session via API
+      const { id, createdAt, updatedAt, ...sessionData } = editSessionData;
+      
+      const res = await fetch(`/api/admin/courses/${course.id}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sessionData),
+      });
+
+      if (res.ok) {
+        Swal.fire("Success", "Session created successfully!", "success");
+        setEditingSession(null);
+        setEditSessionData(null);
+        fetchCourse(); // Refresh to get the real session ID from database
+      } else {
+        const err = await res.json();
+        Swal.fire("Error", err.error || "Failed to create session", "error");
+      }
+    } else {
+      // Update existing session
       const res = await fetch(`/api/admin/courses/${course.id}/sessions/${editSessionData.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -336,39 +375,88 @@ export default function ViewCoursePage() {
         const err = await res.json();
         Swal.fire("Error", err.error || "Failed to update session", "error");
       }
-    } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Error updating session", "error");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    Swal.fire("Error", "Error saving session", "error");
+  }
+};
 
-  const deleteSession = async (sessionId: string) => {
-    const result = await Swal.fire({
-      title: "Delete Session?",
-      text: "This cannot be undone.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Delete",
-      cancelButtonText: "Cancel",
+const deleteSession = async (sessionId: string) => {
+  const result = await Swal.fire({
+    title: "Delete Session?",
+    text: "This cannot be undone.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Delete",
+    cancelButtonText: "Cancel",
+  });
+  if (!result.isConfirmed || !course) return;
+
+  // If it's a temporary session, just remove from local state and re-sequence
+  if (sessionId.startsWith('temp-')) {
+    const updatedSessions = course.sessions?.filter(s => s.id !== sessionId) || [];
+    
+    // Re-sequence session numbers
+    const renumberedSessions = updatedSessions
+      .sort((a, b) => a.sessionNumber - b.sessionNumber)
+      .map((session, index) => ({
+        ...session,
+        sessionNumber: index + 1
+      }));
+    
+    setCourse({ ...course, sessions: renumberedSessions });
+    if (editData) {
+      setEditData({ ...editData, sessions: renumberedSessions });
+    }
+    if (editingSession === sessionId) {
+      setEditingSession(null);
+      setEditSessionData(null);
+    }
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/courses/${course.id}/sessions/${sessionId}`, {
+      method: "DELETE",
     });
-    if (!result.isConfirmed || !course) return;
 
-    try {
-      const res = await fetch(`/api/admin/courses/${course.id}/sessions/${sessionId}`, {
-        method: "DELETE",
-      });
+    if (res.ok) {
+      Swal.fire("Deleted", "Session deleted.", "success");
+      
+      // If backend doesn't re-sequence, do it on frontend
+      // Remove the session from local state immediately for better UX
+      const deletedSession = course.sessions?.find(s => s.id === sessionId);
+      if (deletedSession) {
+        const updatedSessions = course.sessions?.filter(s => s.id !== sessionId) || [];
+        
+        // Re-sequence sessions that come after the deleted one
+        const renumberedSessions = updatedSessions.map(session => {
+          if (session.sessionNumber > deletedSession.sessionNumber) {
+            return {
+              ...session,
+              sessionNumber: session.sessionNumber - 1
+            };
+          }
+          return session;
+        }).sort((a, b) => a.sessionNumber - b.sessionNumber);
 
-      if (res.ok) {
-        Swal.fire("Deleted", "Session deleted.", "success");
-        fetchCourse();
-      } else {
-        Swal.fire("Error", "Failed to delete session", "error");
+        setCourse({ ...course, sessions: renumberedSessions });
+        if (editData) {
+          setEditData({ ...editData, sessions: renumberedSessions });
+        }
       }
-    } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Error deleting session", "error");
+      
+      // Still fetch course to ensure data is in sync with backend
+      fetchCourse();
+    } else {
+      Swal.fire("Error", "Failed to delete session", "error");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    Swal.fire("Error", "Error deleting session", "error");
+  }
+};
 
   const updateEditSessionField = (field: keyof Session, value: any) => {
     if (!editSessionData) return;
@@ -481,7 +569,7 @@ export default function ViewCoursePage() {
       {/* Header */}
       <div className="relative py-8 mb-8 bg-gradient-to-r from-blue-50 to-amber-50 border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl">
+          <div className="max-w-7xl">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
                 <Link
@@ -588,10 +676,13 @@ export default function ViewCoursePage() {
                       {course.sessions?.length || 0} sessions scheduled
                     </CardDescription>
                   </div>
-                  <Button onClick={addSession} className="bg-green-600 hover:bg-green-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Session
-                  </Button>
+                  {/* Only show Add Session button in edit mode */}
+                  {isEditing && (
+                    <Button onClick={addSession} className="bg-green-600 hover:bg-green-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Session
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="p-6">
@@ -599,7 +690,9 @@ export default function ViewCoursePage() {
                   <div className="text-center py-8 text-gray-500">
                     <Video className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                     <p>No sessions scheduled yet.</p>
-                    <p className="text-sm mt-2">Add sessions to get started.</p>
+                    {isEditing && (
+                      <p className="text-sm mt-2">Add sessions to get started.</p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -612,7 +705,7 @@ export default function ViewCoursePage() {
                               <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div className="space-y-2">
-                                    <Label>Session Title</Label>
+                                    <Label>Session Title *</Label>
                                     <Input
                                       value={editSessionData?.title || ""}
                                       onChange={(e) =>
@@ -622,7 +715,7 @@ export default function ViewCoursePage() {
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <Label>Session Date</Label>
+                                    <Label>Session Date *</Label>
                                     <Input
                                       type="date"
                                       value={editSessionData?.sessionDate || ""}
@@ -633,7 +726,7 @@ export default function ViewCoursePage() {
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <Label>Session Time</Label>
+                                    <Label>Session Time *</Label>
                                     <Input
                                       type="time"
                                       value={editSessionData?.sessionTime || ""}
@@ -644,7 +737,7 @@ export default function ViewCoursePage() {
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <Label>Duration (minutes)</Label>
+                                    <Label>Duration (minutes) *</Label>
                                     <Input
                                       type="number"
                                       value={editSessionData?.duration || 60}
@@ -742,24 +835,26 @@ export default function ViewCoursePage() {
                                       {formatDate(session.sessionDate)} at {formatTime(session.sessionTime)} • {session.duration} mins
                                     </p>
                                   </div>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => startEditingSession(session)}
-                                    >
-                                      <Edit className="h-3 w-3 mr-1" />
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => deleteSession(session.id)}
-                                    >
-                                      <Trash2 className="h-3 w-3 mr-1" />
-                                      Delete
-                                    </Button>
-                                  </div>
+                                  {isEditing && (
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => startEditingSession(session)}
+                                      >
+                                        <Edit className="h-3 w-3 mr-1" />
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => deleteSession(session.id)}
+                                      >
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        Delete
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
 
                                 {session.description && (
@@ -1155,14 +1250,14 @@ export default function ViewCoursePage() {
                         </select>
                       </div>
 
-                       <div className="pt-4 border-t">
-      <ImageUpload
-        label="Course Thumbnail"
-        value={editData.thumbnailUrl || ""}
-        onChange={(url) => updateEditField("thumbnailUrl", url)}
-        isThumbnail={true}
-      />
-    </div>
+                      <div className="pt-4 border-t">
+                        <ImageUpload
+                          label="Course Thumbnail"
+                          value={editData.thumbnailUrl || ""}
+                          onChange={(url) => updateEditField("thumbnailUrl", url)}
+                          isThumbnail={true}
+                        />
+                      </div>
                     </div>
                   ) : (
                     <>
@@ -1183,21 +1278,21 @@ export default function ViewCoursePage() {
                         </p>
                       )}
                       {displayData.thumbnailUrl && (
-      <div className="mt-4">
-        <Label className="text-sm text-gray-600 mb-2 block">Course Thumbnail</Label>
-        <div className="relative w-full rounded-lg overflow-hidden border border-gray-200">
-          <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-            <Image
-              src={displayData.thumbnailUrl}
-              alt={displayData.title}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </div>
-        </div>
-      </div>
-    )}
+                        <div className="mt-4">
+                          <Label className="text-sm text-gray-600 mb-2 block">Course Thumbnail</Label>
+                          <div className="relative w-full rounded-lg overflow-hidden border border-gray-200">
+                            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                              <Image
+                                src={displayData.thumbnailUrl}
+                                alt={displayData.title}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 

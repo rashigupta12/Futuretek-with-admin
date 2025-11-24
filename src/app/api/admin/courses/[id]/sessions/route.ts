@@ -1,3 +1,4 @@
+//src/app/api/admin/courses/[id]/sessions/route.ts
 /*eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 import {
@@ -74,13 +75,13 @@ export async function POST(
       courseId,
       sessionNumber: Number(sessionNumber),
       title: String(title),
-      description: description ? String(description) : null,
-      sessionDate: new Date(sessionDate), // Required field, should not be null
-      sessionTime: String(sessionTime), // Required field
+      description: description ? String(description) : "",
+      sessionDate: new Date(sessionDate),
+      sessionTime: String(sessionTime),
       duration: Number(duration) || 60,
-      meetingLink: meetingLink ? String(meetingLink) : null,
-      meetingPasscode: meetingPasscode ? String(meetingPasscode) : null,
-      recordingUrl: recordingUrl ? String(recordingUrl) : null,
+      meetingLink: meetingLink ? String(meetingLink) : "",
+      meetingPasscode: meetingPasscode ? String(meetingPasscode) : "",
+      recordingUrl: recordingUrl ? String(recordingUrl) : "",
       isCompleted: Boolean(isCompleted),
     };
 
@@ -95,7 +96,6 @@ export async function POST(
         session: {
           ...newSession,
           sessionDate: newSession.sessionDate?.toISOString().split('T')[0] || '',
-          sessionTime: newSession.sessionTime,
         },
       },
       { status: 201 }
@@ -108,3 +108,5 @@ export async function POST(
     );
   }
 }
+
+

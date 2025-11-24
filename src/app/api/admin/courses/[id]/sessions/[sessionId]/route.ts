@@ -1,3 +1,4 @@
+//src/app/api/admin/courses/[id]/sessions/[sessionId]/route.ts
 /*eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/db";
 import {
@@ -6,6 +7,7 @@ import {
 } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+
 // PUT - Update a session
 export async function PUT(
   req: NextRequest,
@@ -85,13 +87,13 @@ export async function PUT(
     // Only update provided fields
     if (sessionNumber !== undefined) updateData.sessionNumber = sessionNumber;
     if (title !== undefined) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
+    if (description !== undefined) updateData.description = description || "";
     if (sessionDate !== undefined) updateData.sessionDate = sessionDate ? new Date(sessionDate) : null;
     if (sessionTime !== undefined) updateData.sessionTime = sessionTime;
     if (duration !== undefined) updateData.duration = duration;
-    if (meetingLink !== undefined) updateData.meetingLink = meetingLink;
-    if (meetingPasscode !== undefined) updateData.meetingPasscode = meetingPasscode;
-    if (recordingUrl !== undefined) updateData.recordingUrl = recordingUrl;
+    if (meetingLink !== undefined) updateData.meetingLink = meetingLink || "";
+    if (meetingPasscode !== undefined) updateData.meetingPasscode = meetingPasscode || "";
+    if (recordingUrl !== undefined) updateData.recordingUrl = recordingUrl || "";
     if (isCompleted !== undefined) updateData.isCompleted = Boolean(isCompleted);
 
     const [updatedSession] = await db

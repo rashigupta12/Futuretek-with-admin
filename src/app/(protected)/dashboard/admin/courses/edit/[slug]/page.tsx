@@ -364,10 +364,12 @@ export default function EditCoursePage() {
 
           {/* Sessions Management */}
           <SessionManager
-            sessions={sessions}
-            setSessions={setSessions}
-            totalSessions={parseInt(formData.totalSessions) || 0}
-          />
+  sessions={sessions}
+  setSessions={setSessions}
+  totalSessions={parseInt(formData.totalSessions) || 0}
+  courseId={formData.id}  // Pass the course ID
+  onRefresh={fetchCourse}  // Pass the refresh function
+/>
 
           {/* Content & SEO */}
           <Card className="border border-gray-200 hover:shadow-md transition-shadow">

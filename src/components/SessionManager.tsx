@@ -27,12 +27,16 @@ interface SessionManagerProps {
   sessions: Session[];
   setSessions: (sessions: Session[]) => void;
   totalSessions: number;
+  courseId?: string; // Optional: if provided, will use API calls
+  onRefresh?: () => void; // Optional: callback to refresh course data
 }
 
 export default function SessionManager({
   sessions,
   setSessions,
   totalSessions,
+  courseId,
+  onRefresh,
 }: SessionManagerProps) {
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Session | null>(null);
@@ -46,7 +50,7 @@ export default function SessionManager({
     const newSession: Session = {
       id: `temp-${Date.now()}`,
       sessionNumber: newSessionNumber,
-      title: "",
+      title: `Session ${newSessionNumber}`,
       description: "",
       sessionDate: "",
       sessionTime: "",
@@ -56,6 +60,8 @@ export default function SessionManager({
       recordingUrl: "",
       isCompleted: false,
     };
+
+    // Always add to local state first, save to API when user clicks save
     setSessions([...sessions, newSession]);
     setEditingSession(newSession.id);
     setEditFormData(newSession);
@@ -67,32 +73,85 @@ export default function SessionManager({
   };
 
   const cancelEditing = () => {
+    // If it's a new temp session that hasn't been saved yet, remove it from the list
+    if (editingSession?.startsWith("temp-")) {
+      const updatedSessions = sessions.filter((s) => s.id !== editingSession);
+      setSessions(updatedSessions);
+    }
     setEditingSession(null);
     setEditFormData(null);
   };
 
-  const saveEditing = () => {
+  const saveEditing = async () => {
     if (!editFormData) return;
 
     if (
       !editFormData.sessionDate ||
       !editFormData.sessionTime ||
-      !editFormData.meetingLink
+      !editFormData.title
     ) {
       Swal.fire({
         icon: "error",
         title: "Missing Required Fields",
-        text: "Date, Time, and Meeting Link are required fields.",
+        text: "Title, Date, and Time are required fields.",
         confirmButtonColor: "#16a34a",
       });
       return;
     }
-    const updatedSessions = sessions.map((session) =>
-      session.id === editingSession ? editFormData : session
-    );
-    setSessions(updatedSessions);
-    setEditingSession(null);
-    setEditFormData(null);
+
+    // If courseId is provided, save to API
+    if (courseId) {
+      const isNewSession = editingSession?.startsWith("temp-");
+      
+      try {
+        const url = isNewSession 
+          ? `/api/admin/courses/${courseId}/sessions`
+          : `/api/admin/courses/${courseId}/sessions/${editingSession}`;
+        
+        const method = isNewSession ? "POST" : "PUT";
+
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editFormData),
+        });
+
+        if (res.ok) {
+          Swal.fire({
+            icon: "success",
+            title: "Success!",
+            text: `Session ${isNewSession ? 'created' : 'updated'} successfully`,
+            timer: 1500,
+            showConfirmButton: false,
+          });
+          setEditingSession(null);
+          setEditFormData(null);
+          if (onRefresh) onRefresh();
+        } else {
+          const err = await res.json();
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: err.error || `Failed to ${isNewSession ? 'create' : 'update'} session`,
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: `Error ${isNewSession ? 'creating' : 'updating'} session`,
+        });
+      }
+    } else {
+      // Local state management (for create course page)
+      const updatedSessions = sessions.map((session) =>
+        session.id === editingSession ? editFormData : session
+      );
+      setSessions(updatedSessions);
+      setEditingSession(null);
+      setEditFormData(null);
+    }
   };
 
   const updateEditFormData = (field: keyof Session, value: any) => {
@@ -101,18 +160,86 @@ export default function SessionManager({
     }
   };
 
-  const removeSession = (index: number) => {
-    const updatedSessions = sessions.filter((_, i) => i !== index);
-    // Re-number sessions after deletion
-    const renumberedSessions = updatedSessions.map((session, idx) => ({
-      ...session,
-      sessionNumber: idx + 1,
-    }));
-    setSessions(renumberedSessions);
+  const removeSession = async (session: Session, index: number) => {
+    const result = await Swal.fire({
+      title: "Delete Session?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
 
-    // If we're deleting the session being edited, cancel editing
-    if (sessions[index].id === editingSession) {
-      cancelEditing();
+    if (!result.isConfirmed) return;
+
+    // If it's a temp session, just remove from local state
+    if (session.id.startsWith("temp-")) {
+      const updatedSessions = sessions.filter((_, i) => i !== index);
+      // Re-number sessions after deletion
+      const renumberedSessions = updatedSessions.map((s, idx) => ({
+        ...s,
+        sessionNumber: idx + 1,
+      }));
+      setSessions(renumberedSessions);
+
+      // If we're deleting the session being edited, cancel editing
+      if (session.id === editingSession) {
+        setEditingSession(null);
+        setEditFormData(null);
+      }
+      return;
+    }
+
+    // If courseId is provided and session exists in DB, delete via API
+    if (courseId) {
+      try {
+        const res = await fetch(
+          `/api/admin/courses/${courseId}/sessions/${session.id}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        if (res.ok) {
+          Swal.fire({
+            icon: "success",
+            title: "Deleted!",
+            text: "Session deleted successfully",
+            timer: 1500,
+            showConfirmButton: false,
+          });
+          if (onRefresh) onRefresh();
+        } else {
+          const err = await res.json();
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: err.error || "Failed to delete session",
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Error deleting session",
+        });
+      }
+    } else {
+      // Local state management (shouldn't reach here for persisted sessions)
+      const updatedSessions = sessions.filter((_, i) => i !== index);
+      const renumberedSessions = updatedSessions.map((s, idx) => ({
+        ...s,
+        sessionNumber: idx + 1,
+      }));
+      setSessions(renumberedSessions);
+
+      if (session.id === editingSession) {
+        setEditingSession(null);
+        setEditFormData(null);
+      }
     }
   };
 
@@ -161,11 +288,7 @@ export default function SessionManager({
 
   const formatDate = (date: string) => {
     if (!date) return "-";
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return new Date(date).toLocaleDateString("en-GB");
   };
 
   return (
@@ -176,7 +299,7 @@ export default function SessionManager({
             Course Sessions ({sessions.length} of {totalSessions || 0})
           </CardTitle>
           <div className="flex gap-2">
-            {totalSessions > 0 && (
+            {totalSessions > 0 && !courseId && (
               <Button
                 type="button"
                 variant="outline"
@@ -202,9 +325,9 @@ export default function SessionManager({
           <div className="text-center py-8 text-gray-500">
             <p>No sessions added yet.</p>
             <p className="text-sm mt-2">
-              {totalSessions
+              {totalSessions && !courseId
                 ? `Click "Generate ${totalSessions} Sessions" to auto-create sessions or add them manually.`
-                : 'Set "Total Sessions" above to enable auto-generation.'}
+                : 'Click "Add Session" to create a new session.'}
             </p>
           </div>
         ) : (
@@ -249,15 +372,12 @@ export default function SessionManager({
                   .sort((a, b) => a.sessionNumber - b.sessionNumber)
                   .map((session, index) => (
                     <tr key={session.id} className="hover:bg-gray-50">
-                      {/* Session Number */}
                       <td className="border border-gray-200 px-4 py-3 text-sm font-medium text-gray-900">
                         {session.sessionNumber}
                       </td>
 
-                      {/* Session Title */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ||
-                        session.id.startsWith("temp-") ? (
+                        {editingSession === session.id ? (
                           <Input
                             value={editFormData?.title || ""}
                             onChange={(e) =>
@@ -272,10 +392,8 @@ export default function SessionManager({
                         )}
                       </td>
 
-                      {/* Date */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ||
-                        session.id.startsWith("temp-") ? (
+                        {editingSession === session.id ? (
                           <Input
                             type="date"
                             value={editFormData?.sessionDate || ""}
@@ -290,10 +408,8 @@ export default function SessionManager({
                         )}
                       </td>
 
-                      {/* Time */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ||
-                        session.id.startsWith("temp-") ? (
+                        {editingSession === session.id ? (
                           <Input
                             type="time"
                             value={editFormData?.sessionTime || ""}
@@ -308,10 +424,8 @@ export default function SessionManager({
                         )}
                       </td>
 
-                      {/* Duration */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ||
-                        session.id.startsWith("temp-") ? (
+                        {editingSession === session.id ? (
                           <Input
                             type="number"
                             value={editFormData?.duration || 60}
@@ -330,10 +444,8 @@ export default function SessionManager({
                         )}
                       </td>
 
-                      {/* Meeting Link */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ||
-                        session.id.startsWith("temp-") ? (
+                        {editingSession === session.id ? (
                           <Input
                             type="url"
                             value={editFormData?.meetingLink || ""}
@@ -342,7 +454,6 @@ export default function SessionManager({
                             }
                             placeholder="https://zoom.us/j/..."
                             className="w-full"
-                            required
                           />
                         ) : session.meetingLink ? (
                           <a
@@ -358,10 +469,8 @@ export default function SessionManager({
                         )}
                       </td>
 
-                      {/* Passcode */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ||
-                        session.id.startsWith("temp-") ? (
+                        {editingSession === session.id ? (
                           <Input
                             value={editFormData?.meetingPasscode || ""}
                             onChange={(e) =>
@@ -378,10 +487,8 @@ export default function SessionManager({
                         )}
                       </td>
 
-                      {/* Recording URL */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ||
-                        session.id.startsWith("temp-") ? (
+                        {editingSession === session.id ? (
                           <Input
                             type="url"
                             value={editFormData?.recordingUrl || ""}
@@ -405,10 +512,8 @@ export default function SessionManager({
                         )}
                       </td>
 
-                      {/* Status */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
-                        {editingSession === session.id ||
-                        session.id.startsWith("temp-") ? (
+                        {editingSession === session.id ? (
                           <div className="flex items-center">
                             <input
                               type="checkbox"
@@ -436,11 +541,9 @@ export default function SessionManager({
                         )}
                       </td>
 
-                      {/* Actions */}
                       <td className="border border-gray-200 px-4 py-3 text-sm">
                         <div className="flex items-center gap-2">
-                          {editingSession === session.id ||
-                          session.id.startsWith("temp-") ? (
+                          {editingSession === session.id ? (
                             <>
                               <Button
                                 type="button"
@@ -475,7 +578,7 @@ export default function SessionManager({
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                onClick={() => removeSession(index)}
+                                onClick={() => removeSession(session, index)}
                                 className="border-red-200 text-red-700 hover:bg-red-50"
                               >
                                 <Trash2 className="h-3 w-3" />
@@ -489,7 +592,6 @@ export default function SessionManager({
               </tbody>
             </table>
 
-            {/* Edit Form for Description (shown when editing) */}
             {editingSession && editFormData && (
               <Card className="mt-4 border border-blue-200">
                 <CardHeader className="bg-blue-50 border-b">
