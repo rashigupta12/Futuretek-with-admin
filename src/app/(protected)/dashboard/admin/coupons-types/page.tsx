@@ -54,11 +54,7 @@ export default function CouponTypesPage() {
   const fetchCouponTypes = useCallback(async () => {
     try {
       setLoading(true);
-      const baseUrl =
-        discountTypeFilter === "ALL"
-          ? "/api/admin/coupon-types"
-          : `/api/admin/coupon-types?discountType=${discountTypeFilter}`;
-
+      const baseUrl ="/api/admin/coupon-types";
       // Add cache busting parameter
       const cacheBuster = `${
         baseUrl.includes("?") ? "&" : "?"
@@ -109,12 +105,16 @@ export default function CouponTypesPage() {
   }, [fetchCouponTypes]);
 
   // Filter by search
-  const filteredCouponTypes = couponTypes.filter(
-    (ct) =>
-      ct.typeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ct.typeCode.includes(searchTerm) ||
-      ct.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+ const filteredCouponTypes = couponTypes
+  .filter((ct) =>
+    ct.typeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ct.typeCode.includes(searchTerm) ||
+    ct.description.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  .filter((ct) => {
+    if (discountTypeFilter === "ALL") return true;
+    return ct.discountType === discountTypeFilter;
+  });
 
   const discountTypeOptions = ["ALL", "PERCENTAGE", "FIXED_AMOUNT"];
 

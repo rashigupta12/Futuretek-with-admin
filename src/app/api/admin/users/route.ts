@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
       createdAt: UsersTable.createdAt,
     }).from(UsersTable);
 
-    const users = await (role && (role === "ADMIN" || role === "USER")
-      ? query.where(eq(UsersTable.role, role as "ADMIN" | "USER"))
+    const users = await (role && (role === "ADMIN" || role === "USER"|| role === "JYOTISHI")
+      ? query.where(eq(UsersTable.role, role as "ADMIN" | "USER" | "JYOTISHI"))
       : query);
 
     return NextResponse.json({ users }, { status: 200 });

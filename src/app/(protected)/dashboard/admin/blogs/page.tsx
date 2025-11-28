@@ -20,7 +20,7 @@ import {
   Filter,
   Plus,
   Search,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -45,17 +45,17 @@ export default function BlogsPage() {
 
   useEffect(() => {
     fetchBlogs();
-  }, [statusFilter]);
+  }, []);
 
   const fetchBlogs = async () => {
     try {
       setLoading(true);
-      const url =
-        statusFilter === "ALL"
-          ? "/api/admin/blogs"
-          : `/api/admin/blogs?status=${statusFilter}`;
+      // const url =
+      // statusFilter === "ALL"
+      //   ? "/api/admin/blogs"
+      //   : `/api/admin/blogs?status=${statusFilter}`;
 
-      const res = await fetch(url);
+      const res = await fetch("/api/admin/blogs");
       const data = await res.json();
 
       const mapped: Blog[] = (data.blogs || []).map((b: any) => ({
@@ -122,9 +122,14 @@ export default function BlogsPage() {
     }
   };
 
-  const filteredBlogs = blogs.filter((b) =>
-    b.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredBlogs = blogs
+    .filter((b) => b.title.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((b) => {
+      if (statusFilter === "ALL") return true;
+      if (statusFilter === "PUBLISHED") return b.isPublished;
+      if (statusFilter === "DRAFT") return !b.isPublished;
+      return true;
+    });
 
   const statusOptions = ["ALL", "PUBLISHED", "DRAFT"];
 
